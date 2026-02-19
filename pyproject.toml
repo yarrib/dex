@@ -1,0 +1,35 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "dex"
+version = "0.1.0"
+description = "Opinionated CLI framework for Databricks/MLOps project operations"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "yarrib" }]
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+]
+
+[project.scripts]
+dex = "dex.cli:cli"
+
+[tool.maturin]
+bindings = "pyo3"
+manifest-path = "crates/dex-py/Cargo.toml"
+module-name = "dex._core"
+python-source = "python"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

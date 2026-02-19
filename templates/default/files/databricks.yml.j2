@@ -1,0 +1,25 @@
+bundle:
+  name: {{ project_name }}
+
+workspace:
+  host: ${var.workspace_url}
+
+variables:
+  workspace_url:
+    description: Databricks workspace URL
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      workspace_url: ""
+
+  staging:
+    mode: development
+    variables:
+      workspace_url: ""
+
+  prod:
+    variables:
+      workspace_url: ""
