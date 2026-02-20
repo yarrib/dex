@@ -307,10 +307,10 @@ def passthrough(name, command, description=None):
 
 ## 5. Data Flow
 
-### 5.1. `dex init` Flow
+### 5.1. `dex init` Flow — Standalone Template
 
 ```
-User runs: dex init --template ml-pipeline
+User runs: dex init --template default
                 │
                 ▼
     ┌── Click CLI (Python) ──┐
@@ -322,6 +322,7 @@ User runs: dex init --template ml-pipeline
     ┌── dex._core (PyO3) ───┐
     │  parse_template_manifest│
     │  → TemplateManifest     │
+    │  (no [template.dabs])   │
     └────────┬────────────────┘
              │
              ▼
@@ -345,11 +346,74 @@ User runs: dex init --template ml-pipeline
     └─────────────────────────┘
 ```
 
-Key point: the Python layer handles **all user interaction** (prompts, output).
-The Rust core handles **all file operations** (parsing, rendering, writing).
-The FFI boundary passes **data, not control flow**.
+### 5.2. `dex init` Flow — DABs-Composite Template
 
-### 5.2. Pass-through Flow
+When the template manifest includes `[template.dabs]`, there are two phases.
+Phase 1 delegates to `databricks bundle init`. Phase 2 layers dex files on top.
+
+```
+User runs: dex init --template ml-pipeline
+                │
+                ▼
+    ┌── Click CLI (Python) ──┐
+    │  parse args             │
+    │  resolve template name  │
+    └────────┬────────────────┘
+             │
+             ▼
+    ┌── dex._core (PyO3) ───┐
+    │  parse_template_manifest│
+    │  → TemplateManifest     │
+    │  (has [template.dabs])  │
+    └────────┬────────────────┘
+             │
+             ▼
+    ┌── Click CLI (Python) ──┐
+    │  for each variable:     │
+    │    prompt user (click)  │
+    │  collect variables dict │
+    └────────┬────────────────┘
+             │
+             ▼  Phase 1: DABs scaffold (Python orchestrates)
+    ┌── Click CLI (Python) ──────────────────────────┐
+    │  map dex vars → DABs vars via variable_map      │
+    │  write temp config JSON                         │
+    │  subprocess.run([                               │
+    │    "databricks", "bundle", "init", <source>,    │
+    │    "--output-dir", <target>,                     │
+    │    "--config-file", <tmp.json>                   │
+    │  ])                                             │
+    │  → DABs Go templates render → databricks.yml,   │
+    │    notebooks, src/, etc.                        │
+    └────────┬────────────────────────────────────────┘
+             │
+             ▼  Phase 2: dex layer on top
+    ┌── dex._core (PyO3) ───┐
+    │  scaffold_project(      │
+    │    template, dir, vars) │
+    │  renders dex files/     │
+    │  → dex.toml, CI, tasks  │
+    │  (skips existing files  │
+    │   unless overwrite=true)│
+    └────────┬────────────────┘
+             │
+             ▼
+    ┌── Click CLI (Python) ──┐
+    │  display combined result│
+    │  run post-scaffold hook │
+    └─────────────────────────┘
+```
+
+Key points:
+
+- Phase 1 is pure Python (subprocess to `databricks` CLI). No Rust involved.
+- Phase 2 is pure Rust (file rendering via dex-core). No subprocess.
+- The Python layer orchestrates both phases and owns all user interaction.
+- DABs variables are mapped from dex variables via `[template.dabs.variable_map]`,
+  so the user only answers prompts once.
+- If `databricks` is not installed, dex raises a clear error before Phase 1.
+
+### 5.3. Pass-through Flow
 
 ```
 User runs: dex db clusters list --output json

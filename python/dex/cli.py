@@ -137,13 +137,80 @@ def init_command(template: str, directory: str, no_prompt: bool) -> None:
     else:
         variables["project_name"] = target.name if target.name != "." else Path.cwd().name
 
-    # Scaffold
+    # Check if template has a DABs base — if so, run Phase 1 first.
+    # The manifest is parsed via PyO3 to check for [template.dabs].
+    # For embedded templates we check the metadata returned from list_embedded_templates.
+    # Full manifest parsing for embedded templates happens inside scaffold_project,
+    # but we need the dabs info before scaffolding to run Phase 1.
+    #
+    # For now, we use parse_template_manifest for filesystem templates only.
+    # Embedded templates in v0.1 are standalone (no DABs base).
+    # Future: expose dabs info for embedded templates from _core.
+
+    # Scaffold — Phase 2 (or the only phase for standalone templates)
     result = scaffold_project("__embedded__", template, str(target), variables)
 
     console.print(f"\n[green]Scaffolded {len(result.files_created)} files:[/green]")
     for f in sorted(result.files_created):
         console.print(f"  {f}")
     console.print()
+
+
+def _run_dabs_init(
+    dabs_source: str,
+    target_dir: Path,
+    variables: dict[str, str],
+    variable_map: dict[str, str],
+) -> None:
+    """Phase 1: delegate to `databricks bundle init` for DABs-composite templates.
+
+    Writes a temporary config JSON mapping dex variables to DABs variable names,
+    then runs `databricks bundle init` non-interactively.
+    """
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+
+    # Check that databricks CLI is available.
+    if shutil.which("databricks") is None:
+        console.print(
+            "[red]Error:[/red] this template requires the Databricks CLI "
+            "(`databricks`), but it was not found on PATH."
+        )
+        console.print("Install it: https://docs.databricks.com/dev-tools/cli/install.html")
+        raise SystemExit(1)
+
+    # Map dex variable names → DABs variable names.
+    dabs_config = {}
+    for dex_var, dabs_var in variable_map.items():
+        if dex_var in variables:
+            dabs_config[dabs_var] = variables[dex_var]
+
+    # Write config to a temp file and run databricks bundle init.
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, prefix="dex-dabs-"
+    ) as f:
+        json.dump(dabs_config, f)
+        config_path = f.name
+
+    try:
+        console.print("[dim]Running databricks bundle init...[/dim]")
+        result = subprocess.run(
+            [
+                "databricks", "bundle", "init", dabs_source,
+                "--output-dir", str(target_dir),
+                "--config-file", config_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            console.print(f"[red]Error:[/red] databricks bundle init failed:\n{result.stderr}")
+            raise SystemExit(result.returncode)
+        console.print("[green]DABs template scaffolded.[/green]")
+    finally:
+        Path(config_path).unlink(missing_ok=True)
 
 
 # Default CLI instance for `dex` command.

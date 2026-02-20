@@ -184,10 +184,42 @@ color = "auto"    # auto | always | never
 
 ## 6. Template System
 
-Templates are directories containing a manifest (`template.toml`), template files, and
-optional hooks. They are rendered using Jinja2 syntax (via minijinja in Rust).
+dex templates are **additive layers**. They can optionally declare a Databricks Asset
+Bundle (DABs) template as a foundation, then add dex-specific files on top. This means
+dex never reimplements DABs templating (which uses Go templates) — it delegates to
+`databricks bundle init` and layers its opinions afterward.
 
-### 6.1. Template Structure
+### 6.1. Two Modes
+
+**Standalone template** — dex renders everything itself (Jinja2 via minijinja):
+
+```
+dex init --template default
+  → dex renders files/ through Jinja2 engine
+  → writes to target directory
+```
+
+**DABs-composite template** — dex delegates the bundle scaffold to the Databricks CLI,
+then layers dex-specific files on top:
+
+```
+dex init --template ml-pipeline
+  Phase 1: databricks bundle init <dabs_source> --output-dir ./my-project
+           → Go templates render → databricks.yml, notebooks, src/, etc.
+           → DABs variables passed non-interactively via --config-file
+  Phase 2: dex renders its own files/ on top
+           → dex.toml, CI config, tasks, monitoring, etc.
+           → Jinja2 templates, dex variables
+           → will not overwrite files DABs already created (unless overwrite = true)
+```
+
+This composition model lets teams use **any existing DABs template** — official ones,
+custom org templates from Git repos, local directories — and add dex opinions on top
+without converting Go templates to Jinja2.
+
+### 6.2. Template Structure
+
+**Standalone** (dex owns the full scaffold):
 
 ```
 my-template/
@@ -206,12 +238,33 @@ my-template/
     post_scaffold.py
 ```
 
-### 6.2. Template Manifest: `template.toml`
+**DABs-composite** (dex adds on top of a DABs template):
+
+```
+my-template/
+  template.toml              # manifest — includes [template.dabs] section
+  files/                     # ONLY dex-specific additions
+    dex.toml.j2              # dex project config
+    .github/
+      workflows/
+        ci.yml.j2            # CI config that DABs doesn't provide
+    Makefile.j2
+  hooks/
+    post_scaffold.py
+```
+
+When a DABs base is declared, `files/` contains only what dex **adds** — not the
+full project. DABs provides the bundle scaffold (databricks.yml, notebooks, src/).
+dex provides the ops layer (dex.toml, CI, tasks, monitoring).
+
+### 6.3. Template Manifest: `template.toml`
+
+#### Standalone (no DABs base)
 
 ```toml
 [template]
-name = "ml-pipeline"
-description = "Databricks ML pipeline project"
+name = "default"
+description = "Minimal Databricks ML project"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 
@@ -228,6 +281,39 @@ prompt = "Python version"
 type = "choice"
 choices = ["3.10", "3.11", "3.12"]
 default = "3.11"
+```
+
+#### DABs-composite
+
+```toml
+[template]
+name = "ml-pipeline"
+description = "Databricks ML pipeline with full ops tooling"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+# DABs template as foundation — rendered by `databricks bundle init`
+[template.dabs]
+# Any valid source for `databricks bundle init`:
+source = "https://github.com/databricks/bundle-examples/tree/main/default-python"
+#   source = "default-python"                    # built-in DABs template name
+#   source = "/path/to/local/dabs/template"      # local path
+#   source = "https://github.com/myorg/templates" # Git URL
+
+# Map dex variables → DABs Go template variables.
+# dex collects variables first, writes them to a temp JSON config,
+# then passes --config-file to `databricks bundle init` so it runs
+# non-interactively.
+[template.dabs.variable_map]
+project_name = "project_name"    # dex var → DABs var (often 1:1)
+
+# dex-specific variables (prompted after DABs variables are resolved)
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_-]*$"
 
 [[variables]]
 name = "include_ci"
@@ -241,7 +327,7 @@ prompt = "Cloud provider"
 type = "choice"
 choices = ["azure", "aws", "gcp"]
 
-# Conditional file inclusion
+# Conditional file inclusion (dex layer only)
 [[files]]
 src = ".github/"
 condition = "include_ci"
@@ -252,7 +338,28 @@ src = "cloud/{{ cloud_provider }}/"
 dest = "infra/"
 ```
 
-### 6.3. Variable Types
+### 6.4. DABs Init Integration Details
+
+When `[template.dabs]` is present, the Python CLI orchestrates:
+
+1. **Collect dex variables** — prompt the user (or use `--no-prompt` defaults)
+2. **Write a temporary DABs config file** — map dex variables into DABs variable
+   names per `[template.dabs.variable_map]`, write as JSON
+3. **Run `databricks bundle init`** non-interactively:
+   ```
+   databricks bundle init <source> \
+     --output-dir <target> \
+     --config-file <tmp-config.json>
+   ```
+4. **Render dex files on top** — call into dex-core to render `files/` with Jinja2,
+   writing into the same target directory. Files DABs already created are **not**
+   overwritten unless a `[[files]]` rule sets `overwrite = true`.
+5. **Run hooks** — post_scaffold, etc.
+
+This means `databricks` CLI must be installed for DABs-composite templates.
+Standalone templates (no `[template.dabs]`) have no external dependency.
+
+### 6.6. Variable Types
 
 | Type     | Rust Type | Prompt Widget           |
 |----------|-----------|-------------------------|
@@ -261,7 +368,7 @@ dest = "infra/"
 | `choice` | `String`  | Select from list        |
 | `multi`  | `Vec`     | Multi-select from list  |
 
-### 6.4. Template Sources
+### 6.7. Template Sources
 
 Templates are resolved in order:
 
@@ -270,7 +377,7 @@ Templates are resolved in order:
 3. **User-configured** — paths in `~/.config/dex/config.toml`
 4. **Python entry points** — templates registered by installed packages
 
-### 6.5. Hooks
+### 6.8. Hooks
 
 Hooks are Python scripts invoked at lifecycle points:
 

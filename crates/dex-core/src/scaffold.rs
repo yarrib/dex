@@ -184,6 +184,7 @@ mod tests {
             src: ".github/".to_string(),
             dest: None,
             condition: Some("include_ci".to_string()),
+            overwrite: false,
         }];
 
         let template = make_template(files, rules);

@@ -29,10 +29,16 @@ fn parse_template_manifest(path: &str) -> PyResult<TemplateManifestPy> {
     let manifest = TemplateManifest::from_path(&PathBuf::from(path))
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
+    let dabs = manifest.template.dabs.map(|d| DabsBaseSpecPy {
+        source: d.source,
+        variable_map: d.variable_map,
+    });
+
     Ok(TemplateManifestPy {
         name: manifest.template.name,
         description: manifest.template.description,
         version: manifest.template.version,
+        dabs,
         variables: manifest
             .variables
             .into_iter()
@@ -112,7 +118,18 @@ struct TemplateManifestPy {
     #[pyo3(get)]
     version: String,
     #[pyo3(get)]
+    dabs: Option<DabsBaseSpecPy>,
+    #[pyo3(get)]
     variables: Vec<VariableSpecPy>,
+}
+
+#[pyclass]
+#[derive(Clone)]
+struct DabsBaseSpecPy {
+    #[pyo3(get)]
+    source: String,
+    #[pyo3(get)]
+    variable_map: HashMap<String, String>,
 }
 
 #[pyclass]
@@ -202,6 +219,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TemplateManifestPy>()?;
     m.add_class::<VariableSpecPy>()?;
     m.add_class::<TemplateMetaPy>()?;
+    m.add_class::<DabsBaseSpecPy>()?;
     m.add_class::<ScaffoldResultPy>()?;
     Ok(())
 }
