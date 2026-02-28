@@ -56,6 +56,7 @@ dependencies = [
  "minijinja",
  "regex",
  "serde",
+ "serde_json",
  "tempfile",
  "thiserror",
  "toml",

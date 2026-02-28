@@ -295,26 +295,29 @@ min_dex_version = "0.1.0"
 # DABs template as foundation — rendered by `databricks bundle init`
 [template.dabs]
 # Any valid source for `databricks bundle init`:
-source = "https://github.com/databricks/bundle-examples/tree/main/default-python"
+source = "https://github.com/databricks/mlops-stacks"
 #   source = "default-python"                    # built-in DABs template name
 #   source = "/path/to/local/dabs/template"      # local path
 #   source = "https://github.com/myorg/templates" # Git URL
 
-# Map dex variables → DABs Go template variables.
-# dex collects variables first, writes them to a temp JSON config,
-# then passes --config-file to `databricks bundle init` so it runs
-# non-interactively.
-[template.dabs.variable_map]
-project_name = "project_name"    # dex var → DABs var (often 1:1)
+# How DABs variables are prompted. One of:
+#   "passthrough" — let `databricks bundle init` run interactively (default)
+#   "unified"     — dex reads databricks_template_schema.json from the source,
+#                    merges with dex variables, presents one prompt flow
+#   "mapped"      — pre-fill via variable_map, DABs prompts for the rest
+prompt = "unified"
 
-# dex-specific variables (prompted after DABs variables are resolved)
-[[variables]]
-name = "project_name"
-prompt = "Project name"
-type = "string"
-required = true
-validate = "^[a-z][a-z0-9_-]*$"
+# For "mapped" mode only: map dex variable names → DABs variable names.
+# [template.dabs.variable_map]
+# project_name = "input_project_name"
 
+# For "unified" mode: override specific DABs schema variables.
+# dex reads the schema automatically — these overrides let you change
+# defaults, restrict choices, or hide variables.
+[template.dabs.overrides.input_cloud]
+default = "azure"
+
+# dex-specific variables (beyond what DABs provides)
 [[variables]]
 name = "include_ci"
 prompt = "Include CI/CD configuration?"
@@ -322,10 +325,11 @@ type = "bool"
 default = true
 
 [[variables]]
-name = "cloud_provider"
-prompt = "Cloud provider"
+name = "monitoring_tier"
+prompt = "Monitoring tier"
 type = "choice"
-choices = ["azure", "aws", "gcp"]
+choices = ["basic", "full"]
+default = "basic"
 
 # Conditional file inclusion (dex layer only)
 [[files]]
@@ -338,26 +342,129 @@ src = "cloud/{{ cloud_provider }}/"
 dest = "infra/"
 ```
 
-### 6.4. DABs Init Integration Details
+### 6.4. DABs Prompt Modes
 
-When `[template.dabs]` is present, the Python CLI orchestrates:
+The `prompt` field in `[template.dabs]` controls how DABs template variables are
+collected. There are three modes, each with different tradeoffs:
 
-1. **Collect dex variables** — prompt the user (or use `--no-prompt` defaults)
-2. **Write a temporary DABs config file** — map dex variables into DABs variable
-   names per `[template.dabs.variable_map]`, write as JSON
-3. **Run `databricks bundle init`** non-interactively:
-   ```
-   databricks bundle init <source> \
-     --output-dir <target> \
-     --config-file <tmp-config.json>
-   ```
-4. **Render dex files on top** — call into dex-core to render `files/` with Jinja2,
-   writing into the same target directory. Files DABs already created are **not**
-   overwritten unless a `[[files]]` rule sets `overwrite = true`.
-5. **Run hooks** — post_scaffold, etc.
+#### Mode 1: `"passthrough"` (default)
 
-This means `databricks` CLI must be installed for DABs-composite templates.
-Standalone templates (no `[template.dabs]`) have no external dependency.
+Let `databricks bundle init` handle its own interactive prompts. dex prompts for
+its own variables afterward. Two prompt sessions, zero configuration.
+
+```
+dex init --template ml-pipeline
+    │
+    ▼  Phase 1 — interactive DABs prompts
+    databricks bundle init <source> --output-dir <target>
+      → "Project name [my_project]: " (from DABs schema)
+      → "Cloud provider (aws/azure/gcp) [azure]: " (from DABs schema)
+      → ... (all DABs prompts run natively)
+    │
+    ▼  Phase 2 — dex prompts
+    dex: "Include CI/CD configuration? [Y/n]: "
+    dex: "Monitoring tier (basic/full) [basic]: "
+    │
+    ▼  Phase 3 — dex renders its own files on top
+```
+
+**Use when:** You want simplicity, or the DABs template has complex conditional
+prompts (`skip_prompt_if`) that are hard to replicate.
+
+#### Mode 2: `"unified"` (best UX)
+
+dex fetches the `databricks_template_schema.json` from the template source,
+parses its properties, merges with dex variables, and presents **one unified
+prompt flow**. All prompts come through dex's click-based UI.
+
+```
+dex init --template ml-pipeline
+    │
+    ▼  Single prompt flow (dex handles everything)
+    "Project name [my_project]: "          ← from DABs schema
+    "Cloud provider (aws/azure/gcp): "     ← from DABs schema, override default
+    "Include CI/CD configuration? [Y/n]: " ← from dex template.toml
+    "Monitoring tier (basic/full): "        ← from dex template.toml
+    │
+    ▼  Phase 1 — non-interactive DABs scaffold
+    databricks bundle init <source> \
+      --output-dir <target> \
+      --config-file <full-config.json>   ← all DABs vars pre-filled
+    │
+    ▼  Phase 2 — dex renders its own files on top
+```
+
+How dex resolves the schema:
+
+1. **Local path** — read `<source>/databricks_template_schema.json` directly
+2. **Git URL** — shallow-clone to temp dir, read schema, pass clone path to
+   `databricks bundle init` (avoids cloning twice)
+3. **Built-in name** — not supported for unified mode (use passthrough)
+
+The `[template.dabs.overrides]` section lets template authors customize DABs
+prompts: change defaults, restrict choices, rewrite descriptions. Properties not
+overridden use the values from the DABs schema as-is.
+
+**Use when:** You want the best UX — one prompt flow, consistent styling, and
+the ability to customize DABs prompts for your org.
+
+#### Mode 3: `"mapped"`
+
+Pre-fill specific DABs variables via `variable_map`, let `databricks bundle init`
+prompt interactively for anything else. A hybrid of passthrough and unified.
+
+```toml
+[template.dabs]
+source = "https://github.com/databricks/mlops-stacks"
+prompt = "mapped"
+
+[template.dabs.variable_map]
+project_name = "input_project_name"    # dex var → DABs var
+cloud_provider = "input_cloud"
+```
+
+```
+dex init --template ml-pipeline
+    │
+    ▼  dex prompts for its own variables
+    "Project name: "        ← dex variable (also mapped to DABs)
+    "Cloud provider: "      ← dex variable (also mapped to DABs)
+    "Include CI? [Y/n]: "   ← dex-only variable
+    │
+    ▼  Phase 1 — partially non-interactive DABs scaffold
+    databricks bundle init <source> \
+      --output-dir <target> \
+      --config-file <partial-config.json>   ← only mapped vars
+      → DABs prompts for unmapped vars (if any)
+    │
+    ▼  Phase 2 — dex renders its own files on top
+```
+
+**Use when:** You want to share some variables between dex and DABs (e.g.
+`project_name`) without reading the full schema, and you're OK with the
+DABs CLI prompting for anything you didn't map.
+
+### 6.5. `databricks_template_schema.json` Parsing
+
+For unified mode, dex parses the DABs schema and converts properties to dex
+variable specs:
+
+| DABs Schema Field | dex Variable Field | Notes                          |
+|-------------------|--------------------|--------------------------------|
+| property name     | `name`             | Direct mapping                 |
+| `description`     | `prompt`           | Used as prompt text            |
+| `type`            | `var_type`         | `"string"` → `String`/`Choice` |
+| `default`         | `default`          | Supports `{{.other_var}}` refs |
+| `enum`            | `choices`          | Converts type to `Choice`      |
+| `pattern`         | `validate`         | Regex validation               |
+| `order`           | sort key           | Lower = prompted first         |
+| `skip_prompt_if`  | (evaluated)        | Conditional prompting          |
+
+DABs variables are prompted first (sorted by `order`), followed by dex-specific
+variables (sorted by declaration order in `template.toml`). Variable names that
+appear in both DABs schema and dex `[[variables]]` are deduplicated — the dex
+definition takes precedence (allowing the template author to override prompts,
+defaults, or validation).
 
 ### 6.6. Variable Types
 
@@ -469,7 +576,128 @@ from dex._core import (
 The `_core` module is the FFI boundary. The public Python API (`dex.*`) wraps
 it with Pythonic interfaces.
 
-## 8. v0.1 Scope
+## 8. Agent Scaffolding (`dex agent`)
+
+### 8.1. Overview
+
+`dex agent` extends dex with opinionated agent project scaffolding. It combines
+deterministic project generation with a generative Q&A flow powered by Claude to
+produce a working, deployable agent project — fully integrated into the DAB
+workflow dex already manages.
+
+Agent projects are just DABs. Everything dex does (deploy, validate, pass-through)
+works on agent projects without special casing.
+
+```
+dex agent new              # scaffold a new agent project
+dex agent eval             # run evals and log results to MLflow (future)
+dex agent add tool         # scaffold a tool into an existing project (future)
+dex deploy                 # existing dex DAB deploy — works unchanged
+```
+
+### 8.2. Philosophy
+
+- **Opinions are the value.** MLflow tracing, structured logging, evals, and DAB
+  config are always included. Remove them if you don't want them — but you'll
+  never have to add them.
+- **Scaffold fast, build inside structure.** Deterministic generation creates the
+  project. Claude fills in agent logic inside that structure.
+- **Describe behavior, not boilerplate.** The Q&A asks what the agent does, not
+  how to wire up infrastructure.
+
+### 8.3. Q&A Flow
+
+The interactive flow collects just enough context to scaffold meaningfully:
+
+1. **What does this agent do in one sentence?**
+2. **What triggers it?** (user request / schedule / event / upstream system)
+3. **What does success look like?**
+4. **What does it need to read?** (tables, APIs, files)
+5. **What does it need to write or change?**
+6. **Does it hand off to a human or another agent?**
+7. **Autonomous or confirm before acting?**
+8. **Example input and correct output?**
+9. **What would a bad or dangerous output look like?**
+10. **Job, serving endpoint, or interactive?**
+
+Answers drive:
+- The `CLAUDE.md` and system prompt
+- Tool stubs
+- The first eval test case
+- DAB config (job vs serving endpoint, schedule, etc.)
+
+### 8.4. Generated Structure
+
+```
+my-agent/
+├── CLAUDE.md                   # project instructions for Claude Code
+├── databricks.yml              # DAB root config
+├── resources/
+│   └── my_agent_job.yml        # DAB job or serving endpoint definition
+├── src/
+│   └── my_agent/
+│       ├── __init__.py
+│       ├── agent.py            # agent definition and loop
+│       ├── tools/
+│       │   ├── __init__.py     # tool discovery and ToolResult dataclass
+│       │   └── example_tool.py # stub tool(s) from Q&A
+│       ├── prompts/
+│       │   └── system.md       # system prompt from Q&A
+│       └── tracing.py          # MLflow tracing (always included)
+├── evals/
+│   ├── runner.py               # eval harness → MLflow
+│   └── cases/
+│       └── example.json        # one eval case from Q&A
+├── tests/
+│   └── test_agent.py
+├── pyproject.toml
+└── .env.example
+```
+
+### 8.5. Baked-In Defaults
+
+**MLflow Tracing** — every agent run is traced. Experiment name derived from
+project name. Traces include input, output, tool calls, latency, errors.
+
+**Structured Logging** — JSON logging only. No print statements in generated code.
+
+**Evals Folder** — always generated with a runner and one seeded test case.
+
+**CLAUDE.md** — always generated. Contains agent description, project structure,
+conventions, and constraints for Claude Code.
+
+**DAB Config** — always generated and deployable.
+
+**Tool Interface** — all tools return `ToolResult(success, data, error)` and are
+auto-discovered from the `tools/` directory.
+
+### 8.6. Two-Phase Generation
+
+**Phase 1 — Deterministic (Rust core).** File structure, DAB config, tracing
+setup, tool interface, eval harness. Fast, predictable, testable.
+
+**Phase 2 — Generative (Python layer → Claude API).** Flesh out `agent.py`,
+complete tool stubs, write the system prompt, fill in the eval case. Claude
+operates inside the already-generated structure. The `CLAUDE.md` constrains it.
+
+The generative phase is optional (`--no-generate` flag) — you can scaffold
+the structure and write the agent logic yourself.
+
+### 8.7. Eval Case Format
+
+```json
+{
+    "id": "example-01",
+    "description": "Basic happy path",
+    "input": "...",
+    "expected_behavior": "...",
+    "should_not": "..."
+}
+```
+
+Results are logged to the MLflow experiment as a run with pass/fail metrics.
+
+## 9. v0.1 Scope
 
 **Ship: `dex init` with one built-in template.**
 

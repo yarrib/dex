@@ -41,10 +41,50 @@ pub struct TemplateMetaRaw {
 pub struct DabsBaseSpec {
     /// Source for `databricks bundle init` — URL, local path, or built-in name.
     pub source: String,
+
+    /// How DABs variables are collected. One of:
+    /// - `"passthrough"` (default) — let `databricks bundle init` prompt interactively
+    /// - `"unified"` — dex reads databricks_template_schema.json, merges prompts
+    /// - `"mapped"` — pre-fill via variable_map, DABs prompts for unmapped vars
+    #[serde(default)]
+    pub prompt: DabsPromptMode,
+
     /// Maps dex variable names to DABs template variable names.
-    /// Used to write a config JSON file for non-interactive DABs init.
+    /// Used in "mapped" mode to write a config JSON for partial pre-fill.
     #[serde(default)]
     pub variable_map: std::collections::HashMap<String, String>,
+
+    /// Overrides for DABs schema variables (unified mode).
+    /// Keys are DABs variable names. Values override default, choices, etc.
+    #[serde(default)]
+    pub overrides: std::collections::HashMap<String, DabsVariableOverride>,
+}
+
+/// How DABs template variables are prompted during `dex init`.
+#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum DabsPromptMode {
+    /// Let `databricks bundle init` handle prompts interactively.
+    #[default]
+    Passthrough,
+    /// dex reads the DABs schema, merges with dex variables, single prompt flow.
+    Unified,
+    /// Pre-fill mapped variables, DABs prompts for the rest.
+    Mapped,
+}
+
+/// Override for a specific DABs schema variable (unified mode).
+#[derive(Debug, Deserialize)]
+pub struct DabsVariableOverride {
+    #[serde(default)]
+    pub default: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub choices: Option<Vec<String>>,
+    /// If true, skip this variable (don't prompt, use default).
+    #[serde(default)]
+    pub skip: bool,
 }
 
 /// Conditional file inclusion / path remapping rule.
@@ -78,14 +118,13 @@ impl TemplateManifest {
             path: path.to_path_buf(),
             source,
         })?;
-        Self::from_str(&content)
+        Self::parse(&content)
     }
 
     /// Parse a `template.toml` from a string.
-    pub fn from_str(content: &str) -> Result<Self, DexError> {
-        toml::from_str(content).map_err(|e| {
-            DexError::Template(TemplateError::InvalidManifest(e.to_string()))
-        })
+    pub fn parse(content: &str) -> Result<Self, DexError> {
+        toml::from_str(content)
+            .map_err(|e| DexError::Template(TemplateError::InvalidManifest(e.to_string())))
     }
 
     /// Convert to a `TemplateMeta` for listing.
@@ -112,7 +151,7 @@ mod tests {
             description = "Default project template"
             version = "0.1.0"
         "#;
-        let manifest = TemplateManifest::from_str(toml_str).unwrap();
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
         assert_eq!(manifest.template.name, "default");
         assert!(manifest.variables.is_empty());
         assert!(manifest.files.is_empty());
@@ -148,10 +187,13 @@ mod tests {
             src = ".github/"
             condition = "include_ci"
         "#;
-        let manifest = TemplateManifest::from_str(toml_str).unwrap();
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
         let dabs = manifest.template.dabs.unwrap();
         assert!(dabs.source.contains("bundle-examples"));
-        assert_eq!(dabs.variable_map.get("project_name").unwrap(), "project_name");
+        assert_eq!(
+            dabs.variable_map.get("project_name").unwrap(),
+            "project_name"
+        );
         assert_eq!(manifest.variables.len(), 2);
     }
 
@@ -163,7 +205,7 @@ mod tests {
             description = "Standalone template"
             version = "0.1.0"
         "#;
-        let manifest = TemplateManifest::from_str(toml_str).unwrap();
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
         assert!(manifest.template.dabs.is_none());
     }
 
@@ -197,7 +239,7 @@ mod tests {
             [hooks]
             post_scaffold = "hooks/post_scaffold.py"
         "#;
-        let manifest = TemplateManifest::from_str(toml_str).unwrap();
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
         assert_eq!(manifest.variables.len(), 2);
         assert_eq!(manifest.files.len(), 1);
         assert!(manifest.hooks.unwrap().post_scaffold.is_some());

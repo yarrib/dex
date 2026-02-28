@@ -90,6 +90,59 @@ fn scaffold_project(
     })
 }
 
+/// Scaffold an agent project from Q&A answers.
+#[pyfunction]
+fn scaffold_agent(
+    answers: &Bound<'_, PyDict>,
+    target_dir: &str,
+) -> PyResult<AgentScaffoldResultPy> {
+    let a = dex_core::agent::AgentAnswers {
+        name: extract_str(answers, "name")?,
+        description: extract_str(answers, "description")?,
+        trigger: match extract_str(answers, "trigger")?.as_str() {
+            "schedule" => dex_core::AgentTrigger::Schedule,
+            "event" => dex_core::AgentTrigger::Event,
+            "upstream_system" => dex_core::AgentTrigger::UpstreamSystem,
+            _ => dex_core::AgentTrigger::UserRequest,
+        },
+        success_criteria: extract_str(answers, "success_criteria")?,
+        reads: extract_str(answers, "reads")?,
+        writes: extract_str(answers, "writes")?,
+        handoff: answers
+            .get_item("handoff")
+            .ok()
+            .flatten()
+            .and_then(|v| v.extract::<bool>().ok())
+            .unwrap_or(false),
+        autonomous: answers
+            .get_item("autonomous")
+            .ok()
+            .flatten()
+            .and_then(|v| v.extract::<bool>().ok())
+            .unwrap_or(true),
+        example_input: extract_str(answers, "example_input")?,
+        example_output: extract_str(answers, "example_output")?,
+        bad_output: extract_str(answers, "bad_output")?,
+        deploy_target: match extract_str(answers, "deploy_target")?.as_str() {
+            "serving_endpoint" => dex_core::AgentDeployTarget::ServingEndpoint,
+            "interactive" => dex_core::AgentDeployTarget::Interactive,
+            _ => dex_core::AgentDeployTarget::Job,
+        },
+    };
+
+    let result = dex_core::agent::scaffold_agent(&a, &PathBuf::from(target_dir))
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    Ok(AgentScaffoldResultPy {
+        project_dir: result.project_dir.to_string_lossy().to_string(),
+        files_created: result
+            .files_created
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect(),
+    })
+}
+
 /// List available embedded templates.
 #[pyfunction]
 fn list_embedded_templates() -> PyResult<Vec<TemplateMetaPy>> {
@@ -171,6 +224,15 @@ struct ScaffoldResultPy {
     directories_created: Vec<String>,
 }
 
+#[pyclass]
+#[derive(Clone)]
+struct AgentScaffoldResultPy {
+    #[pyo3(get)]
+    project_dir: String,
+    #[pyo3(get)]
+    files_created: Vec<String>,
+}
+
 // --- Helpers ---
 
 fn dict_to_minijinja_value(dict: &Bound<'_, PyDict>) -> PyResult<minijinja::Value> {
@@ -183,9 +245,7 @@ fn dict_to_minijinja_value(dict: &Bound<'_, PyDict>) -> PyResult<minijinja::Valu
     Ok(minijinja::Value::from_serialize(&map))
 }
 
-fn dict_to_hashmap(
-    dict: &Bound<'_, PyDict>,
-) -> PyResult<HashMap<String, minijinja::Value>> {
+fn dict_to_hashmap(dict: &Bound<'_, PyDict>) -> PyResult<HashMap<String, minijinja::Value>> {
     let mut map = HashMap::new();
     for (key, value) in dict.iter() {
         let k: String = key.extract()?;
@@ -209,17 +269,28 @@ fn python_to_minijinja_value(obj: &Bound<'_, PyAny>) -> PyResult<minijinja::Valu
     }
 }
 
+/// Extract a string value from a Python dict, returning a PyResult.
+fn extract_str(dict: &Bound<'_, PyDict>, key: &str) -> PyResult<String> {
+    dict.get_item(key)
+        .ok()
+        .flatten()
+        .and_then(|v| v.extract::<String>().ok())
+        .ok_or_else(|| PyValueError::new_err(format!("missing required key: {key}")))
+}
+
 /// The dex._core Python module.
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render_template, m)?)?;
     m.add_function(wrap_pyfunction!(parse_template_manifest, m)?)?;
     m.add_function(wrap_pyfunction!(scaffold_project, m)?)?;
+    m.add_function(wrap_pyfunction!(scaffold_agent, m)?)?;
     m.add_function(wrap_pyfunction!(list_embedded_templates, m)?)?;
     m.add_class::<TemplateManifestPy>()?;
     m.add_class::<VariableSpecPy>()?;
     m.add_class::<TemplateMetaPy>()?;
     m.add_class::<DabsBaseSpecPy>()?;
     m.add_class::<ScaffoldResultPy>()?;
+    m.add_class::<AgentScaffoldResultPy>()?;
     Ok(())
 }

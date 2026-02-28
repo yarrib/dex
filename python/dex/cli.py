@@ -83,6 +83,10 @@ def create_cli(
     # Register built-in commands.
     group.add_command(init_command)
 
+    # Register agent subcommand group.
+    from dex.agent import agent_group
+    group.add_command(agent_group)
+
     return group
 
 

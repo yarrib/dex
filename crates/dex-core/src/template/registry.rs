@@ -59,7 +59,7 @@ fn load_template_files(dir: &Path) -> Result<HashMap<PathBuf, String>, DexError>
     for entry in walkdir::WalkDir::new(dir).into_iter() {
         let entry = entry.map_err(|e| DexError::Io {
             path: dir.to_path_buf(),
-            source: std::io::Error::new(std::io::ErrorKind::Other, e),
+            source: std::io::Error::other(e),
         })?;
 
         if entry.file_type().is_file() {
@@ -68,11 +68,10 @@ fn load_template_files(dir: &Path) -> Result<HashMap<PathBuf, String>, DexError>
                 .strip_prefix(dir)
                 .expect("walkdir entry should be under base dir");
 
-            let content =
-                std::fs::read_to_string(entry.path()).map_err(|source| DexError::Io {
-                    path: entry.path().to_path_buf(),
-                    source,
-                })?;
+            let content = std::fs::read_to_string(entry.path()).map_err(|source| DexError::Io {
+                path: entry.path().to_path_buf(),
+                source,
+            })?;
 
             files.insert(rel_path.to_path_buf(), content);
         }
@@ -137,7 +136,7 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         ))
     })?;
 
-    let manifest = TemplateManifest::from_str(manifest_str)?;
+    let manifest = TemplateManifest::parse(manifest_str)?;
 
     // Collect files from the embedded "files/" subdirectory.
     let mut files = HashMap::new();
@@ -149,7 +148,7 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         files: &mut HashMap<PathBuf, String>,
     ) {
         for file in dir.files() {
-            if let Some(rel) = file.path().strip_prefix(base_prefix).ok() {
+            if let Ok(rel) = file.path().strip_prefix(base_prefix) {
                 if let Some(content) = file.contents_utf8() {
                     files.insert(rel.to_path_buf(), content.to_string());
                 }
@@ -179,7 +178,7 @@ fn list_embedded_templates() -> Result<Vec<TemplateMeta>, DexError> {
         let manifest_file = dir.get_file("template.toml");
         if let Some(file) = manifest_file {
             if let Some(content) = file.contents_utf8() {
-                if let Ok(manifest) = TemplateManifest::from_str(content) {
+                if let Ok(manifest) = TemplateManifest::parse(content) {
                     templates.push(manifest.meta());
                 }
             }

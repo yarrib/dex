@@ -41,11 +41,9 @@ impl VariableSpec {
     pub fn validate_value(&self, value: &str) -> Result<(), TemplateError> {
         // Check against regex pattern if present.
         if let Some(pattern) = &self.validate {
-            let re = regex::Regex::new(pattern).map_err(|e| {
-                TemplateError::ValidationFailed {
-                    name: self.name.clone(),
-                    message: format!("invalid validation pattern: {e}"),
-                }
+            let re = regex::Regex::new(pattern).map_err(|e| TemplateError::ValidationFailed {
+                name: self.name.clone(),
+                message: format!("invalid validation pattern: {e}"),
             })?;
             if !re.is_match(value) {
                 return Err(TemplateError::ValidationFailed {
@@ -60,10 +58,7 @@ impl VariableSpec {
             if !choices.iter().any(|c| c == value) {
                 return Err(TemplateError::ValidationFailed {
                     name: self.name.clone(),
-                    message: format!(
-                        "value '{value}' is not one of: {}",
-                        choices.join(", ")
-                    ),
+                    message: format!("value '{value}' is not one of: {}", choices.join(", ")),
                 });
             }
         }

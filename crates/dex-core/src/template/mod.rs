@@ -1,5 +1,6 @@
 //! Template system: engine, manifest parsing, registry, and variable handling.
 
+pub mod dabs_schema;
 pub mod engine;
 pub mod manifest;
 pub mod registry;
