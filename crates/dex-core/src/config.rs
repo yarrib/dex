@@ -121,7 +121,10 @@ mod tests {
         assert_eq!(config.project.name, "ml-pipeline");
         assert_eq!(config.tasks.len(), 2);
         assert_eq!(config.tasks["build"].depends_on, vec!["test"]);
-        assert_eq!(config.profiles["dev"].cluster_id.as_deref(), Some("0123-456789-abcdef"));
+        assert_eq!(
+            config.profiles["dev"].cluster_id.as_deref(),
+            Some("0123-456789-abcdef")
+        );
         assert_eq!(config.passthrough["db"].command, "databricks");
     }
 }

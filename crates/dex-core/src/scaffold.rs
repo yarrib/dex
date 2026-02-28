@@ -70,10 +70,7 @@ pub fn scaffold(
         }
 
         // Render content through template engine if it's a .j2 file.
-        let is_template = rel_path
-            .extension()
-            .and_then(|e| e.to_str())
-            == Some("j2");
+        let is_template = rel_path.extension().and_then(|e| e.to_str()) == Some("j2");
 
         let rendered_content = if is_template {
             engine.render_string(content, &context)?
@@ -175,10 +172,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut files = HashMap::new();
         files.insert(PathBuf::from("README.md"), "# Hello".to_string());
-        files.insert(
-            PathBuf::from(".github/ci.yml"),
-            "name: CI".to_string(),
-        );
+        files.insert(PathBuf::from(".github/ci.yml"), "name: CI".to_string());
 
         let rules = vec![FileRule {
             src: ".github/".to_string(),
