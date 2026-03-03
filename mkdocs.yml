@@ -1,0 +1,53 @@
+site_name: dex
+site_description: Extensible CLI framework for data project operations
+site_url: https://yarrib.github.io/dex
+repo_url: https://github.com/yarrib/dex
+repo_name: yarrib/dex
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      enable_creation_date: true
+
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.snippets
+  - attr_list
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage:
+      - Overview: usage/index.md
+      - dex init: usage/init.md
+      - Templates: usage/templates.md
+      - dex agent new: usage/agent.md
+  - Contributing: contributing.md

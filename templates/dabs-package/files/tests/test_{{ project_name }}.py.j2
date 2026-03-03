@@ -1,0 +1,13 @@
+from {{ project_name }}.main import main
+
+
+def test_main_runs(monkeypatch):
+    """Smoke test: main() runs without raising."""
+    from unittest.mock import MagicMock, patch
+
+    mock_spark = MagicMock()
+    with patch("{{ project_name }}.main.SparkSession") as mock_session_cls:
+        mock_session_cls.builder.getOrCreate.return_value = mock_spark
+        main(catalog="test_catalog", schema="test_schema")
+
+    mock_spark.sql.assert_called()

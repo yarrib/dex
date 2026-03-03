@@ -143,6 +143,33 @@ fn scaffold_agent(
     })
 }
 
+/// Return the variable specs for a named template.
+#[pyfunction]
+fn get_template_variables(source: &str, name: &str) -> PyResult<Vec<VariableSpecPy>> {
+    let template_source = if source == "__embedded__" {
+        TemplateSource::Embedded
+    } else {
+        TemplateSource::Directory(PathBuf::from(source))
+    };
+
+    let template = dex_core::template::registry::load_template(&template_source, name)
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    Ok(template
+        .variables
+        .into_iter()
+        .map(|v| VariableSpecPy {
+            name: v.name,
+            prompt: v.prompt,
+            var_type: format!("{:?}", v.var_type).to_lowercase(),
+            required: v.required,
+            default: v.default.map(|d| d.to_string()),
+            choices: v.choices,
+            validate: v.validate,
+        })
+        .collect())
+}
+
 /// List available embedded templates.
 #[pyfunction]
 fn list_embedded_templates() -> PyResult<Vec<TemplateMetaPy>> {
@@ -285,6 +312,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_template_manifest, m)?)?;
     m.add_function(wrap_pyfunction!(scaffold_project, m)?)?;
     m.add_function(wrap_pyfunction!(scaffold_agent, m)?)?;
+    m.add_function(wrap_pyfunction!(get_template_variables, m)?)?;
     m.add_function(wrap_pyfunction!(list_embedded_templates, m)?)?;
     m.add_class::<TemplateManifestPy>()?;
     m.add_class::<VariableSpecPy>()?;

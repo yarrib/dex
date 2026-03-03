@@ -2,9 +2,10 @@
 
 ## What is dex
 
-An opinionated CLI framework for Databricks/MLOps project operations. Rust core (template
-engine, config, file I/O) with Python surface (click CLI, extensibility, pass-throughs).
-Distributed as a Python package via maturin/PyO3. See `docs/SPEC.md` and `docs/ARCHITECTURE.md`.
+An extensible CLI framework for data project operations — Python packages, Databricks workflows,
+and more. Rust core (template engine, config, file I/O) with Python surface (click CLI,
+extensibility, pass-throughs). Distributed as a Python package via maturin/PyO3.
+See `docs/SPEC.md` and `docs/ARCHITECTURE.md`.
 
 ## Build Commands
 
@@ -15,14 +16,20 @@ cargo test                       # run all Rust tests
 cargo clippy -- -D warnings      # lint (treat warnings as errors)
 cargo fmt --check                # format check
 
-# Python (requires maturin)
-maturin develop                  # build + install into current venv
-pytest                           # run Python tests
-ruff check python/               # lint Python
-ruff format --check python/      # format check Python
+# Python (requires maturin + uv)
+uv sync                          # install Python deps
+maturin develop                  # build + install Rust extension into venv
+uv run pytest                    # run Python tests
+uv run ruff check python/        # lint Python
+uv run ruff format --check python/  # format check Python
 
-# Everything
-cargo test && maturin develop && pytest
+# Shortcuts via make
+make dev                         # uv sync + maturin develop
+make build                       # cargo build + maturin develop
+make test                        # cargo test + uv run pytest
+make lint                        # clippy + ruff check
+make fmt                         # cargo fmt + ruff format
+make fmt-check                   # format check (no writes)
 ```
 
 ## Repository Structure
@@ -61,7 +68,7 @@ docs/               Specification and architecture documents.
 
 ### Rust
 
-- Edition 2021, target stable Rust
+- Edition 2024, target stable Rust
 - `thiserror` for error types in dex-core, never `anyhow`
 - `#[must_use]` on functions that return values callers shouldn't ignore
 - Public API types in `lib.rs`, implementation in submodules
@@ -71,7 +78,7 @@ docs/               Specification and architecture documents.
 
 ### Python
 
-- Python 3.10+ (match statements OK)
+- Python 3.11+
 - Type hints on all public functions
 - `click` for CLI, not `argparse` or `typer`
 - `rich` for terminal output formatting

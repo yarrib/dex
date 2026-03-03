@@ -10,3 +10,11 @@ prompt = "Project name"
 type = "string"
 required = true
 validate = "^[a-z][a-z0-9_-]*$"
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
