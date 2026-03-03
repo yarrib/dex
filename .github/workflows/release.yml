@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set version from tag
+        run: python3 scripts/bump-version.py ${{ github.ref_name }}
+
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -43,6 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: python3 scripts/bump-version.py ${{ github.ref_name }}
 
       - name: Build sdist
         uses: PyO3/maturin-action@v1
