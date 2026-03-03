@@ -140,6 +140,8 @@ fn scaffold_agent(
             .iter()
             .map(|p| p.to_string_lossy().to_string())
             .collect(),
+        system_prompt: result.system_prompt,
+        claude_md: result.claude_md,
     })
 }
 
@@ -258,6 +260,10 @@ struct AgentScaffoldResultPy {
     project_dir: String,
     #[pyo3(get)]
     files_created: Vec<String>,
+    #[pyo3(get)]
+    system_prompt: String,
+    #[pyo3(get)]
+    claude_md: String,
 }
 
 // --- Helpers ---

@@ -137,17 +137,15 @@ fn answers_to_context(answers: &AgentAnswers, project_name: &str) -> HashMap<Str
     ctx
 }
 
-/// Slugify a name for use as a project/module name.
+/// Slugify a name for use as a Python module/package name.
+///
+/// Converts to lowercase, replaces hyphens and any non-alphanumeric characters
+/// with underscores. Hyphens are explicitly replaced because hyphenated names
+/// are invalid as Python identifiers (e.g. `import table-anomaly` is a syntax error).
 fn slugify(name: &str) -> String {
     name.to_lowercase()
         .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '_'
-            }
-        })
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
         .collect::<String>()
         .trim_matches('_')
         .to_string()
@@ -620,7 +618,9 @@ mod tests {
     #[test]
     fn slugify_names() {
         assert_eq!(slugify("My Cool Agent"), "my_cool_agent");
-        assert_eq!(slugify("table-anomaly-monitor"), "table-anomaly-monitor");
+        assert_eq!(slugify("table-anomaly-monitor"), "table_anomaly_monitor");
+        assert_eq!(slugify("my.package"), "my_package");
+        assert_eq!(slugify("__leading"), "leading");
     }
 
     #[test]
@@ -632,7 +632,7 @@ mod tests {
         assert!(result.project_dir.exists());
         assert!(result.files_created.len() > 10);
         assert!(result.system_prompt.contains("anomalies"));
-        assert!(result.claude_md.contains("table-anomaly-monitor"));
+        assert!(result.claude_md.contains("table_anomaly_monitor"));
 
         // Check key files exist
         assert!(result.project_dir.join("pyproject.toml").exists());
@@ -640,11 +640,11 @@ mod tests {
         assert!(result.project_dir.join("CLAUDE.md").exists());
         assert!(result
             .project_dir
-            .join("src/table-anomaly-monitor/agent.py")
+            .join("src/table_anomaly_monitor/agent.py")
             .exists());
         assert!(result
             .project_dir
-            .join("src/table-anomaly-monitor/tracing.py")
+            .join("src/table_anomaly_monitor/tracing.py")
             .exists());
         assert!(result.project_dir.join("evals/cases/example.json").exists());
     }
