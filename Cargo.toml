@@ -1,0 +1,36 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+authors = ["yarrib"]
+repository = "https://github.com/yarrib/dex"
+
+[workspace.dependencies]
+# Internal
+dex-core = { path = "crates/dex-core" }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Template engine
+minijinja = { version = "2", features = ["loader"] }
+
+# Error handling
+thiserror = "2"
+
+# Filesystem
+walkdir = "2"
+include_dir = { version = "0.7", features = ["glob"] }
+regex = "1"
+
+# Python bindings
+pyo3 = { version = "0.23", features = ["extension-module"] }
+
+# Testing
+insta = { version = "1", features = ["yaml"] }
+tempfile = "3"

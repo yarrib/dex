@@ -1,0 +1,16 @@
+[package]
+name = "dex-py"
+version = "0.1.0"
+description = "Python bindings for dex-core via PyO3"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+name = "_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+dex-core = { workspace = true }
+minijinja = { workspace = true }
+pyo3 = { workspace = true }

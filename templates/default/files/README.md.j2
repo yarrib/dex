@@ -1,0 +1,33 @@
+# {{ project_name }}
+
+A Databricks ML project scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/    # Package source
+├── notebooks/                 # Databricks notebooks
+├── tests/                     # Tests
+├── databricks.yml             # Databricks Asset Bundle config
+└── pyproject.toml             # Project config
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+```

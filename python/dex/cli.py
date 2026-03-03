@@ -1,0 +1,221 @@
+"""dex CLI — built on click, extensible by design.
+
+Usage as a standalone CLI:
+    dex init --template default
+
+Usage as a framework for org CLIs:
+    from dex.cli import create_cli
+    cli = create_cli(name="acme-dex", passthroughs=[...])
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import click
+from rich.console import Console
+
+from dex.passthrough import PassthroughCommand, PassthroughSpec
+
+console = Console()
+
+
+class DexGroup(click.Group):
+    """click Group subclass that supports pass-through commands and plugin discovery."""
+
+    def __init__(self, passthroughs: dict[str, PassthroughSpec] | None = None, **kwargs):
+        super().__init__(**kwargs)
+        self._passthroughs = passthroughs or {}
+
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.BaseCommand | None:
+        # 1. Built-in commands
+        rv = super().get_command(ctx, cmd_name)
+        if rv is not None:
+            return rv
+
+        # 2. Pass-through commands
+        if cmd_name in self._passthroughs:
+            spec = self._passthroughs[cmd_name]
+            return PassthroughCommand(
+                name=cmd_name,
+                target_command=spec.command,
+                description=spec.description,
+            )
+
+        return None
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        builtins = super().list_commands(ctx)
+        passthroughs = sorted(self._passthroughs.keys())
+        return builtins + passthroughs
+
+
+def create_cli(
+    name: str = "dex",
+    templates_dir: str | Path | None = None,
+    config_defaults: dict[str, str] | None = None,
+    passthroughs: list[PassthroughSpec] | None = None,
+) -> DexGroup:
+    """Factory for creating a dex CLI instance.
+
+    Teams call this to build their org-specific CLI::
+
+        cli = create_cli(name="acme-dex", passthroughs=[
+            PassthroughSpec(name="db", command="databricks", description="Databricks CLI"),
+        ])
+
+        @cli.command()
+        def my_custom_command():
+            ...
+    """
+    pt_map = {p.name: p for p in (passthroughs or [])}
+
+    @click.group(name=name, cls=DexGroup, passthroughs=pt_map)
+    @click.version_option(package_name="dex")
+    def group():
+        """Opinionated CLI for Databricks/MLOps project operations."""
+
+    # Store config on the group for subcommands to access.
+    group.templates_dir = templates_dir  # type: ignore[attr-defined]
+    group.config_defaults = config_defaults or {}  # type: ignore[attr-defined]
+
+    # Register built-in commands.
+    group.add_command(init_command)
+
+    # Register agent subcommand group.
+    from dex.agent import agent_group
+    group.add_command(agent_group)
+
+    return group
+
+
+@click.command("init")
+@click.option(
+    "--template",
+    "-t",
+    default="default",
+    show_default=True,
+    help="Template to scaffold from.",
+)
+@click.option(
+    "--dir",
+    "-d",
+    "directory",
+    default=".",
+    type=click.Path(),
+    help="Target directory.",
+)
+@click.option(
+    "--no-prompt",
+    is_flag=True,
+    help="Use defaults for all variables (non-interactive).",
+)
+def init_command(template: str, directory: str, no_prompt: bool) -> None:
+    """Scaffold a new project from a template."""
+    from dex._core import list_embedded_templates, scaffold_project
+
+    target = Path(directory).resolve()
+
+    console.print(f"\n[bold]dex init[/bold] — scaffolding with template [cyan]{template}[/cyan]\n")
+
+    # For v0.1, scaffold from embedded templates.
+    # Future: resolve template from multiple sources.
+    templates = list_embedded_templates()
+    template_names = [t.name for t in templates]
+
+    if template not in template_names:
+        console.print(f"[red]Error:[/red] template '{template}' not found.")
+        console.print(f"Available templates: {', '.join(template_names)}")
+        raise SystemExit(1)
+
+    # Collect variables interactively.
+    # For v0.1 with embedded templates, we parse the manifest via the core.
+    variables = {}
+
+    if not no_prompt:
+        # Default variable: project_name from target directory name
+        default_name = target.name if target.name != "." else Path.cwd().name
+        project_name = click.prompt("Project name", default=default_name)
+        variables["project_name"] = project_name
+    else:
+        variables["project_name"] = target.name if target.name != "." else Path.cwd().name
+
+    # Check if template has a DABs base — if so, run Phase 1 first.
+    # The manifest is parsed via PyO3 to check for [template.dabs].
+    # For embedded templates we check the metadata returned from list_embedded_templates.
+    # Full manifest parsing for embedded templates happens inside scaffold_project,
+    # but we need the dabs info before scaffolding to run Phase 1.
+    #
+    # For now, we use parse_template_manifest for filesystem templates only.
+    # Embedded templates in v0.1 are standalone (no DABs base).
+    # Future: expose dabs info for embedded templates from _core.
+
+    # Scaffold — Phase 2 (or the only phase for standalone templates)
+    result = scaffold_project("__embedded__", template, str(target), variables)
+
+    console.print(f"\n[green]Scaffolded {len(result.files_created)} files:[/green]")
+    for f in sorted(result.files_created):
+        console.print(f"  {f}")
+    console.print()
+
+
+def _run_dabs_init(
+    dabs_source: str,
+    target_dir: Path,
+    variables: dict[str, str],
+    variable_map: dict[str, str],
+) -> None:
+    """Phase 1: delegate to `databricks bundle init` for DABs-composite templates.
+
+    Writes a temporary config JSON mapping dex variables to DABs variable names,
+    then runs `databricks bundle init` non-interactively.
+    """
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+
+    # Check that databricks CLI is available.
+    if shutil.which("databricks") is None:
+        console.print(
+            "[red]Error:[/red] this template requires the Databricks CLI "
+            "(`databricks`), but it was not found on PATH."
+        )
+        console.print("Install it: https://docs.databricks.com/dev-tools/cli/install.html")
+        raise SystemExit(1)
+
+    # Map dex variable names → DABs variable names.
+    dabs_config = {}
+    for dex_var, dabs_var in variable_map.items():
+        if dex_var in variables:
+            dabs_config[dabs_var] = variables[dex_var]
+
+    # Write config to a temp file and run databricks bundle init.
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, prefix="dex-dabs-"
+    ) as f:
+        json.dump(dabs_config, f)
+        config_path = f.name
+
+    try:
+        console.print("[dim]Running databricks bundle init...[/dim]")
+        result = subprocess.run(
+            [
+                "databricks", "bundle", "init", dabs_source,
+                "--output-dir", str(target_dir),
+                "--config-file", config_path,
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            console.print(f"[red]Error:[/red] databricks bundle init failed:\n{result.stderr}")
+            raise SystemExit(result.returncode)
+        console.print("[green]DABs template scaffolded.[/green]")
+    finally:
+        Path(config_path).unlink(missing_ok=True)
+
+
+# Default CLI instance for `dex` command.
+cli = create_cli()
