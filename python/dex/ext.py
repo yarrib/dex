@@ -6,11 +6,12 @@ This module is the public API for building on top of dex.
 
 from __future__ import annotations
 
-from dex.cli import DexGroup, create_cli
+from dex.cli import DexGroup, create_cli, passthrough
 from dex.passthrough import PassthroughSpec
 
 __all__ = [
     "DexGroup",
     "PassthroughSpec",
     "create_cli",
+    "passthrough",
 ]

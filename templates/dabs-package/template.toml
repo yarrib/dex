@@ -1,0 +1,49 @@
+[template]
+name = "dabs-package"
+description = "Databricks Asset Bundle Python package project"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "include_notebook"
+prompt = "Include exploration notebook?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "include_job"
+prompt = "Include job definition?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "use_serverless"
+prompt = "Use serverless compute?"
+type = "bool"
+default = false
+required = false
+
+[[files]]
+src = "notebooks/"
+condition = "include_notebook"
+
+[[files]]
+src = "resources/"
+condition = "include_job"

@@ -58,6 +58,11 @@ pub fn scaffold(
 
         let dest = target_dir.join(&final_path);
 
+        // Respect file rule overwrite flag: skip if file exists and rule says don't overwrite.
+        if dest.exists() && !get_overwrite_flag(rel_path, &template.file_rules) {
+            continue;
+        }
+
         // Create parent directories.
         if let Some(parent) = dest.parent() {
             if !parent.exists() {
@@ -89,6 +94,21 @@ pub fn scaffold(
         files_created,
         directories_created,
     })
+}
+
+/// Return the effective overwrite flag for a file path based on file rules.
+///
+/// Returns `true` (overwrite) if no rule matches. When a rule matches, returns
+/// that rule's `overwrite` field. Relevant for DABs-composite templates where
+/// an earlier phase may have already written files that should not be replaced.
+fn get_overwrite_flag(rel_path: &Path, file_rules: &[crate::template::FileRule]) -> bool {
+    for rule in file_rules {
+        let rule_src = Path::new(&rule.src);
+        if rel_path.starts_with(rule_src) {
+            return rule.overwrite;
+        }
+    }
+    true
 }
 
 /// Check whether a file should be included based on file rules and variable values.

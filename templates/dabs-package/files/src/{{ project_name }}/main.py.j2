@@ -1,0 +1,20 @@
+import argparse
+
+from pyspark.sql import SparkSession
+
+
+def main(catalog: str, schema: str) -> None:
+    spark = SparkSession.builder.getOrCreate()
+    spark.sql(f"USE CATALOG {catalog}")
+    spark.sql(f"USE SCHEMA {schema}")
+
+    # TODO: implement your logic here
+    print(f"Running {{ project_name }} in {catalog}.{schema}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="{{ project_name }}")
+    parser.add_argument("--catalog", required=True, help="Unity Catalog catalog name")
+    parser.add_argument("--schema", required=True, help="Unity Catalog schema name")
+    args = parser.parse_args()
+    main(catalog=args.catalog, schema=args.schema)
