@@ -34,33 +34,29 @@ clean:
 
 # --- Versioning ---
 
+# Print the version currently in pyproject.toml
 version:
 	@python3 scripts/bump-version.py
 
+# Push a tag to trigger the release workflow. The tag is the version source of truth;
+# release.yml stamps the version into build artifacts at build time — no commit needed.
 bump-patch: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py patch))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
-	git commit -m "chore: bump version to $(NEW)"
 	git tag v$(NEW)
-	git push origin HEAD v$(NEW)
-	@echo "Released v$(NEW)"
+	git push origin v$(NEW)
+	@echo "Tagged v$(NEW) — release workflow will fire"
 
 bump-minor: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py minor))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
-	git commit -m "chore: bump version to $(NEW)"
 	git tag v$(NEW)
-	git push origin HEAD v$(NEW)
-	@echo "Released v$(NEW)"
+	git push origin v$(NEW)
+	@echo "Tagged v$(NEW) — release workflow will fire"
 
 bump-major: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py major))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
-	git commit -m "chore: bump version to $(NEW)"
 	git tag v$(NEW)
-	git push origin HEAD v$(NEW)
-	@echo "Released v$(NEW)"
+	git push origin v$(NEW)
+	@echo "Tagged v$(NEW) — release workflow will fire"
 
 _bump-guard:
 	@git diff --quiet && git diff --staged --quiet || (echo "error: working tree is dirty"; exit 1)
-	@git rev-parse --abbrev-ref HEAD | grep -q '^main$$' || (echo "error: not on main branch"; exit 1)
