@@ -570,8 +570,8 @@ cargo test && maturin develop && pytest
 # Build wheels for distribution
 maturin build --release
 
-# Publish to PyPI
-maturin publish
+# Attach to a GitHub Release (CI handles this automatically on tag push)
+# gh release upload vX.Y.Z dist/*.whl
 ```
 
 ### 8.3. CI
