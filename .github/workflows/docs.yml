@@ -3,21 +3,19 @@ name: Deploy docs
 on:
   push:
     branches: [main]
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
+    tags:
+      - "v*"
 
 permissions:
-  pages: write
-  id-token: write
+  contents: write  # mike commits to gh-pages branch
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed for git-revision-date-localized
+          fetch-depth: 0  # mike needs full history
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,21 +30,18 @@ jobs:
           UV_PYTHON: "3.12"
         run: uv sync --extra docs
 
-      - name: Build docs
-        run: uv run mkdocs build --strict
+      - name: Configure git for mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site/
+      - name: Deploy latest (on push to main)
+        if: github.ref_type == 'branch'
+        run: uv run mike deploy --push --update-aliases latest
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy versioned release (on tag)
+        if: github.ref_type == 'tag'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          MINOR="${VERSION%.*}"
+          uv run mike deploy --push --update-aliases "${MINOR}" latest

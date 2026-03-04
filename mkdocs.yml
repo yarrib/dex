@@ -31,6 +31,11 @@ plugins:
   - git-revision-date-localized:
       enable_creation_date: true
 
+extra:
+  version:
+    provider: mike
+    default: latest
+
 markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:

@@ -17,9 +17,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "ty>=0.0.1",
+    "ruff>=0.4",
+]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocs-git-revision-date-localized-plugin>=1.2",
+    "mike>=2.0",
 ]
 
 [project.scripts]
