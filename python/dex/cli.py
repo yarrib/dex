@@ -100,6 +100,7 @@ def create_cli(
 
     # Register agent subcommand group.
     from dex.agent import agent_group
+
     group.add_command(agent_group)
 
     # Register MCP subcommand group.
@@ -228,9 +229,14 @@ def _run_dabs_init(
         console.print("[dim]Running databricks bundle init...[/dim]")
         result = subprocess.run(
             [
-                "databricks", "bundle", "init", dabs_source,
-                "--output-dir", str(target_dir),
-                "--config-file", config_path,
+                "databricks",
+                "bundle",
+                "init",
+                dabs_source,
+                "--output-dir",
+                str(target_dir),
+                "--config-file",
+                config_path,
             ],
             capture_output=True,
             text=True,
