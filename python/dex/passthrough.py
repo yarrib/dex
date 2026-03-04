@@ -18,7 +18,7 @@ class PassthroughSpec:
     description: str | None = None
 
 
-class PassthroughCommand(click.BaseCommand):
+class PassthroughCommand(click.BaseCommand):  # type: ignore[misc]
     """A click command that delegates to an external CLI.
 
     All arguments after the command name are forwarded to the target CLI.

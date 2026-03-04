@@ -10,7 +10,6 @@ Usage as a framework for org CLIs:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import click
@@ -43,7 +42,7 @@ class DexGroup(click.Group):
         super().__init__(**kwargs)
         self._passthroughs = passthroughs or {}
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.BaseCommand | None:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.BaseCommand | None:  # type: ignore[override]
         # 1. Built-in commands
         rv = super().get_command(ctx, cmd_name)
         if rv is not None:
@@ -100,6 +99,7 @@ def create_cli(
 
     # Register agent subcommand group.
     from dex.agent import agent_group
+
     group.add_command(agent_group)
 
     # Register MCP subcommand group.
@@ -228,9 +228,14 @@ def _run_dabs_init(
         console.print("[dim]Running databricks bundle init...[/dim]")
         result = subprocess.run(
             [
-                "databricks", "bundle", "init", dabs_source,
-                "--output-dir", str(target_dir),
-                "--config-file", config_path,
+                "databricks",
+                "bundle",
+                "init",
+                dabs_source,
+                "--output-dir",
+                str(target_dir),
+                "--config-file",
+                config_path,
             ],
             capture_output=True,
             text=True,

@@ -49,11 +49,15 @@ _TOOLS: list[Tool] = [
             "properties": {
                 "template": {
                     "type": "string",
-                    "description": "Template name (e.g. 'default'). Use list_templates to discover names.",
+                    "description": (
+                        "Template name (e.g. 'default'). Use list_templates to discover names."
+                    ),
                 },
                 "directory": {
                     "type": "string",
-                    "description": "Absolute path to the target directory. Created if it does not exist.",
+                    "description": (
+                        "Absolute path to the target directory. Created if it does not exist."
+                    ),
                 },
                 "variables": {
                     "type": "object",
@@ -79,7 +83,9 @@ _TOOLS: list[Tool] = [
                 },
                 "description": {
                     "type": "string",
-                    "description": "What the agent does. Used to generate system prompt and CLAUDE.md.",
+                    "description": (
+                        "What the agent does. Used to generate system prompt and CLAUDE.md."
+                    ),
                 },
                 "directory": {
                     "type": "string",
@@ -87,7 +93,9 @@ _TOOLS: list[Tool] = [
                 },
                 "generate": {
                     "type": "boolean",
-                    "description": "If true, generate system prompt and CLAUDE.md via LLM. Default false.",
+                    "description": (
+                        "If true, generate system prompt and CLAUDE.md via LLM. Default false."
+                    ),
                     "default": False,
                 },
             },

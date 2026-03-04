@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::DexError;
-use crate::template::engine::TemplateEngine;
 use crate::template::Template;
+use crate::template::engine::TemplateEngine;
 
 /// Result of a successful scaffold operation.
 #[derive(Debug)]
@@ -64,14 +64,14 @@ pub fn scaffold(
         }
 
         // Create parent directories.
-        if let Some(parent) = dest.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|source| DexError::Io {
-                    path: parent.to_path_buf(),
-                    source,
-                })?;
-                directories_created.push(parent.to_path_buf());
-            }
+        if let Some(parent) = dest.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|source| DexError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+            directories_created.push(parent.to_path_buf());
         }
 
         // Render content through template engine if it's a .j2 file.

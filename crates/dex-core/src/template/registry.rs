@@ -100,10 +100,10 @@ fn list_directory_templates(base: &Path) -> Result<Vec<TemplateMeta>, DexError> 
         })?;
 
         let manifest_path = entry.path().join("template.toml");
-        if manifest_path.is_file() {
-            if let Ok(manifest) = TemplateManifest::from_path(&manifest_path) {
-                templates.push(manifest.meta());
-            }
+        if manifest_path.is_file()
+            && let Ok(manifest) = TemplateManifest::from_path(&manifest_path)
+        {
+            templates.push(manifest.meta());
         }
     }
 
@@ -121,13 +121,11 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         .get_dir(name)
         .ok_or_else(|| DexError::Template(TemplateError::NotFound(name.to_string())))?;
 
-    let manifest_file = template_dir
-        .get_file("template.toml")
-        .ok_or_else(|| {
-            DexError::Template(TemplateError::InvalidManifest(format!(
-                "no template.toml in embedded template '{name}'"
-            )))
-        })?;
+    let manifest_file = template_dir.get_file("template.toml").ok_or_else(|| {
+        DexError::Template(TemplateError::InvalidManifest(format!(
+            "no template.toml in embedded template '{name}'"
+        )))
+    })?;
 
     let manifest_str = manifest_file.contents_utf8().ok_or_else(|| {
         DexError::Template(TemplateError::InvalidManifest(
@@ -147,10 +145,10 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         files: &mut HashMap<PathBuf, String>,
     ) {
         for file in dir.files() {
-            if let Ok(rel) = file.path().strip_prefix(base_prefix) {
-                if let Some(content) = file.contents_utf8() {
-                    files.insert(rel.to_path_buf(), content.to_string());
-                }
+            if let Ok(rel) = file.path().strip_prefix(base_prefix)
+                && let Some(content) = file.contents_utf8()
+            {
+                files.insert(rel.to_path_buf(), content.to_string());
             }
         }
         for subdir in dir.dirs() {
@@ -175,12 +173,11 @@ fn list_embedded_templates() -> Result<Vec<TemplateMeta>, DexError> {
 
     for dir in EMBEDDED_TEMPLATES.dirs() {
         let manifest_file = dir.get_file("template.toml");
-        if let Some(file) = manifest_file {
-            if let Some(content) = file.contents_utf8() {
-                if let Ok(manifest) = TemplateManifest::parse(content) {
-                    templates.push(manifest.meta());
-                }
-            }
+        if let Some(file) = manifest_file
+            && let Some(content) = file.contents_utf8()
+            && let Ok(manifest) = TemplateManifest::parse(content)
+        {
+            templates.push(manifest.meta());
         }
     }
 

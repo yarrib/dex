@@ -12,7 +12,7 @@ pub mod template;
 pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
 pub use config::ProjectConfig;
 pub use error::DexError;
-pub use scaffold::{scaffold, ScaffoldResult};
+pub use scaffold::{ScaffoldResult, scaffold};
 pub use template::{Template, TemplateMeta, TemplateSource};
 
 /// Result type alias for dex operations.
