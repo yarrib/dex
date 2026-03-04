@@ -39,6 +39,8 @@ jobs:
   python:
     name: Python ${{ matrix.python-version }} (ruff / ty / pytest)
     runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -64,8 +66,6 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Install Python dependencies
-        env:
-          UV_PYTHON: ${{ matrix.python-version }}
         run: uv sync --extra dev
 
       - name: Format check
