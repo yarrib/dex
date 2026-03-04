@@ -10,7 +10,6 @@ Usage as a framework for org CLIs:
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import click

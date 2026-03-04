@@ -54,13 +54,13 @@ impl VariableSpec {
         }
 
         // Check against choices if present.
-        if let Some(choices) = &self.choices {
-            if !choices.iter().any(|c| c == value) {
-                return Err(TemplateError::ValidationFailed {
-                    name: self.name.clone(),
-                    message: format!("value '{value}' is not one of: {}", choices.join(", ")),
-                });
-            }
+        if let Some(choices) = &self.choices
+            && !choices.iter().any(|c| c == value)
+        {
+            return Err(TemplateError::ValidationFailed {
+                name: self.name.clone(),
+                message: format!("value '{value}' is not one of: {}", choices.join(", ")),
+            });
         }
 
         Ok(())
