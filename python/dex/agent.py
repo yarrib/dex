@@ -50,11 +50,8 @@ def agent_new(name: str | None, directory: str, no_generate: bool) -> None:
     if name is None:
         name = Prompt.ask("[bold]What does this agent do in one sentence?[/bold]")
 
-    agent_name = Prompt.ask("Agent name", default=_suggest_name(name)) if name else name
-
     description = name  # The one-sentence description IS the name prompt answer.
-    if agent_name != name:
-        description = name  # They gave a description first, then a name.
+    agent_name = Prompt.ask("Agent name", default=_suggest_name(description))
 
     trigger = _prompt_choice(
         "What triggers it?",

@@ -18,7 +18,7 @@ class PassthroughSpec:
     description: str | None = None
 
 
-class PassthroughCommand(click.BaseCommand):  # type: ignore[misc]
+class PassthroughCommand(click.Command):
     """A click command that delegates to an external CLI.
 
     All arguments after the command name are forwarded to the target CLI.
@@ -37,10 +37,14 @@ class PassthroughCommand(click.BaseCommand):  # type: ignore[misc]
         description: str | None = None,
         **kwargs,
     ):
-        super().__init__(name, **kwargs)
+        super().__init__(
+            name,
+            params=[],
+            context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+            help=description or f"Pass-through to `{target_command}`",
+            **kwargs,
+        )
         self.target_command = target_command
-        self.help = description or f"Pass-through to `{target_command}`"
-        self.context_settings = {"ignore_unknown_options": True, "allow_extra_args": True}
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         ctx.args = args
