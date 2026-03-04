@@ -42,7 +42,7 @@ class DexGroup(click.Group):
         super().__init__(**kwargs)
         self._passthroughs = passthroughs or {}
 
-    def get_command(self, ctx: click.Context, cmd_name: str) -> click.BaseCommand | None:
+    def get_command(self, ctx: click.Context, cmd_name: str) -> click.BaseCommand | None:  # type: ignore[override]
         # 1. Built-in commands
         rv = super().get_command(ctx, cmd_name)
         if rv is not None:
