@@ -709,7 +709,7 @@ Results are logged to the MLflow experiment as a run with pass/fail metrics.
 - `template.toml` manifest format with variable declarations
 - Beautiful terminal output (colors, spinners, styled prompts)
 - `dex.toml` project config (project section only)
-- Python package installable via `uv pip install` / `uv tool install`
+- Python package installable via `uv tool install` from GitHub Releases
 - `create_cli()` factory for building org CLIs on top
 
 ### What's Out (Future)

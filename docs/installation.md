@@ -1,18 +1,20 @@
 # Installation
 
-dex ships as pre-built wheels on [GitHub Releases](https://github.com/yarrib/dex/releases).
-No Rust toolchain required.
+dex is distributed as pre-built wheels on [GitHub Releases](https://github.com/yarrib/dex/releases).
+No PyPI, no crates.io, no Rust toolchain required.
 
-## pip
+## Install with uv (recommended)
 
-Download the wheel for your platform from the [latest release](https://github.com/yarrib/dex/releases/latest),
-then install it directly:
+`uv tool install` installs dex as an isolated CLI tool — the same way you'd install `ruff` or `mypy`.
+
+Go to the [latest release](https://github.com/yarrib/dex/releases/latest) and copy the wheel URL
+for your platform, then run:
 
 ```bash
-pip install https://github.com/yarrib/dex/releases/download/v0.1.0/dex-0.1.0-cp312-cp312-manylinux_2_17_x86_64.whl
+uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
 ```
 
-Replace the filename with the one matching your platform:
+Replace `<wheel-filename>` with the one matching your platform:
 
 | Platform | Filename pattern |
 |---|---|
@@ -21,10 +23,28 @@ Replace the filename with the one matching your platform:
 | macOS Intel | `*-macosx_10_12_x86_64.whl` |
 | Windows x86\_64 | `*-win_amd64.whl` |
 
-## uv
+After install, `dex` is available globally:
 
 ```bash
-uv tool install "dex @ https://github.com/yarrib/dex/releases/download/v0.1.0/dex-0.1.0-cp312-cp312-manylinux_2_17_x86_64.whl"
+dex --help
+```
+
+## Upgrade
+
+```bash
+uv tool upgrade dex
+```
+
+Or reinstall from a specific release:
+
+```bash
+uv tool install --force "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
+```
+
+## Uninstall
+
+```bash
+uv tool uninstall dex
 ```
 
 ## Build from source
@@ -40,7 +60,7 @@ make dev
 `make dev` runs `uv sync` followed by `maturin develop`, which compiles the Rust extension
 and installs everything into the local virtual environment.
 
-After that, the `dex` command is available:
+After that, `dex` is available in the venv:
 
 ```bash
 dex --help
@@ -49,4 +69,5 @@ dex --help
 ## Requirements
 
 - Python 3.11+
+- [uv](https://docs.astral.sh/uv/) — for `uv tool install`
 - For building from source: Rust stable (`rustup update stable`)

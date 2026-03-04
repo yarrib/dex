@@ -5,14 +5,10 @@
 ## Quick install
 
 ```bash
-pip install dex
+uv tool install "dex @ https://github.com/yarrib/dex/releases/latest/download/dex-latest-py3-none-any.whl"
 ```
 
-Or with uv:
-
-```bash
-uv add dex
-```
+See [Installation](installation.md) for platform-specific wheel links.
 
 ## 30-second example
 
@@ -51,6 +47,6 @@ my_project/
 
 ## Next steps
 
-- [Installation](installation.md) — pip, uv, build from source
+- [Installation](installation.md) — install from GitHub Releases or build from source
 - [Usage: dex init](usage/init.md) — all options and templates
 - [Templates](usage/templates.md) — template reference
