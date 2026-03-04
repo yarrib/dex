@@ -32,6 +32,7 @@ _(nothing active)_
 - [ ] `agent_new` name/description logic has a no-op guard
 - [ ] `scaffold.rs` ignores `FileRule.overwrite` flag
 - [ ] `dabs_schema.rs` has no callers
+- [ ] `PassthroughCommand` extends deprecated `click.BaseCommand` — migrate to `click.Command` before Click 9
 
 ### Infrastructure
 - [x] Add `ci.yml` — PR/push CI for Python (ty, ruff, pytest) and Rust (clippy, fmt, test)
