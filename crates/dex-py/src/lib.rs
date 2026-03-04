@@ -10,8 +10,8 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-use dex_core::template::manifest::TemplateManifest;
 use dex_core::template::TemplateSource;
+use dex_core::template::manifest::TemplateManifest;
 
 /// Render a Jinja2 template string with the given variables.
 #[pyfunction]

@@ -121,13 +121,11 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         .get_dir(name)
         .ok_or_else(|| DexError::Template(TemplateError::NotFound(name.to_string())))?;
 
-    let manifest_file = template_dir
-        .get_file("template.toml")
-        .ok_or_else(|| {
-            DexError::Template(TemplateError::InvalidManifest(format!(
-                "no template.toml in embedded template '{name}'"
-            )))
-        })?;
+    let manifest_file = template_dir.get_file("template.toml").ok_or_else(|| {
+        DexError::Template(TemplateError::InvalidManifest(format!(
+            "no template.toml in embedded template '{name}'"
+        )))
+    })?;
 
     let manifest_str = manifest_file.contents_utf8().ok_or_else(|| {
         DexError::Template(TemplateError::InvalidManifest(

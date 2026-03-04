@@ -638,14 +638,18 @@ mod tests {
         assert!(result.project_dir.join("pyproject.toml").exists());
         assert!(result.project_dir.join("databricks.yml").exists());
         assert!(result.project_dir.join("CLAUDE.md").exists());
-        assert!(result
-            .project_dir
-            .join("src/table_anomaly_monitor/agent.py")
-            .exists());
-        assert!(result
-            .project_dir
-            .join("src/table_anomaly_monitor/tracing.py")
-            .exists());
+        assert!(
+            result
+                .project_dir
+                .join("src/table_anomaly_monitor/agent.py")
+                .exists()
+        );
+        assert!(
+            result
+                .project_dir
+                .join("src/table_anomaly_monitor/tracing.py")
+                .exists()
+        );
         assert!(result.project_dir.join("evals/cases/example.json").exists());
     }
 }
