@@ -3,18 +3,36 @@
 dex is distributed as pre-built wheels on [GitHub Releases](https://github.com/yarrib/dex/releases).
 No PyPI, no crates.io, no Rust toolchain required.
 
-## Install with uv (recommended)
+## One-line install (recommended)
 
-`uv tool install` installs dex as an isolated CLI tool — the same way you'd install `ruff` or `mypy`.
-
-Go to the [latest release](https://github.com/yarrib/dex/releases/latest) and copy the wheel URL
-for your platform, then run:
+Paste this in your terminal on macOS or Linux:
 
 ```bash
-uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
+curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-Replace `<wheel-filename>` with the one matching your platform:
+The script will:
+
+1. Detect your OS and CPU architecture
+2. Fetch the latest release from GitHub
+3. Install [uv](https://docs.astral.sh/uv/) if it is not already present
+4. Run `uv tool install` with the correct wheel
+
+After install, `dex` is available globally:
+
+```bash
+dex --help
+```
+
+!!! note "Windows"
+    The install script does not support Windows. Use the manual install path below.
+
+## Manual install with uv
+
+If you prefer not to pipe into `sh`, or you are on Windows:
+
+1. Go to the [latest release](https://github.com/yarrib/dex/releases/latest)
+2. Copy the wheel URL for your platform
 
 | Platform | Filename pattern |
 |---|---|
@@ -23,10 +41,10 @@ Replace `<wheel-filename>` with the one matching your platform:
 | macOS Intel | `*-macosx_10_12_x86_64.whl` |
 | Windows x86\_64 | `*-win_amd64.whl` |
 
-After install, `dex` is available globally:
+3. Install via uv:
 
 ```bash
-dex --help
+uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
 ```
 
 ## Upgrade
@@ -71,3 +89,7 @@ dex --help
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/) — for `uv tool install`
 - For building from source: Rust stable (`rustup update stable`)
+
+## PyPI
+
+Coming soon. Track progress in [GitHub Issues](https://github.com/yarrib/dex/issues).
