@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://yarrib.github.io/dex/latest/quickstart/">
+        <link rel="canonical" href="https://yarrib.github.io/dex/latest/extending/">
       
       
-        <link rel="prev" href="..">
+        <link rel="prev" href="../templates/org-templates/">
       
       
-        <link rel="next" href="../installation/">
+        <link rel="next" href="../contributing/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Quickstart - dex</title>
+        <title>Extending dex - dex</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#quickstart" class="md-skip">
+        <a href="#extending-dex-org-clis" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Quickstart
+              Extending dex
             
           </span>
         </div>
@@ -244,11 +244,9 @@
   
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../quickstart/" class="md-tabs__link">
         
   
   
@@ -324,9 +322,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../extending/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -434,37 +434,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Quickstart
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -480,81 +453,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-install" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Install
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-scaffold-a-project" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Scaffold a project
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-inspect-what-was-generated" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Inspect what was generated
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-deploy-to-databricks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Deploy to Databricks
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Next steps
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -936,10 +834,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../extending/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending dex
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -955,6 +880,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#create_cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        create_cli()
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pass-through-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pass-through commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom commands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#distributing-your-org-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distributing your org CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dexgroup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexGroup
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1013,10 +1035,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-install" class="md-nav__link">
+  <a href="#quick-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Install
+        Quick example
       
     </span>
   </a>
@@ -1024,10 +1046,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-scaffold-a-project" class="md-nav__link">
+  <a href="#create_cli" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Scaffold a project
+        create_cli()
       
     </span>
   </a>
@@ -1035,10 +1057,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-inspect-what-was-generated" class="md-nav__link">
+  <a href="#pass-through-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Inspect what was generated
+        Pass-through commands
       
     </span>
   </a>
@@ -1046,10 +1068,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-deploy-to-databricks" class="md-nav__link">
+  <a href="#custom-commands" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Deploy to Databricks
+        Custom commands
       
     </span>
   </a>
@@ -1057,10 +1079,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#next-steps" class="md-nav__link">
+  <a href="#custom-templates" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Next steps
+        Custom templates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#distributing-your-org-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Distributing your org CLI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dexgroup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DexGroup
       
     </span>
   </a>
@@ -1087,64 +1131,151 @@
   
 
 
-<h1 id="quickstart">Quickstart</h1>
-<p>Install dex and scaffold your first project in under a minute.</p>
-<h2 id="1-install">1. Install</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-sSf<span class="w"> </span>https://raw.githubusercontent.com/yarrib/dex/main/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>sh
+<h1 id="extending-dex-org-clis">Extending dex — Org CLIs</h1>
+<p>dex is designed to be wrapped by teams into their own internal CLI. You get all the built-in dex commands (<code>init</code>, <code>agent new</code>, <code>mcp serve</code>) plus the ability to add custom commands, custom templates, and pass-throughs to other tools — all under your own CLI name.</p>
+<h2 id="quick-example">Quick example</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># acme_dex/cli.py</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dex.ext</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_cli</span><span class="p">,</span> <span class="n">passthrough</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">cli</span> <span class="o">=</span> <span class="n">create_cli</span><span class="p">(</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;acme-dex&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">passthroughs</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n">passthrough</span><span class="p">(</span><span class="s2">&quot;db&quot;</span><span class="p">,</span> <span class="s2">&quot;databricks&quot;</span><span class="p">,</span> <span class="s2">&quot;Databricks CLI&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n">passthrough</span><span class="p">(</span><span class="s2">&quot;tf&quot;</span><span class="p">,</span> <span class="s2">&quot;terraform&quot;</span><span class="p">,</span> <span class="s2">&quot;Terraform&quot;</span><span class="p">),</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="p">],</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="k">def</span><span class="w"> </span><span class="nf">deploy</span><span class="p">():</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Deploy the current bundle to dev.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;databricks&quot;</span><span class="p">,</span> <span class="s2">&quot;bundle&quot;</span><span class="p">,</span> <span class="s2">&quot;deploy&quot;</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<p>Or manually with uv (see <a href="../installation/">Installation</a> for platform-specific wheel URLs).</p>
-<p>See <a href="../installation/">Installation</a> for platform-specific wheels and Windows instructions.</p>
-<h2 id="2-scaffold-a-project">2. Scaffold a project</h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Databricks Asset Bundle</label><label for="__tabbed_1_2">Plain Python package</label><label for="__tabbed_1_3">Non-interactive (CI / scripts)</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dex<span class="w"> </span>init<span class="w"> </span>--template<span class="w"> </span>dabs-package<span class="w"> </span>--dir<span class="w"> </span>my_project
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># pyproject.toml</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">[project.scripts]</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">acme-dex</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;acme_dex.cli:cli&quot;</span>
 </code></pre></div>
-<p>Prompts:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Project name [my_project]:
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Python version (3.12, 3.11) [3.12]:
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Include exploration notebook? [Y/n]:
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>Include job definition? [Y/n]:
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>Use serverless compute? [y/N]:
+<p>Your users now have:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>acme-dex<span class="w"> </span>init<span class="w"> </span>--template<span class="w"> </span>dabs-package<span class="w">   </span><span class="c1"># built-in</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>acme-dex<span class="w"> </span>deploy<span class="w">                         </span><span class="c1"># your custom command</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>acme-dex<span class="w"> </span>db<span class="w"> </span>clusters<span class="w"> </span>list<span class="w">               </span><span class="c1"># pass-through to databricks</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>acme-dex<span class="w"> </span>tf<span class="w"> </span>plan<span class="w">                        </span><span class="c1"># pass-through to terraform</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>dex<span class="w"> </span>init<span class="w"> </span>--template<span class="w"> </span>default<span class="w"> </span>--dir<span class="w"> </span>my_package
+<h2 id="create_cli"><code>create_cli()</code></h2>
+<p>The factory that wires everything together.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dex.ext</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_cli</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">cli</span> <span class="o">=</span> <span class="n">create_cli</span><span class="p">(</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;acme-dex&quot;</span><span class="p">,</span>           <span class="c1"># CLI name shown in --help</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">templates_dir</span><span class="o">=</span><span class="s2">&quot;./templates&quot;</span><span class="p">,</span>  <span class="c1"># path to your org&#39;s custom templates (optional)</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">passthroughs</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>        <span class="c1"># list of PassthroughSpec (optional)</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span>
 </code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>dex<span class="w"> </span>init<span class="w"> </span>--template<span class="w"> </span>dabs-package<span class="w"> </span>--no-prompt<span class="w"> </span>--dir<span class="w"> </span>my_project
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>str</code></td>
+<td>CLI name. Defaults to <code>"dex"</code>.</td>
+</tr>
+<tr>
+<td><code>templates_dir</code></td>
+<td><code>str \| Path \| None</code></td>
+<td>Directory of custom templates to add alongside built-ins.</td>
+</tr>
+<tr>
+<td><code>passthroughs</code></td>
+<td><code>list[PassthroughSpec]</code></td>
+<td>External CLIs to expose as subcommands.</td>
+</tr>
+</tbody>
+</table>
+<p><code>create_cli()</code> returns a <code>DexGroup</code> (a <code>click.Group</code> subclass). Add commands to it exactly as you would with click.</p>
+<h2 id="pass-through-commands">Pass-through commands</h2>
+<p>Pass-throughs proxy a subcommand directly to an external CLI, forwarding all arguments and inheriting stdin/stdout/stderr for full interactivity.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dex.ext</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_cli</span><span class="p">,</span> <span class="n">passthrough</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">cli</span> <span class="o">=</span> <span class="n">create_cli</span><span class="p">(</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;acme-dex&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">passthroughs</span><span class="o">=</span><span class="p">[</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="n">passthrough</span><span class="p">(</span><span class="s2">&quot;db&quot;</span><span class="p">,</span> <span class="s2">&quot;databricks&quot;</span><span class="p">,</span> <span class="s2">&quot;Databricks CLI&quot;</span><span class="p">),</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="p">],</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">)</span>
 </code></pre></div>
-</div>
-</div>
-</div>
-<h2 id="3-inspect-what-was-generated">3. Inspect what was generated</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>my_project/
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── src/my_project/
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>│   ├── __init__.py
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>│   └── main.py
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>├── resources/
-<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>│   └── my_project_job.yml
-<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├── notebooks/
-<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>│   └── exploration.py
-<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>├── tests/
-<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>│   └── test_my_project.py
-<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>├── databricks.yml
-<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>├── pyproject.toml
-<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>├── README.md
-<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>└── .gitignore
+<p><code>passthrough(name, command, description)</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>Subcommand name in your CLI (<code>acme-dex db ...</code>)</td>
+</tr>
+<tr>
+<td><code>command</code></td>
+<td>Executable to invoke (<code>databricks</code>)</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>Help text shown in <code>--help</code></td>
+</tr>
+</tbody>
+</table>
+<p>You can also construct <code>PassthroughSpec</code> directly:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dex.ext</span><span class="w"> </span><span class="kn">import</span> <span class="n">PassthroughSpec</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">spec</span> <span class="o">=</span> <span class="n">PassthroughSpec</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;db&quot;</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="s2">&quot;databricks&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Databricks CLI&quot;</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="4-deploy-to-databricks">4. Deploy to Databricks</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">cd</span><span class="w"> </span>my_project
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>databricks<span class="w"> </span>bundle<span class="w"> </span>deploy<span class="w">          </span><span class="c1"># → dev target</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>databricks<span class="w"> </span>bundle<span class="w"> </span>deploy<span class="w"> </span>--target<span class="w"> </span>prod
+<h2 id="custom-commands">Custom commands</h2>
+<p>After calling <code>create_cli()</code>, decorate commands onto the returned group:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">cli</span> <span class="o">=</span> <span class="n">create_cli</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;acme-dex&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--target&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;dev&quot;</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">deploy</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Deploy the current bundle.&quot;&quot;&quot;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">&quot;databricks&quot;</span><span class="p">,</span> <span class="s2">&quot;bundle&quot;</span><span class="p">,</span> <span class="s2">&quot;deploy&quot;</span><span class="p">,</span> <span class="s2">&quot;--target&quot;</span><span class="p">,</span> <span class="n">target</span><span class="p">],</span> <span class="n">check</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="next-steps">Next steps</h2>
-<ul>
-<li><a href="../usage/init/">dex init reference</a> — all options and template variables</li>
-<li><a href="../usage/templates/">Template reference</a> — what each template generates</li>
-<li><a href="../usage/agent/">dex agent new</a> — scaffold an AI agent project</li>
-</ul>
+<p>Commands can also be added programmatically:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">cli</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">my_command_func</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;my-command&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="custom-templates">Custom templates</h2>
+<p>Point <code>templates_dir</code> at a directory of templates following the <a href="../templates/authoring/">authoring guide</a>. Users can then use them with <code>dex init --template &lt;name&gt;</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="n">cli</span> <span class="o">=</span> <span class="n">create_cli</span><span class="p">(</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;acme-dex&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">templates_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;templates&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">)</span>
+</code></pre></div>
+<p>Your org templates live alongside the dex built-ins. If a name conflicts, your template wins.</p>
+<h2 id="distributing-your-org-cli">Distributing your org CLI</h2>
+<p>Package it as a standard Python package and distribute via your internal PyPI, Artifactory, or direct install:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Install from internal PyPI</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>acme-dex<span class="w"> </span>--index<span class="w"> </span>https://pypi.internal.acme.com/
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Or from a Git repo</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;acme-dex @ git+https://github.com/acme/acme-dex&quot;</span>
+</code></pre></div>
+<p>Your users run <code>acme-dex</code> directly — they never need to know about dex.</p>
+<h2 id="dexgroup"><code>DexGroup</code></h2>
+<p><code>DexGroup</code> is the <code>click.Group</code> subclass returned by <code>create_cli()</code>. It handles pass-through resolution and can be used directly if you need lower-level control:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dex.ext</span><span class="w"> </span><span class="kn">import</span> <span class="n">DexGroup</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nd">@click</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="bp">cls</span><span class="o">=</span><span class="n">DexGroup</span><span class="p">,</span> <span class="n">passthroughs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;db&quot;</span><span class="p">:</span> <span class="n">db_spec</span><span class="p">})</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">cli</span><span class="p">():</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Acme internal tooling.&quot;&quot;&quot;</span>
+</code></pre></div>
 
 
 
@@ -1177,7 +1308,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 5, 2026 02:21:37 UTC">March 5, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 5, 2026 15:34:02 UTC">March 5, 2026</span>
   </span>
 
     
