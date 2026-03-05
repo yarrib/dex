@@ -192,7 +192,7 @@ def mcp_group() -> None:
 
 
 @mcp_group.command("serve")
-def mcp_serve() -> None:
+def mcp_serve() -> None:  # pragma: no cover
     """Start the dex MCP server (stdio transport)."""
     import asyncio
 

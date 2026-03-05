@@ -170,7 +170,7 @@ def _handle_get_template_variables(template: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-async def serve() -> None:
+async def serve() -> None:  # pragma: no cover
     """Run the dex MCP server over stdio."""
     server = Server("dex")
 

@@ -80,5 +80,8 @@ jobs:
       - name: Type check
         run: uv run ty check python/
 
+      - name: Security scan
+        run: uv run bandit -r python/dex/ -ll
+
       - name: Test
         run: uv run pytest

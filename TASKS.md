@@ -41,10 +41,10 @@ _(nothing active)_
 ### Infrastructure
 - [x] Add `ci.yml` — PR/push CI for Python (ty, ruff, pytest) and Rust (clippy, fmt, test)
 - [x] Add `install.sh` — curl-pipeable install from GitHub Releases
-- [x] Configure mike for versioned docs (one-time manual step: change Pages source from "GitHub Actions" artifact → "Deploy from branch: gh-pages")
+- [ ] Configure mike for versioned docs (one-time manual step: change Pages source from "GitHub Actions" artifact → "Deploy from branch: gh-pages")
 - [x] Improve `release.yml` — tag validation + changelog via git-cliff
-- [ ] Add Python integration tests for `dex agent new`
-- [ ] Add Python integration tests for `dex mcp serve`
+- [x] Add Python integration tests for `dex agent new`
+- [x] Add Python integration tests for `dex mcp serve`
 - [x] Add pre-commit config (`.pre-commit-config.yaml`) — ruff + cargo-clippy hooks
 - [x] Add coverage threshold to pytest (`--cov=dex --cov-fail-under=80`) + `pytest-cov` dep
 - [x] Add `bandit` security scan to Python CI step
