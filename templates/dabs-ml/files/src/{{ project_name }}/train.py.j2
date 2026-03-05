@@ -1,0 +1,45 @@
+import argparse
+import logging
+
+import mlflow
+import mlflow.sklearn
+from pyspark.sql import SparkSession
+
+logger = logging.getLogger(__name__)
+
+
+def train(catalog: str, schema: str, experiment_name: str) -> None:
+    spark = SparkSession.builder.getOrCreate()
+    spark.sql(f"USE CATALOG {catalog}")
+    spark.sql(f"USE SCHEMA {schema}")
+
+    mlflow.set_experiment(experiment_name)
+
+    with mlflow.start_run():
+        # TODO: load your training data
+        # df = spark.table("your_feature_table").toPandas()
+        # X, y = df.drop("label", axis=1), df["label"]
+
+        # TODO: build and fit your model
+        # model = YourModel(...)
+        # model.fit(X, y)
+
+        # TODO: log parameters, metrics, and the model
+        # mlflow.log_params({"param_key": param_value})
+        # mlflow.log_metric("accuracy", score)
+        # mlflow.sklearn.log_model(
+        #     model,
+        #     artifact_path="{{ project_name }}",
+        #     registered_model_name=f"{catalog}.{schema}.{{ project_name }}",
+        # )
+
+        logger.info("Training complete for {{ project_name }} in %s.%s", catalog, schema)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="{{ project_name }} training")
+    parser.add_argument("--catalog", required=True)
+    parser.add_argument("--schema", required=True)
+    parser.add_argument("--experiment-name", required=True)
+    args = parser.parse_args()
+    train(catalog=args.catalog, schema=args.schema, experiment_name=args.experiment_name)

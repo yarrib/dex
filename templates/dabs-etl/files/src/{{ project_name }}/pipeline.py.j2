@@ -1,0 +1,43 @@
+import dlt
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType
+
+SOURCE_PATH = spark.conf.get("source_path", "{{ source_path }}")
+
+
+@dlt.table(
+    name="raw_{{ project_name }}",
+    comment="Raw ingestion from Autoloader source",
+    table_properties={"quality": "bronze"},
+)
+def ingest_raw():
+    # TODO: adjust schema and format for your source
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .option("cloudFiles.schemaLocation", f"{SOURCE_PATH}/_schema")
+        .load(SOURCE_PATH)
+        .withColumn("_ingested_at", F.current_timestamp())
+        .withColumn("_source_file", F.input_file_name())
+    )
+
+
+@dlt.table(
+    name="cleaned_{{ project_name }}",
+    comment="Validated and cleaned records",
+    table_properties={"quality": "silver"},
+)
+@dlt.expect_or_drop("valid_record", "TODO: add your data quality expectation")
+def clean():
+    # TODO: implement your cleaning and transformation logic
+    return dlt.read_stream("raw_{{ project_name }}")
+
+
+@dlt.table(
+    name="{{ project_name }}_gold",
+    comment="Aggregated business-level output",
+    table_properties={"quality": "gold"},
+)
+def aggregate():
+    # TODO: implement your aggregation logic
+    return dlt.read("cleaned_{{ project_name }}")

@@ -1,0 +1,15 @@
+from unittest.mock import MagicMock, patch
+
+
+def test_predict_returns_assistant_message():
+    """Smoke test: predict() returns a well-formed assistant message."""
+    mock_executor = MagicMock()
+    mock_executor.invoke.return_value = {"output": "test response"}
+
+    with patch("{{ project_name }}.agent.build_agent", return_value=mock_executor):
+        from {{ project_name }}.agent import predict
+
+        result = predict({"messages": [{"role": "user", "content": "hello"}]})
+
+    assert result["role"] == "assistant"
+    assert "content" in result

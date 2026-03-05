@@ -1,0 +1,67 @@
+"""{{ project_name }} agent definition.
+
+Implements a LangChain agent logged to MLflow for deployment via
+Mosaic AI Model Serving.
+"""
+
+import mlflow
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_databricks import ChatDatabricks
+
+from {{ project_name }}.tools import get_tools
+
+mlflow.langchain.autolog()
+
+SYSTEM_PROMPT = """You are a helpful assistant for {{ project_name }}.
+
+# TODO: describe the agent's purpose and constraints here.
+"""
+
+
+def build_agent() -> AgentExecutor:
+    llm = ChatDatabricks(
+        endpoint="databricks-meta-llama-3-1-70b-instruct",
+        # TODO: choose your model endpoint
+    )
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", SYSTEM_PROMPT),
+            MessagesPlaceholder("chat_history", optional=True),
+            ("human", "{input}"),
+            MessagesPlaceholder("agent_scratchpad"),
+        ]
+    )
+
+    tools = get_tools()
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+
+def predict(model_input: dict) -> dict:
+    """Entry point for MLflow model serving."""
+    agent = build_agent()
+    messages = model_input.get("messages", [])
+    last_user_message = next(
+        (m["content"] for m in reversed(messages) if m.get("role") == "user"),
+        "",
+    )
+    result = agent.invoke({"input": last_user_message})
+    return {"content": result["output"], "role": "assistant"}
+
+
+if __name__ == "__main__":
+    # Log the agent to MLflow for deployment
+    import os
+
+    catalog = os.environ.get("CATALOG", "dev")
+    schema = os.environ.get("SCHEMA", "{{ project_name }}_dev")
+    model_name = f"{catalog}.{schema}.{{ project_name }}"
+
+    with mlflow.start_run():
+        mlflow.pyfunc.log_model(
+            artifact_path="{{ project_name }}",
+            python_model=predict,
+            registered_model_name=model_name,
+        )

@@ -1,0 +1,49 @@
+[template]
+name = "dabs-aiagent"
+description = "Databricks Asset Bundle Mosaic AI agent with model serving and optional vector search"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "include_vector_search"
+prompt = "Include vector search retriever?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "use_serverless"
+prompt = "Use serverless compute?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "include_notebook"
+prompt = "Include evaluation notebook?"
+type = "bool"
+default = true
+required = false
+
+[[files]]
+src = "notebooks/"
+condition = "include_notebook"
+
+[[files]]
+src = "src/{{ project_name }}/tools/retriever.py.j2"
+condition = "include_vector_search"
