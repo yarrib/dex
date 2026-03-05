@@ -19,7 +19,7 @@ _(nothing active)_
 - [x] `_core.pyi` stub file — type stubs exist in `python/dex/_core.pyi`
 - [ ] Fix `include_dir` path resolution — first pattern always fails (dead branch in template registry)
 - [ ] Wire user template directories through Python → PyO3 → Rust (`TemplateSource::Directory` exists; `create_cli()` ignores `templates_dir`)
-- [ ] Implement user config loading from `~/.config/dex/config.toml` (Python layer, per arch rules)
+- [x] Implement user config loading from `~/.config/dex/config.toml` and `./dex.toml` — supports local dirs and git remotes (SSH + HTTPS)
 
 ### Documentation
 - [x] Write quickstart guide (`docs/quickstart.md`) — install → `dex init` → inspect project
