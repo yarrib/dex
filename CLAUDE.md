@@ -85,6 +85,13 @@ docs/               Specification and architecture documents.
 - No classes where a function will do
 - Test with `pytest` and `click.testing.CliRunner`
 
+## Git Workflow
+
+- **main is protected.** Never push directly to main.
+- **All work goes on branches.** Branch from main, use a descriptive name: `feat/`, `fix/`, `chore/`, `docs/`.
+- **PRs are required.** Open a PR against main; all CI checks must pass and the PR must be approved before merging.
+- **One logical change per PR.** Keep PRs small and focused.
+
 ## Commit Conventions
 
 - Prefix: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`
