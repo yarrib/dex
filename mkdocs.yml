@@ -63,3 +63,4 @@ nav:
       - Org Template Registries: templates/org-templates.md
   - Extending dex: extending.md
   - Contributing: contributing.md
+  - Releasing: releasing.md
