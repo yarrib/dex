@@ -60,5 +60,6 @@ nav:
   - Templates:
       - Built-in Templates: templates/built-in.md
       - Authoring: templates/authoring.md
+      - Org Template Registries: templates/org-templates.md
   - Extending dex: extending.md
   - Contributing: contributing.md
