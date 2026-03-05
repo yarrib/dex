@@ -5,10 +5,10 @@
 ## Quick install
 
 ```bash
-uv tool install "dex @ https://github.com/yarrib/dex/releases/latest/download/dex-latest-py3-none-any.whl"
+curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-See [Installation](installation.md) for platform-specific wheel links.
+See [Installation](installation.md) for manual install, Windows, and build-from-source options.
 
 ## 30-second example
 

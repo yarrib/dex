@@ -8,11 +8,7 @@ Install dex and scaffold your first project in under a minute.
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-Or with uv directly:
-
-```bash
-uv tool install "dex @ https://github.com/yarrib/dex/releases/latest/download/dex-latest-py3-none-any.whl"
-```
+Or manually with uv (see [Installation](installation.md) for platform-specific wheel URLs).
 
 See [Installation](installation.md) for platform-specific wheels and Windows instructions.
 
