@@ -85,6 +85,20 @@ docs/               Specification and architecture documents.
 - No classes where a function will do
 - Test with `pytest` and `click.testing.CliRunner`
 
+## Release Process
+
+Releases are manual and tag-driven. Never push tags directly — always use the make targets:
+
+```bash
+make bump-patch   # bug fixes → 0.1.0 → 0.1.1
+make bump-minor   # new features → 0.1.0 → 0.2.0
+make bump-major   # breaking changes → 0.1.0 → 1.0.0
+```
+
+Each command updates `pyproject.toml` and `Cargo.toml`, creates a tag, and pushes it. The `release.yml` workflow fires automatically. See `docs/releasing.md` for the full process.
+
+There is no auto-versioning workflow — `version.yml` was intentionally removed.
+
 ## Git Workflow
 
 - **main is protected.** Never push directly to main.
