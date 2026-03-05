@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt fmt-check dev clean all
+.PHONY: build test lint fmt fmt-check dev clean all docs docs-serve
 .PHONY: version bump-patch bump-minor bump-major _bump-guard
 
 all: lint test
@@ -26,6 +26,13 @@ fmt:
 fmt-check:
 	cargo fmt --check
 	uv run ruff format --check python/
+
+docs:
+	uv sync --extra docs
+	uv run mkdocs build --strict
+
+docs-serve: docs
+	uv run mkdocs serve
 
 clean:
 	cargo clean

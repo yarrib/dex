@@ -49,10 +49,12 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   - Installation: installation.md
   - Usage:
       - Overview: usage/index.md
       - dex init: usage/init.md
       - Templates: usage/templates.md
       - dex agent new: usage/agent.md
+      - dex mcp serve: usage/mcp.md
   - Contributing: contributing.md

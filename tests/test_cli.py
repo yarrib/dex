@@ -1,5 +1,8 @@
 """Smoke tests for the dex CLI."""
 
+from pathlib import Path
+
+import pytest
 from click.testing import CliRunner
 
 from dex.cli import cli
@@ -29,3 +32,10 @@ def test_agent_help() -> None:
 def test_mcp_help() -> None:
     result = CliRunner().invoke(cli, ["mcp", "--help"])
     assert result.exit_code == 0
+
+
+def test_init_unknown_template_exits_nonzero(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        cli, ["init", "--template", "does-not-exist", "--dir", str(tmp_path), "--no-prompt"]
+    )
+    assert result.exit_code != 0
