@@ -57,4 +57,7 @@ nav:
       - Templates: usage/templates.md
       - dex agent new: usage/agent.md
       - dex mcp serve: usage/mcp.md
+  - Templates:
+      - Authoring: templates/authoring.md
+  - Extending dex: extending.md
   - Contributing: contributing.md

@@ -23,8 +23,8 @@ _(nothing active)_
 
 ### Documentation
 - [x] Write quickstart guide (`docs/quickstart.md`) — install → `dex init` → inspect project
-- [ ] Write template authoring guide (`docs/templates/authoring.md`) — manifest format, minijinja syntax, file rules
-- [ ] Write org-CLI / extending guide (`docs/extending.md`) — `create_cli()`, custom templates, passthrough commands
+- [x] Write template authoring guide (`docs/templates/authoring.md`) — manifest format, minijinja syntax, file rules
+- [x] Write org-CLI / extending guide (`docs/extending.md`) — `create_cli()`, custom templates, passthrough commands
 - [ ] Document built-in templates (`docs/templates/built-in.md`) — rationale for each default pattern (`default`, `dabs-package`, etc.), design decisions, when to use each
 - [ ] Document org template pattern (`docs/templates/org-templates.md`) — how to publish a private template registry, wire it into a `create_cli()` org-CLI, and distribute via internal PyPI or direct Git URL ("pull and attach")
 - [ ] Move `docs/prd-*.md` to `docs/internal/` so they don't appear in public nav
