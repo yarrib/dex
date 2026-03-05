@@ -21,6 +21,8 @@ make dev
 | `make fmt` | `cargo fmt` + `uv run ruff format python/` |
 | `make fmt-check` | Format check only (no writes) |
 | `make clean` | Remove build artifacts |
+| `make docs` | Build docs site (strict mode) |
+| `make docs-serve` | Serve docs site at localhost:8000 |
 
 ## Architecture
 
