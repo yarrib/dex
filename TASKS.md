@@ -27,7 +27,7 @@ _(nothing active)_
 - [x] Write org-CLI / extending guide (`docs/extending.md`) — `create_cli()`, custom templates, passthrough commands
 - [x] Document built-in templates (`docs/templates/built-in.md`) — rationale for each default pattern (`default`, `dabs-package`, etc.), design decisions, when to use each
 - [x] Document org template pattern (`docs/templates/org-templates.md`) — how to publish a private template registry, wire it into a `create_cli()` org-CLI, and distribute via internal PyPI or direct Git URL ("pull and attach")
-- [ ] Move `docs/prd-*.md` to `docs/internal/` so they don't appear in public nav
+- [x] Move `docs/prd-*.md` to `docs/internal/` so they don't appear in public nav
 - [x] Add MCP integration guide (`docs/usage/mcp.md` — Claude Desktop + Claude Code wiring)
 - [x] Update mkdocs nav to add Quickstart, Templates section, and Extending page
 
