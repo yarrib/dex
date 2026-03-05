@@ -46,6 +46,34 @@ templates/          Built-in Jinja2 templates, embedded at compile time
 3. Run `make build` to embed the template in the binary
 4. Test with `dex init --template <name>`
 
+## Docs versioning
+
+The docs site uses [mike](https://github.com/jimporter/mike) for versioned deployments to GitHub Pages.
+
+**How it works:**
+
+- Push to `main` → deploys the `latest` alias (unversioned dev docs)
+- Push a `v*` tag → deploys a minor-version alias (e.g. `0.1`) and updates `latest`
+- All versions live on the `gh-pages` branch; mike manages the index
+
+**Version selector** is shown in the top-right corner of the site (provided by mkdocs-material + mike).
+
+**One-time setup** (already done): the GitHub Pages source must be set to "Deploy from branch: `gh-pages`" in the repo Settings → Pages. Do not use the "GitHub Actions" artifact mode — mike writes directly to the branch.
+
+**Local preview:**
+
+```bash
+uv run mike serve           # browse versioned docs locally
+uv run mkdocs serve         # browse unversioned docs (faster for writing)
+```
+
+**Manually deploy a version** (maintainers only):
+
+```bash
+uv run mike deploy --push --update-aliases 0.2 latest
+uv run mike set-default --push latest
+```
+
 ## Commit conventions
 
 ```
