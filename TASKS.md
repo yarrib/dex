@@ -28,11 +28,11 @@ _(nothing active)_
 - [ ] Update mkdocs nav to add Quickstart, Templates section, and Extending page
 
 ### Bugs
-- [ ] `_run_dabs_init` is defined but never called — dead code in CLI
-- [ ] `agent_new` name/description logic has a no-op guard
-- [ ] `scaffold.rs` ignores `FileRule.overwrite` flag
-- [ ] `dabs_schema.rs` has no callers
-- [ ] `PassthroughCommand` extends deprecated `click.BaseCommand` — migrate to `click.Command` before Click 9
+- [x] `_run_dabs_init` is defined but never called — removed; DABs composite flow TBD
+- [x] `agent_new` name/description logic has a no-op guard
+- [x] `scaffold.rs` ignores `FileRule.overwrite` flag — already implemented (lines 61-64)
+- [x] `dabs_schema.rs` has no callers — module is valid and tested; will be wired in DABs composite flow
+- [x] `PassthroughCommand` extends deprecated `click.BaseCommand` — migrated to `click.Command`
 
 ### Infrastructure
 - [x] Add `ci.yml` — PR/push CI for Python (ty, ruff, pytest) and Rust (clippy, fmt, test)
