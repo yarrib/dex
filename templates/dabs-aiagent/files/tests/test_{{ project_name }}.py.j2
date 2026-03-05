@@ -1,15 +1,26 @@
 from unittest.mock import MagicMock, patch
 
 
-def test_predict_returns_assistant_message():
-    """Smoke test: predict() returns a well-formed assistant message."""
-    mock_executor = MagicMock()
-    mock_executor.invoke.return_value = {"output": "test response"}
+def test_agent_predict_returns_assistant_message():
+    """Smoke test: Agent.predict() returns a well-formed assistant message."""
+    mock_response = MagicMock()
+    mock_response.choices[0].message.content = "test response"
 
-    with patch("{{ project_name }}.agent.build_agent", return_value=mock_executor):
-        from {{ project_name }}.agent import predict
+    mock_client = MagicMock()
+    mock_client.serving_endpoints.query.return_value = mock_response
 
-        result = predict({"messages": [{"role": "user", "content": "hello"}]})
+    from {{ project_name }}.agent import Agent
+
+    agent = Agent()
+    # Bypass load_context by injecting dependencies directly.
+    agent._endpoint = "test-endpoint"
+    agent._client = mock_client
+
+    result = agent.predict(
+        context=MagicMock(),
+        model_input={"messages": [{"role": "user", "content": "hello"}]},
+    )
 
     assert result["role"] == "assistant"
-    assert "content" in result
+    assert result["content"] == "test response"
+    mock_client.serving_endpoints.query.assert_called_once()

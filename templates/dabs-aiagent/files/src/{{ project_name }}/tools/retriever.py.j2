@@ -1,38 +1,42 @@
-"""Vector search retriever tool for {{ project_name }}."""
+"""Vector search retriever for {{ project_name }}.
+
+Uses the Databricks Vector Search SDK directly — no AI framework required.
+"""
 
 import os
 
 from databricks.vector_search.client import VectorSearchClient
-from langchain_core.tools import Tool
 
 
-def build_retriever_tool() -> Tool:
-    vs_endpoint = os.environ.get(
-        "VECTOR_SEARCH_ENDPOINT", "{{ project_name }}_vs_endpoint"
+def retrieve(query: str, num_results: int = 5) -> list[str]:
+    """Search the {{ project_name }} knowledge base.
+
+    Args:
+        query: Natural language query string.
+        num_results: Maximum number of chunks to return.
+
+    Returns:
+        List of text chunks ranked by relevance.
+    """
+    endpoint = os.environ.get(
+        "VECTOR_SEARCH_ENDPOINT",
+        # TODO: set VECTOR_SEARCH_ENDPOINT in your serving endpoint environment.
+        "{{ project_name }}_vs_endpoint",
     )
-    vs_index = os.environ.get(
+    index_name = os.environ.get(
         "VECTOR_SEARCH_INDEX",
-        # TODO: set your Unity Catalog index path: catalog.schema.index_name
-        "main.{{ project_name }}.{{ project_name }}_index",
+        # TODO: set VECTOR_SEARCH_INDEX to your Unity Catalog index path.
+        # Format: catalog.schema.index_name
+        "${var.catalog}.${var.schema}.{{ project_name }}_index",
     )
 
     client = VectorSearchClient(disable_notice=True)
-    index = client.get_index(endpoint_name=vs_endpoint, index_name=vs_index)
+    index = client.get_index(endpoint_name=endpoint, index_name=index_name)
 
-    def retrieve(query: str) -> str:
-        results = index.similarity_search(
-            query_text=query,
-            columns=["content"],  # TODO: adjust to your index columns
-            num_results=5,
-        )
-        rows = results.get("result", {}).get("data_array", [])
-        return "\n\n".join(row[0] for row in rows if row)
-
-    return Tool(
-        name="{{ project_name }}_retriever",
-        description=(
-            "Search the {{ project_name }} knowledge base. "
-            "Use this when you need to look up specific information."
-        ),
-        func=retrieve,
+    results = index.similarity_search(
+        query_text=query,
+        columns=["content"],  # TODO: adjust to your index columns
+        num_results=num_results,
     )
+    rows = results.get("result", {}).get("data_array", [])
+    return [row[0] for row in rows if row]

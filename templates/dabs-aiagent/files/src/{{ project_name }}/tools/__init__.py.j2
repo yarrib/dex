@@ -1,0 +1,12 @@
+"""Tool functions for {{ project_name }}.
+
+Add plain Python callables here; import them into agent.py as needed.
+"""
+
+{% if include_vector_search %}
+from {{ project_name }}.tools.retriever import retrieve
+
+__all__ = ["retrieve"]
+{% else %}
+__all__: list[str] = []
+{% endif %}

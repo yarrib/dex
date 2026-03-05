@@ -1,0 +1,55 @@
+resources:
+  jobs:
+    {{ project_name }}_deploy:
+      name: ${bundle.target}-{{ project_name }}-deploy
+
+      tasks:
+        - task_key: deploy_agent
+          notebook_task:
+            notebook_path: ../notebooks/deploy_agent.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema:  ${var.schema}
+              model_name: "{{ project_name }}"
+          libraries:
+            - whl: ../dist/*.whl
+{% if use_serverless %}
+          environment_key: default
+{% else %}
+          job_cluster_key: default
+{% endif %}
+
+        - task_key: evaluate_agent
+          depends_on:
+            - task_key: deploy_agent
+          notebook_task:
+            notebook_path: ../notebooks/evaluate_agent.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema:  ${var.schema}
+              model_name: "{{ project_name }}"
+              experiment_name: /Shared/${bundle.target}-{{ project_name }}-evals
+          libraries:
+            - whl: ../dist/*.whl
+{% if use_serverless %}
+          environment_key: default
+{% else %}
+          job_cluster_key: default
+{% endif %}
+
+{% if use_serverless %}
+      environments:
+        - environment_key: default
+          spec:
+            client: "1"
+{% else %}
+      job_clusters:
+        - job_cluster_key: default
+          new_cluster:
+            spark_version: "15.4.x-cpu-ml-scala2.12"
+            node_type_id: "i3.xlarge"
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+            data_security_mode: SINGLE_USER
+{% endif %}

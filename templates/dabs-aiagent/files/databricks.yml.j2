@@ -18,14 +18,6 @@ variables:
   schema:
     description: Unity Catalog schema name
     default: default
-{% if include_vector_search %}
-  vector_search_endpoint:
-    description: Vector search endpoint name
-    default: {{ project_name }}_vs_endpoint
-  vector_search_index:
-    description: Vector search index name (catalog.schema.index)
-    default: ${var.catalog}.${var.schema}.{{ project_name }}_index
-{% endif %}
 
 include:
   - resources/*.yml

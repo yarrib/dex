@@ -1,0 +1,51 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Deploy {{ project_name }}
+# MAGIC
+# MAGIC Logs the agent to MLflow and registers it in Unity Catalog.
+# MAGIC
+# MAGIC Run manually or as a DABs job task. When running as a job task,
+# MAGIC `base_parameters` in the job YAML override the widget defaults below.
+
+# COMMAND ----------
+
+dbutils.widgets.text("catalog", "dev", "Catalog")
+dbutils.widgets.text("schema", "{{ project_name }}_dev", "Schema")
+dbutils.widgets.text("model_name", "{{ project_name }}", "Model Name")
+
+catalog    = dbutils.widgets.get("catalog")
+schema     = dbutils.widgets.get("schema")
+model_name = dbutils.widgets.get("model_name")
+
+registered_model_name = f"{catalog}.{schema}.{model_name}"
+print(f"Registering: {registered_model_name}")
+
+# COMMAND ----------
+
+import mlflow
+from {{ project_name }}.agent import Agent
+
+mlflow.set_registry_uri("databricks-uc")
+
+with mlflow.start_run():
+    model_info = mlflow.pyfunc.log_model(
+        artifact_path=model_name,
+        python_model=Agent(),
+        registered_model_name=registered_model_name,
+        pip_requirements=[
+            "databricks-sdk",
+            "mlflow",
+{% if include_vector_search %}
+            "databricks-vectorsearch",
+{% endif %}
+        ],
+    )
+
+model_version = model_info.registered_model_version
+print(f"Registered {registered_model_name} v{model_version}")
+print(f"Model URI: {model_info.model_uri}")
+
+# COMMAND ----------
+
+# Share the registered version with downstream tasks (e.g. evaluate_agent).
+dbutils.jobs.taskValues.set(key="model_version", value=str(model_version))

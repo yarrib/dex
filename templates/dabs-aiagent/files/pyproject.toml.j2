@@ -6,9 +6,9 @@ requires-python = ">={{ python_version }}"
 dependencies = [
     "databricks-sdk",
     "mlflow",
-    "langchain",
-    "langchain-community",
-    "langchain-databricks",
+{% if include_vector_search %}
+    "databricks-vectorsearch",
+{% endif %}
 ]
 
 [build-system]

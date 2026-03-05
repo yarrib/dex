@@ -1,67 +1,60 @@
-"""{{ project_name }} agent definition.
+"""{{ project_name }} agent — plain Python, no AI framework dependencies.
 
-Implements a LangChain agent logged to MLflow for deployment via
-Mosaic AI Model Serving.
+Subclasses mlflow.pyfunc.PythonModel for deployment via Mosaic AI Model Serving.
+Calls a Databricks foundation model endpoint via the Databricks SDK.
 """
 
+import os
+
 import mlflow
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_databricks import ChatDatabricks
+from databricks.sdk import WorkspaceClient
 
-from {{ project_name }}.tools import get_tools
-
-mlflow.langchain.autolog()
+{% if include_vector_search %}
+from {{ project_name }}.tools.retriever import retrieve as _retrieve
+{% endif %}
 
 SYSTEM_PROMPT = """You are a helpful assistant for {{ project_name }}.
 
 # TODO: describe the agent's purpose and constraints here.
 """
 
-
-def build_agent() -> AgentExecutor:
-    llm = ChatDatabricks(
-        endpoint="databricks-meta-llama-3-1-70b-instruct",
-        # TODO: choose your model endpoint
-    )
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", SYSTEM_PROMPT),
-            MessagesPlaceholder("chat_history", optional=True),
-            ("human", "{input}"),
-            MessagesPlaceholder("agent_scratchpad"),
-        ]
-    )
-
-    tools = get_tools()
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+# TODO: choose your foundation model endpoint.
+DEFAULT_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
 
 
-def predict(model_input: dict) -> dict:
-    """Entry point for MLflow model serving."""
-    agent = build_agent()
-    messages = model_input.get("messages", [])
-    last_user_message = next(
-        (m["content"] for m in reversed(messages) if m.get("role") == "user"),
-        "",
-    )
-    result = agent.invoke({"input": last_user_message})
-    return {"content": result["output"], "role": "assistant"}
+class Agent(mlflow.pyfunc.PythonModel):
+    """Stateless chat agent backed by a Databricks model serving endpoint."""
 
+    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:
+        self._endpoint = os.environ.get("FOUNDATION_MODEL_ENDPOINT", DEFAULT_ENDPOINT)
+        self._client = WorkspaceClient()
 
-if __name__ == "__main__":
-    # Log the agent to MLflow for deployment
-    import os
+    def predict(
+        self,
+        context: mlflow.pyfunc.PythonModelContext,
+        model_input: dict,
+        params: dict | None = None,
+    ) -> dict:
+        messages = list(model_input.get("messages", []))
 
-    catalog = os.environ.get("CATALOG", "dev")
-    schema = os.environ.get("SCHEMA", "{{ project_name }}_dev")
-    model_name = f"{catalog}.{schema}.{{ project_name }}"
+{% if include_vector_search %}
+        # RAG: augment the last user message with retrieved context.
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "user":
+                docs = _retrieve(messages[i]["content"])
+                if docs:
+                    augmented = messages[i]["content"] + "\n\nContext:\n" + "\n\n".join(docs)
+                    messages[i] = {**messages[i], "content": augmented}
+                break
+{% endif %}
 
-    with mlflow.start_run():
-        mlflow.pyfunc.log_model(
-            artifact_path="{{ project_name }}",
-            python_model=predict,
-            registered_model_name=model_name,
+        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+
+        response = self._client.serving_endpoints.query(
+            name=self._endpoint,
+            messages=full_messages,
         )
+        return {
+            "role": "assistant",
+            "content": response.choices[0].message.content,
+        }

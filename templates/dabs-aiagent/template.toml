@@ -1,6 +1,6 @@
 [template]
 name = "dabs-aiagent"
-description = "Databricks Asset Bundle Mosaic AI agent with model serving and optional vector search"
+description = "Databricks Asset Bundle AI agent — plain Python, mlflow.pyfunc, model serving via DABs job"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 
@@ -21,28 +21,17 @@ required = false
 
 [[variables]]
 name = "include_vector_search"
-prompt = "Include vector search retriever?"
+prompt = "Include vector search retriever (RAG)?"
 type = "bool"
-default = true
+default = false
 required = false
 
 [[variables]]
 name = "use_serverless"
-prompt = "Use serverless compute?"
+prompt = "Use serverless compute for the deploy job?"
 type = "bool"
 default = true
 required = false
-
-[[variables]]
-name = "include_notebook"
-prompt = "Include evaluation notebook?"
-type = "bool"
-default = true
-required = false
-
-[[files]]
-src = "notebooks/"
-condition = "include_notebook"
 
 [[files]]
 src = "src/{{ project_name }}/tools/retriever.py.j2"
