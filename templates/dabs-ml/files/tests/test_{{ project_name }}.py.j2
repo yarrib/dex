@@ -1,0 +1,14 @@
+from unittest.mock import MagicMock, patch
+
+from {{ project_name }}.train import train
+
+
+def test_train_runs(monkeypatch):
+    """Smoke test: train() runs without raising."""
+    mock_spark = MagicMock()
+    with (
+        patch("{{ project_name }}.train.SparkSession") as mock_session_cls,
+        patch("{{ project_name }}.train.mlflow"),
+    ):
+        mock_session_cls.builder.getOrCreate.return_value = mock_spark
+        train(catalog="dev", schema="test", experiment_name="/Shared/{{ project_name }}_test")

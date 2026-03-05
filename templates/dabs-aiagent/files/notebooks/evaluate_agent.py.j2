@@ -1,0 +1,59 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Evaluate {{ project_name }}
+# MAGIC
+# MAGIC Loads the registered agent from Unity Catalog and runs evaluation cases.
+# MAGIC
+# MAGIC Run manually or as a DABs job task after `deploy_agent`. When chained in a job,
+# MAGIC the model version is automatically forwarded via task values.
+
+# COMMAND ----------
+
+dbutils.widgets.text("catalog", "dev", "Catalog")
+dbutils.widgets.text("schema", "{{ project_name }}_dev", "Schema")
+dbutils.widgets.text("model_name", "{{ project_name }}", "Model Name")
+dbutils.widgets.text("model_version", "1", "Model Version")
+dbutils.widgets.text("experiment_name", "/Shared/{{ project_name }}_evals", "MLflow Experiment")
+
+catalog         = dbutils.widgets.get("catalog")
+schema          = dbutils.widgets.get("schema")
+model_name      = dbutils.widgets.get("model_name")
+experiment_name = dbutils.widgets.get("experiment_name")
+
+# When chained after deploy_agent in a DABs job, use the version it registered.
+# Falls back to the widget value when running the notebook standalone.
+try:
+    model_version = dbutils.jobs.taskValues.get(
+        taskKey="deploy_agent", key="model_version", debugValue=dbutils.widgets.get("model_version")
+    )
+except Exception:
+    model_version = dbutils.widgets.get("model_version")
+
+registered_model_name = f"{catalog}.{schema}.{model_name}"
+model_uri = f"models:/{registered_model_name}/{model_version}"
+print(f"Evaluating: {model_uri}")
+
+# COMMAND ----------
+
+import mlflow
+
+mlflow.set_registry_uri("databricks-uc")
+mlflow.set_experiment(experiment_name)
+
+agent = mlflow.pyfunc.load_model(model_uri)
+
+# COMMAND ----------
+
+# TODO: replace with your real evaluation cases.
+test_cases = [
+    {"messages": [{"role": "user", "content": "What can you help me with?"}]},
+]
+
+with mlflow.start_run(run_name=f"eval-v{model_version}"):
+    mlflow.log_param("model_version", model_version)
+
+    for i, case in enumerate(test_cases):
+        result = agent.predict(case)
+        print(f"Case {i}: {result.get('content', result)}")
+        # TODO: score the result and log a metric, e.g.:
+        # mlflow.log_metric(f"case_{i}_pass", 1.0)

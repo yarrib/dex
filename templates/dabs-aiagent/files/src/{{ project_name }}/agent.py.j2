@@ -1,0 +1,60 @@
+"""{{ project_name }} agent — plain Python, no AI framework dependencies.
+
+Subclasses mlflow.pyfunc.PythonModel for deployment via Mosaic AI Model Serving.
+Calls a Databricks foundation model endpoint via the Databricks SDK.
+"""
+
+import os
+
+import mlflow
+from databricks.sdk import WorkspaceClient
+
+{% if include_vector_search %}
+from {{ project_name }}.tools.retriever import retrieve as _retrieve
+{% endif %}
+
+SYSTEM_PROMPT = """You are a helpful assistant for {{ project_name }}.
+
+# TODO: describe the agent's purpose and constraints here.
+"""
+
+# TODO: choose your foundation model endpoint.
+DEFAULT_ENDPOINT = "databricks-meta-llama-3-3-70b-instruct"
+
+
+class Agent(mlflow.pyfunc.PythonModel):
+    """Stateless chat agent backed by a Databricks model serving endpoint."""
+
+    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:
+        self._endpoint = os.environ.get("FOUNDATION_MODEL_ENDPOINT", DEFAULT_ENDPOINT)
+        self._client = WorkspaceClient()
+
+    def predict(
+        self,
+        context: mlflow.pyfunc.PythonModelContext,
+        model_input: dict,
+        params: dict | None = None,
+    ) -> dict:
+        messages = list(model_input.get("messages", []))
+
+{% if include_vector_search %}
+        # RAG: augment the last user message with retrieved context.
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "user":
+                docs = _retrieve(messages[i]["content"])
+                if docs:
+                    augmented = messages[i]["content"] + "\n\nContext:\n" + "\n\n".join(docs)
+                    messages[i] = {**messages[i], "content": augmented}
+                break
+{% endif %}
+
+        full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+
+        response = self._client.serving_endpoints.query(
+            name=self._endpoint,
+            messages=full_messages,
+        )
+        return {
+            "role": "assistant",
+            "content": response.choices[0].message.content,
+        }

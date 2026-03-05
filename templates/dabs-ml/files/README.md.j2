@@ -1,0 +1,54 @@
+# {{ project_name }}
+
+A Databricks Asset Bundle ML project with MLflow training and model registry scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/    # Training and inference code
+{% if include_notebook %}├── notebooks/                 # Databricks notebooks
+{% endif %}├── resources/                 # Job definitions
+{% if include_serving %}├── serving/                   # Model serving endpoint definition
+{% endif %}├── tests/                     # Tests
+├── databricks.yml             # Databricks Asset Bundle config
+└── pyproject.toml             # Project config
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+
+# Build wheel
+uv build
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Run training job
+databricks bundle run {{ project_name }}_training_job
+
+{% if include_serving %}# Deploy model serving endpoint
+databricks bundle run {{ project_name }}_serving_endpoint
+
+{% endif %}# Deploy to prod
+databricks bundle deploy --target prod
+```

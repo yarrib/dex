@@ -1,0 +1,26 @@
+resources:
+  pipelines:
+    {{ project_name }}_pipeline:
+      name: ${bundle.target}-{{ project_name }}-pipeline
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+
+      libraries:
+        - notebook:
+            path: ./src/{{ project_name }}/pipeline.py
+
+      configuration:
+        source_path: ${var.source_path}
+{% if use_serverless %}
+      serverless: true
+{% else %}
+      clusters:
+        - label: default
+          spark_version: 15.4.x-scala2.12
+          node_type_id: i3.xlarge
+          num_workers: 2
+          data_security_mode: SINGLE_USER
+{% endif %}
+
+      continuous: false
+      development: ${bundle.target == 'dev'}

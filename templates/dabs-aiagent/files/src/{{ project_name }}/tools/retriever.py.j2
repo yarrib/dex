@@ -1,0 +1,42 @@
+"""Vector search retriever for {{ project_name }}.
+
+Uses the Databricks Vector Search SDK directly — no AI framework required.
+"""
+
+import os
+
+from databricks.vector_search.client import VectorSearchClient
+
+
+def retrieve(query: str, num_results: int = 5) -> list[str]:
+    """Search the {{ project_name }} knowledge base.
+
+    Args:
+        query: Natural language query string.
+        num_results: Maximum number of chunks to return.
+
+    Returns:
+        List of text chunks ranked by relevance.
+    """
+    endpoint = os.environ.get(
+        "VECTOR_SEARCH_ENDPOINT",
+        # TODO: set VECTOR_SEARCH_ENDPOINT in your serving endpoint environment.
+        "{{ project_name }}_vs_endpoint",
+    )
+    index_name = os.environ.get(
+        "VECTOR_SEARCH_INDEX",
+        # TODO: set VECTOR_SEARCH_INDEX to your Unity Catalog index path.
+        # Format: catalog.schema.index_name
+        "${var.catalog}.${var.schema}.{{ project_name }}_index",
+    )
+
+    client = VectorSearchClient(disable_notice=True)
+    index = client.get_index(endpoint_name=endpoint, index_name=index_name)
+
+    results = index.similarity_search(
+        query_text=query,
+        columns=["content"],  # TODO: adjust to your index columns
+        num_results=num_results,
+    )
+    rows = results.get("result", {}).get("data_array", [])
+    return [row[0] for row in rows if row]

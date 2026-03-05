@@ -1,0 +1,50 @@
+# {{ project_name }}
+
+A Databricks Asset Bundle ETL project with DLT pipeline scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/    # Pipeline source code
+{% if include_notebook %}├── notebooks/                 # Databricks notebooks
+{% endif %}├── resources/                 # Pipeline definitions
+├── tests/                     # Tests
+├── databricks.yml             # Databricks Asset Bundle config
+└── pyproject.toml             # Project config
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Deploy to staging
+databricks bundle deploy --target staging
+
+# Run the pipeline update
+databricks bundle run {{ project_name }}_pipeline
+
+# Deploy to prod
+databricks bundle deploy --target prod
+```

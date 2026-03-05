@@ -1,0 +1,24 @@
+resources:
+  model_serving_endpoints:
+    {{ project_name }}_serving_endpoint:
+      name: ${bundle.target}-{{ project_name }}
+
+      config:
+        served_entities:
+          - entity_name: ${var.catalog}.${var.schema}.{{ project_name }}
+            entity_version: "1"
+            scale_to_zero_enabled: true
+            workload_size: Small
+{% if use_serverless %}
+            workload_type: CPU
+{% endif %}
+
+        auto_capture_config:
+          catalog_name: ${var.catalog}
+          schema_name: ${var.schema}
+          table_name_prefix: {{ project_name }}_inference
+
+      rate_limits:
+        - calls: 100
+          key: user
+          renewal_period: minute

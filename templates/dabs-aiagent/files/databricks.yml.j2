@@ -1,0 +1,45 @@
+bundle:
+  name: {{ project_name }}
+
+artifacts:
+  {{ project_name }}_whl:
+    type: whl
+    build: uv build
+
+workspace:
+  host: ${var.workspace_url}
+
+variables:
+  workspace_url:
+    description: Databricks workspace URL
+  catalog:
+    description: Unity Catalog catalog name
+    default: main
+  schema:
+    description: Unity Catalog schema name
+    default: default
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      workspace_url: ""
+      catalog: dev
+      schema: {{ project_name }}_dev
+
+  staging:
+    mode: development
+    variables:
+      workspace_url: ""
+      catalog: staging
+      schema: {{ project_name }}_staging
+
+  prod:
+    variables:
+      workspace_url: ""
+      catalog: main
+      schema: {{ project_name }}

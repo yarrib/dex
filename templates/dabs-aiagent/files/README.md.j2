@@ -1,0 +1,52 @@
+# {{ project_name }}
+
+A Databricks Mosaic AI agent project scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/
+│   ├── agent.py               # Agent definition (LangChain / MLflow)
+│   └── tools/
+│       ├── __init__.py        # Tool registry
+{% if include_vector_search %}│       └── retriever.py       # Vector search retriever tool
+{% endif %}{% if include_notebook %}├── notebooks/
+│   └── evaluate_agent.py      # Interactive evaluation notebook
+{% endif %}├── resources/                 # Serving endpoint definition
+├── tests/                     # Tests
+├── databricks.yml             # Databricks Asset Bundle config
+└── pyproject.toml             # Project config
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Deploy model serving endpoint
+databricks bundle run {{ project_name }}_serving_endpoint
+
+# Deploy to prod
+databricks bundle deploy --target prod
+```
