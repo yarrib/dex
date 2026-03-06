@@ -121,7 +121,8 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         .get_dir(name)
         .ok_or_else(|| DexError::Template(TemplateError::NotFound(name.to_string())))?;
 
-    let manifest_file = template_dir.get_file("template.toml").ok_or_else(|| {
+    let manifest_path = template_dir.path().join("template.toml");
+    let manifest_file = template_dir.get_file(&manifest_path).ok_or_else(|| {
         DexError::Template(TemplateError::InvalidManifest(format!(
             "no template.toml in embedded template '{name}'"
         )))
@@ -156,7 +157,8 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         }
     }
 
-    if let Some(files_dir) = template_dir.get_dir("files") {
+    let files_dir_path = template_dir.path().join("files");
+    if let Some(files_dir) = template_dir.get_dir(&files_dir_path) {
         collect_files(files_dir, files_prefix, &mut files);
     }
 
@@ -172,7 +174,8 @@ fn list_embedded_templates() -> Result<Vec<TemplateMeta>, DexError> {
     let mut templates = Vec::new();
 
     for dir in EMBEDDED_TEMPLATES.dirs() {
-        let manifest_file = dir.get_file("template.toml");
+        let manifest_path = dir.path().join("template.toml");
+        let manifest_file = dir.get_file(&manifest_path);
         if let Some(file) = manifest_file
             && let Some(content) = file.contents_utf8()
             && let Ok(manifest) = TemplateManifest::parse(content)
@@ -182,4 +185,16 @@ fn list_embedded_templates() -> Result<Vec<TemplateMeta>, DexError> {
     }
 
     Ok(templates)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn embedded_templates_are_not_empty() {
+        let templates = list_embedded_templates().unwrap();
+        assert!(!templates.is_empty(), "no embedded templates found");
+        assert!(templates.iter().any(|t| t.name == "default"), "missing 'default' template");
+    }
 }
