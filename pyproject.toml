@@ -16,7 +16,7 @@ dependencies = [
     "mcp>=1.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "maturin>=1.0,<2.0",
     "pytest>=8",

@@ -50,7 +50,7 @@ fmt-check:
 	uv run ruff format --check python/
 
 docs:
-	uv sync --extra docs
+	uv sync --group docs
 	uv run mkdocs build --strict
 
 docs-serve: docs
