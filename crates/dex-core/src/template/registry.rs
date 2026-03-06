@@ -195,6 +195,9 @@ mod tests {
     fn embedded_templates_are_not_empty() {
         let templates = list_embedded_templates().unwrap();
         assert!(!templates.is_empty(), "no embedded templates found");
-        assert!(templates.iter().any(|t| t.name == "default"), "missing 'default' template");
+        assert!(
+            templates.iter().any(|t| t.name == "default"),
+            "missing 'default' template"
+        );
     }
 }
