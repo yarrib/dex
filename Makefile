@@ -9,7 +9,7 @@ help:
 	@echo "Development"
 	@echo "  dev          uv sync + maturin develop (first-time setup)"
 	@echo "  build        cargo build + maturin develop"
-	@echo "  test         cargo test + uv run pytest"
+	@echo "  test         cargo test (dex-core) + uv run pytest"
 	@echo "  lint         cargo clippy (dex-core) + ruff check"
 	@echo "  fmt          cargo fmt + ruff format"
 	@echo "  fmt-check    format check only (no writes)"
@@ -34,7 +34,7 @@ build:
 	maturin develop
 
 test:
-	cargo test
+	cargo test -p dex-core
 	uv run pytest
 
 lint:
