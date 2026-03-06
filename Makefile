@@ -27,11 +27,11 @@ help:
 
 dev:
 	uv sync --all-groups
-	uv run maturin develop
+	uv run maturin develop --skip-install
 
 build:
 	cargo build
-	uv run maturin develop
+	uv run maturin develop --skip-install
 
 test:
 	cargo test -p dex-core
