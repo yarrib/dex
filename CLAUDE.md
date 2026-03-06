@@ -87,15 +87,22 @@ docs/               Specification and architecture documents.
 
 ## Release Process
 
-Releases are manual and tag-driven. Never push tags directly — always use the make targets:
+Releases are tag-driven. Because main is protected, version bumps go through a PR:
 
 ```bash
-make bump-patch   # bug fixes → 0.1.0 → 0.1.1
-make bump-minor   # new features → 0.1.0 → 0.2.0
-make bump-major   # breaking changes → 0.1.0 → 1.0.0
+# 1. On a release branch:
+git checkout -b chore/release-v0.x.y
+make bump-patch    # or bump-minor / bump-major — commits the version files
+git push -u origin chore/release-v0.x.y
+# open PR, get it merged
+
+# 2. After merging, tag main:
+git checkout main && git pull
+make tag-release   # tags vX.Y.Z and pushes — triggers release.yml
 ```
 
-Each command updates `pyproject.toml` and `Cargo.toml`, creates a tag, and pushes it. The `release.yml` workflow fires automatically. See `docs/releasing.md` for the full process.
+The `release.yml` workflow fires on the tag push, validates the version, builds wheels
+for all platforms, generates a changelog via git-cliff, and creates a GitHub Release.
 
 There is no auto-versioning workflow — `version.yml` was intentionally removed.
 

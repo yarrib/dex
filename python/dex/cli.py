@@ -15,6 +15,7 @@ from pathlib import Path
 import click
 from rich.console import Console
 
+from dex.config import DexConfig, load_config, resolve_remote
 from dex.passthrough import PassthroughCommand, PassthroughSpec
 
 console = Console()
@@ -108,6 +109,61 @@ def create_cli(
     return group
 
 
+def _collect_templates(
+    extra_dir: Path | None = None,
+) -> dict[str, tuple[str, str]]:
+    """Return a mapping of template_name -> (source_path, description).
+
+    Sources are checked in priority order; later sources override earlier ones:
+      1. Embedded (lowest priority)
+      2. User / project config: templates_dir, then remotes
+      3. extra_dir from create_cli() (highest priority)
+
+    ``source_path`` is ``"__embedded__"`` for built-ins or an absolute
+    directory path string for directory-based templates.
+    """
+    from dex._core import list_embedded_templates, parse_template_manifest
+
+    registry: dict[str, tuple[str, str]] = {}
+
+    # 1. Embedded templates
+    for t in list_embedded_templates():
+        registry[t.name] = ("__embedded__", t.description)
+
+    # 2. Config-based sources
+    config: DexConfig = load_config()
+    dirs_to_scan: list[Path] = []
+
+    if config.templates_dir:
+        dirs_to_scan.append(config.templates_dir)
+
+    for remote in config.remotes:
+        try:
+            with console.status(f"[dim]Updating template remote '{remote.name}'…"):
+                local = resolve_remote(remote)
+            dirs_to_scan.append(local)
+        except RuntimeError as exc:
+            console.print(f"[yellow]Warning:[/yellow] {exc}")
+
+    # 3. Programmatic extra_dir (from create_cli)
+    if extra_dir:
+        dirs_to_scan.append(extra_dir)
+
+    for dir_path in dirs_to_scan:
+        if not dir_path.is_dir():
+            continue
+        for entry in sorted(dir_path.iterdir()):
+            manifest_path = entry / "template.toml"
+            if entry.is_dir() and manifest_path.exists():
+                try:
+                    m = parse_template_manifest(str(manifest_path))
+                    registry[m.name] = (str(dir_path), m.description)
+                except Exception:
+                    pass
+
+    return registry
+
+
 @click.command("init")
 @click.option(
     "--template",
@@ -129,29 +185,32 @@ def create_cli(
     is_flag=True,
     help="Use defaults for all variables (non-interactive).",
 )
-def init_command(template: str, directory: str, no_prompt: bool) -> None:
+@click.pass_context
+def init_command(ctx: click.Context, template: str, directory: str, no_prompt: bool) -> None:
     """Scaffold a new project from a template."""
-    from dex._core import get_template_variables, list_embedded_templates, scaffold_project
+    from dex._core import get_template_variables, scaffold_project
 
     target = Path(directory).resolve()
 
+    # Collect templates from all sources (embedded + config + create_cli extra_dir).
+    extra_dir: Path | None = getattr(ctx.find_root().command, "templates_dir", None)
+    registry = _collect_templates(extra_dir=extra_dir)
+
     console.print(f"\n[bold]dex init[/bold] — scaffolding with template [cyan]{template}[/cyan]\n")
 
-    templates = list_embedded_templates()
-    template_names = [t.name for t in templates]
-
-    if template not in template_names:
+    if template not in registry:
         console.print(f"[red]Error:[/red] template '{template}' not found.")
-        console.print(f"Available templates: {', '.join(template_names)}")
+        console.print(f"Available templates: {', '.join(sorted(registry))}")
         raise SystemExit(1)
 
+    source_path, _ = registry[template]
+
     # Collect variables from template manifest, then prompt interactively.
-    specs = get_template_variables("__embedded__", template)
+    specs = get_template_variables(source_path, template)
     default_project_name = target.name if target.name != "." else Path.cwd().name
     variables: dict[str, object] = {}
 
     for spec in sorted(specs, key=lambda s: s.name):
-        # For project_name, use the target directory name as the default.
         effective_default = (
             default_project_name if spec.name == "project_name" else spec.default or ""
         )
@@ -178,7 +237,7 @@ def init_command(template: str, directory: str, no_prompt: bool) -> None:
         else:
             variables[spec.name] = click.prompt(spec.prompt, default=effective_default)
 
-    result = scaffold_project("__embedded__", template, str(target), variables)
+    result = scaffold_project(source_path, template, str(target), variables)
 
     console.print(f"\n[green]Scaffolded {len(result.files_created)} files:[/green]")
     for f in sorted(result.files_created):
