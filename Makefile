@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt fmt-check dev clean all docs docs-serve help
+.PHONY: build test lint fmt fmt-check dev dev-docs clean all docs docs-serve help
 .PHONY: version bump-patch bump-minor bump-major _bump-guard
 
 all: lint test
@@ -7,7 +7,8 @@ help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Development"
-	@echo "  dev          uv sync + maturin develop (first-time setup)"
+	@echo "  dev          uv sync --group dev + maturin develop"
+	@echo "  dev-docs     uv sync --group dev --group docs + maturin develop"
 	@echo "  build        cargo build + maturin develop"
 	@echo "  test         cargo test (dex-core) + uv run pytest"
 	@echo "  lint         cargo clippy (dex-core) + ruff check"
@@ -26,7 +27,11 @@ help:
 	@echo "  bump-major   bump major version, tag, and push"
 
 dev:
-	uv sync
+	uv sync --group dev
+	uv run maturin develop
+
+dev-docs:
+	uv sync --group dev --group docs
 	uv run maturin develop
 
 build:
