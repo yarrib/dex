@@ -143,9 +143,7 @@ def _git_clone(url: str, dest: Path, ref: str | None) -> None:
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        raise RuntimeError(
-            f"Failed to clone template repo '{url}':\n{result.stderr.strip()}"
-        )
+        raise RuntimeError(f"Failed to clone template repo '{url}':\n{result.stderr.strip()}")
 
 
 def _git_pull(dest: Path, ref: str | None) -> None:
@@ -164,6 +162,7 @@ def _git_pull(dest: Path, ref: str | None) -> None:
         if result.returncode != 0:
             # Non-fatal: warn but use cached copy
             import warnings
+
             warnings.warn(
                 f"Could not update template cache at {dest}: {result.stderr.strip()}",
                 stacklevel=3,
