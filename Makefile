@@ -71,19 +71,19 @@ version:
 # Bump version and commit. Open a PR, merge to main, then run make tag-release.
 bump-patch: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py patch))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
+	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
 bump-minor: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py minor))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
+	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
 bump-major: _bump-guard
 	$(eval NEW := $(shell python3 scripts/bump-version.py major))
-	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml
+	git add pyproject.toml crates/dex-core/Cargo.toml crates/dex-py/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
