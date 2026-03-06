@@ -40,6 +40,8 @@ def next_version(current: str, bump: str) -> str:
 
 def set_version(path: Path, new: str) -> None:
     text = path.read_text()
+    if not re.search(r'^version = "\d+\.\d+\.\d+"', text, re.MULTILINE):
+        sys.exit(f"error: could not find version field in {path}")
     updated = re.sub(
         r'^version = "\d+\.\d+\.\d+"',
         f'version = "{new}"',
@@ -47,8 +49,6 @@ def set_version(path: Path, new: str) -> None:
         count=1,
         flags=re.MULTILINE,
     )
-    if updated == text:
-        sys.exit(f"error: could not find version field in {path}")
     path.write_text(updated)
 
 
