@@ -127,9 +127,11 @@ def _parse_config_file(path: Path) -> DexConfig:
 
 def _merge(user: DexConfig, project: DexConfig) -> DexConfig:
     """Project config takes precedence; remotes are additive (project first)."""
+    project_names = {r.name for r in project.remotes}
+    merged_remotes = project.remotes + [r for r in user.remotes if r.name not in project_names]
     return DexConfig(
         templates_dir=project.templates_dir or user.templates_dir,
-        remotes=project.remotes + [r for r in user.remotes if r.name not in {p.name for p in project.remotes}],
+        remotes=merged_remotes,
     )
 
 
