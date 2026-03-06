@@ -1002,10 +1002,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-run-the-bump-command" class="md-nav__link">
+  <a href="#2-create-the-version-bump-pr" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Run the bump command
+        2. Create the version bump PR
       
     </span>
   </a>
@@ -1013,10 +1013,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-watch-the-release-workflow" class="md-nav__link">
+  <a href="#3-tag-and-push" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Watch the release workflow
+        3. Tag and push
       
     </span>
   </a>
@@ -1024,10 +1024,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-verify-the-release" class="md-nav__link">
+  <a href="#4-watch-the-release-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Verify the release
+        4. Watch the release workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-verify-the-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Verify the release
       
     </span>
   </a>
@@ -1141,10 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-run-the-bump-command" class="md-nav__link">
+  <a href="#2-create-the-version-bump-pr" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Run the bump command
+        2. Create the version bump PR
       
     </span>
   </a>
@@ -1152,10 +1163,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-watch-the-release-workflow" class="md-nav__link">
+  <a href="#3-tag-and-push" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Watch the release workflow
+        3. Tag and push
       
     </span>
   </a>
@@ -1163,10 +1174,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-verify-the-release" class="md-nav__link">
+  <a href="#4-watch-the-release-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Verify the release
+        4. Watch the release workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-verify-the-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Verify the release
       
     </span>
   </a>
@@ -1232,11 +1254,10 @@
 
 
 <h1 id="releasing">Releasing</h1>
-<p>Releases are manual and tag-driven. A maintainer bumps the version locally, pushes the tag, and GitHub Actions builds and publishes the release.</p>
+<p>Releases are manual and tag-driven. Because <code>main</code> is protected, version bumps go through a PR. The tag is pushed after the PR is merged, which triggers the release workflow.</p>
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li>You are on <code>main</code> with a clean working tree</li>
-<li>All changes for the release are merged</li>
+<li>All changes for the release are merged to <code>main</code></li>
 <li>You have push access to the repo (to push tags)</li>
 </ul>
 <h2 id="release-flow">Release flow</h2>
@@ -1264,22 +1285,29 @@
 </tr>
 </tbody>
 </table>
-<h3 id="2-run-the-bump-command">2. Run the bump command</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>pull
+<h3 id="2-create-the-version-bump-pr">2. Create the version bump PR</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>chore/release-v0.x.y
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>make<span class="w"> </span>bump-patch<span class="w">   </span><span class="c1"># or bump-minor / bump-major</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>chore/release-v0.x.y
 </code></pre></div>
-<p>This will:</p>
+<p><code>make bump-patch</code> will:</p>
 <ol>
 <li>Update the version in <code>pyproject.toml</code> and both <code>Cargo.toml</code> files</li>
-<li>Create a git tag (e.g. <code>v0.1.1</code>)</li>
-<li>Push the tag to GitHub</li>
+<li>Commit the changes with message <code>chore: bump version to vX.Y.Z</code></li>
 </ol>
+<p>Open a PR for the branch, get it merged.</p>
 <div class="admonition warning">
 <p class="admonition-title">Working tree must be clean</p>
-<p>The bump commands check for uncommitted changes and will abort if any exist. Commit or stash everything first.</p>
+<p>The bump commands check for uncommitted changes and will abort if any exist.</p>
 </div>
-<h3 id="3-watch-the-release-workflow">3. Watch the release workflow</h3>
+<h3 id="3-tag-and-push">3. Tag and push</h3>
+<p>After the PR is merged:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span>tag-release
+</code></pre></div>
+<p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>pyproject.toml</code> and pushes the tag to GitHub. It also guards against running on the wrong branch.</p>
+<h3 id="4-watch-the-release-workflow">4. Watch the release workflow</h3>
 <p>Go to <strong>Actions → Release</strong> on GitHub. The workflow:</p>
 <ol>
 <li>Validates the tag format (<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>)</li>
@@ -1289,7 +1317,7 @@
 <li>Builds an sdist</li>
 <li>Creates a GitHub Release with all artifacts attached</li>
 </ol>
-<h3 id="4-verify-the-release">4. Verify the release</h3>
+<h3 id="5-verify-the-release">5. Verify the release</h3>
 <ul>
 <li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
 <li>Confirm wheels are attached for all platforms</li>
@@ -1340,25 +1368,31 @@
 <p>Commits without a conventional prefix are filtered out of the changelog.</p>
 <hr />
 <h2 id="hotfix-releases">Hotfix releases</h2>
-<p>For urgent fixes on an already-released version:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>main
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>git<span class="w"> </span>pull
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># make your fix, open a PR, merge it</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>make<span class="w"> </span>bump-patch
+<p>Same flow as a regular release — fix on a branch, PR to main, then tag:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/critical-bug
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># make your fix</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>fix/critical-bug
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># open PR, merge</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>git<span class="w"> </span>checkout<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>make<span class="w"> </span>bump-patch
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>git<span class="w"> </span>push<span class="w"> </span>-u<span class="w"> </span>origin<span class="w"> </span>chore/release-vX.Y.Z
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c1"># open PR, merge</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>git<span class="w"> </span>checkout<span class="w"> </span>main<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>pull
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>make<span class="w"> </span>tag-release
 </code></pre></div>
 <p>There is no separate hotfix branch — all releases go through main.</p>
 <hr />
 <h2 id="if-the-release-workflow-fails">If the release workflow fails</h2>
 <p>The most common causes:</p>
 <ul>
-<li><strong>Tag/version mismatch</strong> — the tag was created without running <code>make bump-*</code>. Delete the tag, run the bump command, and re-push.</li>
+<li><strong>Tag/version mismatch</strong> — <code>pyproject.toml</code> version doesn't match the tag. Delete the tag, fix the version, re-tag.</li>
 <li><strong>Build failure</strong> — a Rust compilation error in the wheel build. Fix the code, delete the tag, re-tag.</li>
 </ul>
 <p>To delete a tag and re-release:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>tag<span class="w"> </span>-d<span class="w"> </span>v0.1.1
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>:refs/tags/v0.1.1
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># fix the issue, then</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>make<span class="w"> </span>bump-patch
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>git<span class="w"> </span>tag<span class="w"> </span>-d<span class="w"> </span>v0.1.1
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>:refs/tags/v0.1.1
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># fix the issue, then</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>make<span class="w"> </span>tag-release
 </code></pre></div>
 
 
@@ -1382,7 +1416,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 5, 2026 20:00:50 UTC">March 5, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 6, 2026 20:54:55 UTC">March 6, 2026</span>
   </span>
 
     
