@@ -1,6 +1,6 @@
 [package]
 name = "dex-core"
-version = "0.0.1"
+version = "0.1.3"
 description = "Core library for dex — template engine, config, scaffolding"
 edition.workspace = true
 license.workspace = true
