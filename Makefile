@@ -1,7 +1,29 @@
-.PHONY: build test lint fmt fmt-check dev clean all docs docs-serve
+.PHONY: build test lint fmt fmt-check dev clean all docs docs-serve help
 .PHONY: version bump-patch bump-minor bump-major _bump-guard
 
 all: lint test
+
+help:
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Development"
+	@echo "  dev          uv sync + maturin develop (first-time setup)"
+	@echo "  build        cargo build + maturin develop"
+	@echo "  test         cargo test + uv run pytest"
+	@echo "  lint         cargo clippy (dex-core) + ruff check"
+	@echo "  fmt          cargo fmt + ruff format"
+	@echo "  fmt-check    format check only (no writes)"
+	@echo "  clean        remove build artifacts"
+	@echo ""
+	@echo "Docs"
+	@echo "  docs         build docs (strict mode)"
+	@echo "  docs-serve   build then serve docs at localhost:8000"
+	@echo ""
+	@echo "Releases"
+	@echo "  version      print current version"
+	@echo "  bump-patch   bump patch version, tag, and push"
+	@echo "  bump-minor   bump minor version, tag, and push"
+	@echo "  bump-major   bump major version, tag, and push"
 
 dev:
 	uv sync
@@ -16,7 +38,7 @@ test:
 	uv run pytest
 
 lint:
-	cargo clippy -- -D warnings
+	cargo clippy -p dex-core -- -D warnings
 	uv run ruff check python/
 
 fmt:
