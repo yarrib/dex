@@ -79,7 +79,7 @@ def agent_new(name: str | None, directory: str, no_generate: bool) -> None:
     console.print()
     target = Path(directory).resolve()
 
-    answers = {
+    answers: dict[str, object] = {
         "name": agent_name,
         "description": description,
         "trigger": TRIGGER_CHOICES[trigger],
