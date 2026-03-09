@@ -2,13 +2,14 @@
 
 **dex** is an opinionated CLI framework for data project operations. It scaffolds Python packages, Databricks Asset Bundles, and AI agent projects — and can be extended by teams to wrap their own tooling.
 
-## Quick install
+## Install
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-See [Installation](installation.md) for manual install, Windows, and build-from-source options.
+Installs via [uv](https://docs.astral.sh/uv/) — auto-detects your platform and downloads the right wheel.
+See [Installation](installation.md) for manual uv install, Windows, and build-from-source options.
 
 ## 30-second example
 

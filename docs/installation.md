@@ -3,9 +3,10 @@
 dex is distributed as pre-built wheels on [GitHub Releases](https://github.com/yarrib/dex/releases).
 No PyPI, no crates.io, no Rust toolchain required.
 
-## One-line install (recommended)
+## Install with uv (recommended)
 
-Paste this in your terminal on macOS or Linux:
+The fastest way to install dex is with the installer script, which uses [uv](https://docs.astral.sh/uv/)
+to download and install the right wheel for your platform:
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
@@ -29,7 +30,7 @@ dex --help
 
 ## Manual install with uv
 
-If you prefer not to pipe into `sh`, or you are on Windows:
+If you already have [uv](https://docs.astral.sh/uv/) and prefer not to pipe into `sh`:
 
 1. Go to the [latest release](https://github.com/yarrib/dex/releases/latest)
 2. Copy the wheel URL for your platform
@@ -41,7 +42,7 @@ If you prefer not to pipe into `sh`, or you are on Windows:
 | macOS Intel | `*-macosx_10_12_x86_64.whl` |
 | Windows x86\_64 | `*-win_amd64.whl` |
 
-3. Install via uv:
+3. Install:
 
 ```bash
 uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"

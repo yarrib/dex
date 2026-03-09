@@ -1,6 +1,6 @@
 [package]
 name = "dex-py"
-version = "0.1.4"
+version = "0.1.0"
 description = "Python bindings for dex-core via PyO3"
 edition.workspace = true
 license.workspace = true
