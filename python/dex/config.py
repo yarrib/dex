@@ -60,11 +60,32 @@ class DexConfig:
 USER_CONFIG_PATH = Path.home() / ".config" / "dex" / "config.toml"
 PROJECT_CONFIG_PATH = Path("dex.toml")
 REMOTE_CACHE_DIR = Path.home() / ".cache" / "dex" / "templates"
+STANDARDS_PATH = Path.home() / ".config" / "dex" / "standards.toml"
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+
+def load_standards(path: Path | None = None) -> dict[str, object]:
+    """Load variable pre-fills from a standards file.
+
+    Reads ``~/.config/dex/standards.toml`` by default, or the path provided
+    via ``--standards``. Returns a flat dict of variable name → value.
+    Variables present here are used directly during ``dex init`` without prompting.
+
+    Example standards.toml::
+
+        author = "yarrib"
+        python_version = "3.12"
+        org = "acme"
+    """
+    target = path or STANDARDS_PATH
+    if not target.exists():
+        return {}
+    with open(target, "rb") as f:
+        return dict(tomllib.load(f))
 
 
 def load_config() -> DexConfig:

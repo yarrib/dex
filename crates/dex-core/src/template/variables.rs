@@ -4,8 +4,8 @@ use serde::Deserialize;
 
 use crate::error::TemplateError;
 
-/// A variable declaration from `template.toml`.
-#[derive(Debug, Deserialize)]
+/// A variable declaration (resolved, with name) used throughout the system.
+#[derive(Debug, Clone, Deserialize)]
 pub struct VariableSpec {
     pub name: String,
     pub prompt: String,
@@ -19,10 +19,49 @@ pub struct VariableSpec {
     pub choices: Option<Vec<String>>,
     #[serde(default)]
     pub validate: Option<String>,
+    /// Optional prompt ordering. Variables with `order` are presented first,
+    /// sorted by this value. Variables without `order` follow in their
+    /// definition order.
+    #[serde(default)]
+    pub order: Option<u32>,
+}
+
+/// Inline variable spec used when parsing the `[variables]` table format.
+/// The variable name comes from the map key, not a field.
+#[derive(Debug, Clone, Deserialize)]
+pub struct VariableSpecInline {
+    pub prompt: String,
+    #[serde(rename = "type", default = "default_var_type")]
+    pub var_type: VariableType,
+    #[serde(default)]
+    pub default: Option<toml::Value>,
+    #[serde(default)]
+    pub required: bool,
+    #[serde(default)]
+    pub choices: Option<Vec<String>>,
+    #[serde(default)]
+    pub validate: Option<String>,
+    #[serde(default)]
+    pub order: Option<u32>,
+}
+
+impl VariableSpecInline {
+    pub fn into_spec(self, name: String) -> VariableSpec {
+        VariableSpec {
+            name,
+            prompt: self.prompt,
+            var_type: self.var_type,
+            default: self.default,
+            required: self.required,
+            choices: self.choices,
+            validate: self.validate,
+            order: self.order,
+        }
+    }
 }
 
 /// The type of a template variable.
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum VariableType {
     #[default]
@@ -80,6 +119,7 @@ mod tests {
             required: false,
             choices: choices.map(|c| c.into_iter().map(String::from).collect()),
             validate: validate.map(String::from),
+            order: None,
         }
     }
 

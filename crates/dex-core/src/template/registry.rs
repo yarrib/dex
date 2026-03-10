@@ -46,7 +46,7 @@ fn load_directory_template(template_dir: &Path) -> Result<Template, DexError> {
 
     Ok(Template {
         meta: manifest.meta(),
-        variables: manifest.variables,
+        variables: manifest.variables(),
         file_rules: manifest.files,
         files,
     })
@@ -164,7 +164,7 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
 
     Ok(Template {
         meta: manifest.meta(),
-        variables: manifest.variables,
+        variables: manifest.variables(),
         file_rules: manifest.files,
         files,
     })
