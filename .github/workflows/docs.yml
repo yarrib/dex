@@ -39,7 +39,7 @@ jobs:
       - name: Deploy latest (on push to main)
         if: github.ref_type == 'branch'
         run: |
-          uv run mike deploy --push --update-aliases dev latest
+          uv run mike deploy --push latest
           uv run mike set-default --push latest
 
       - name: Deploy versioned release (on tag)
@@ -47,5 +47,4 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           MINOR="${VERSION%.*}"
-          uv run mike deploy --push --update-aliases "${MINOR}" latest
-          uv run mike set-default --push latest
+          uv run mike deploy --push "${MINOR}"
