@@ -38,12 +38,16 @@ jobs:
 
       - name: Deploy latest (on push to main)
         if: github.ref_type == 'branch'
+        env:
+          NO_MKDOCS_2_WARNING: 1
         run: |
           uv run mike deploy --push latest
           uv run mike set-default --push latest
 
       - name: Deploy versioned release (on tag)
         if: github.ref_type == 'tag'
+        env:
+          NO_MKDOCS_2_WARNING: 1
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           MINOR="${VERSION%.*}"
