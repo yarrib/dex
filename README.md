@@ -9,8 +9,10 @@ Rust core for performance. Python surface for extensibility. Zero-compromise erg
 ## Install
 
 ```bash
-uv tool install dex
+curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
+
+Installs via [uv](https://docs.astral.sh/uv/) — auto-detects your platform and fetches the right wheel from GitHub Releases.
 
 ## Quick Start
 
@@ -68,7 +70,7 @@ full specification and architecture.
 
 ## Status
 
-**v0.1 — in development.** `dex init` with template scaffolding (Python packages, Databricks Asset Bundles).
+**v0.1.0** — `dex init` with template scaffolding (Python packages, Databricks Asset Bundles).
 
 ## License
 
