@@ -29,6 +29,20 @@ fn parse_template_manifest(path: &str) -> PyResult<TemplateManifestPy> {
     let manifest = TemplateManifest::from_path(&PathBuf::from(path))
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
+    let variables: Vec<VariableSpecPy> = manifest
+        .variables()
+        .into_iter()
+        .map(|v| VariableSpecPy {
+            name: v.name,
+            prompt: v.prompt,
+            var_type: format!("{:?}", v.var_type).to_lowercase(),
+            required: v.required,
+            default: v.default.map(|d| d.to_string()),
+            choices: v.choices,
+            validate: v.validate,
+        })
+        .collect();
+
     let dabs = manifest.template.dabs.map(|d| DabsBaseSpecPy {
         source: d.source,
         variable_map: d.variable_map,
@@ -39,19 +53,7 @@ fn parse_template_manifest(path: &str) -> PyResult<TemplateManifestPy> {
         description: manifest.template.description,
         version: manifest.template.version,
         dabs,
-        variables: manifest
-            .variables
-            .into_iter()
-            .map(|v| VariableSpecPy {
-                name: v.name,
-                prompt: v.prompt,
-                var_type: format!("{:?}", v.var_type).to_lowercase(),
-                required: v.required,
-                default: v.default.map(|d| d.to_string()),
-                choices: v.choices,
-                validate: v.validate,
-            })
-            .collect(),
+        variables,
     })
 }
 

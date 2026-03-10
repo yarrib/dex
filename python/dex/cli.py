@@ -185,10 +185,24 @@ def _collect_templates(
     is_flag=True,
     help="Use defaults for all variables (non-interactive).",
 )
+@click.option(
+    "--standards",
+    "standards_file",
+    default=None,
+    type=click.Path(exists=True, path_type=Path),
+    help="TOML file of pre-filled variable values (skips prompts for matched vars).",
+)
 @click.pass_context
-def init_command(ctx: click.Context, template: str, directory: str, no_prompt: bool) -> None:
+def init_command(
+    ctx: click.Context,
+    template: str,
+    directory: str,
+    no_prompt: bool,
+    standards_file: Path | None,
+) -> None:
     """Scaffold a new project from a template."""
     from dex._core import get_template_variables, scaffold_project
+    from dex.config import load_standards
 
     target = Path(directory).resolve()
 
@@ -205,15 +219,24 @@ def init_command(ctx: click.Context, template: str, directory: str, no_prompt: b
 
     source_path, _ = registry[template]
 
+    # Load standards (pre-filled values that skip prompts).
+    standards = load_standards(standards_file)
+
     # Collect variables from template manifest, then prompt interactively.
+    # Rust returns specs in prompt order (order field, then definition order).
     specs = get_template_variables(source_path, template)
     default_project_name = target.name if target.name != "." else Path.cwd().name
     variables: dict[str, object] = {}
 
-    for spec in sorted(specs, key=lambda s: s.name):
+    for spec in specs:
         effective_default = (
             default_project_name if spec.name == "project_name" else spec.default or ""
         )
+
+        # Standards pre-fill: skip prompt entirely.
+        if spec.name in standards:
+            variables[spec.name] = standards[spec.name]
+            continue
 
         if no_prompt:
             if spec.var_type == "bool":

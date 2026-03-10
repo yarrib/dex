@@ -4,17 +4,6 @@ description = "Opinionated Databricks ML project"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 
-[[variables]]
-name = "project_name"
-prompt = "Project name"
-type = "string"
-required = true
-validate = "^[a-z][a-z0-9_-]*$"
-
-[[variables]]
-name = "python_version"
-prompt = "Python version"
-type = "choice"
-choices = ["3.12", "3.11"]
-default = "3.12"
-required = false
+[variables]
+project_name = { prompt = "Project name", required = true, validate = "^[a-z][a-z0-9_-]*$", order = 1 }
+python_version = { prompt = "Python version", type = "choice", choices = ["3.12", "3.11", "3.13"], default = "3.12", order = 2 }

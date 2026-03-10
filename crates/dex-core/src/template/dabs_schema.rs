@@ -104,6 +104,7 @@ impl DabsTemplateSchema {
                     required: prop.default.is_none(),
                     choices,
                     validate: prop.pattern.clone(),
+                    order: None,
                 }
             })
             .collect()

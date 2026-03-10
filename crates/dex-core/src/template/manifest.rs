@@ -1,9 +1,11 @@
 //! Template manifest (`template.toml`) parsing.
 
+use indexmap::IndexMap;
 use serde::Deserialize;
 use std::path::Path;
 
 use crate::error::{DexError, TemplateError};
+use crate::template::variables::VariableSpecInline;
 use crate::template::{TemplateMeta, VariableSpec};
 
 /// Raw deserialized template manifest from `template.toml`.
@@ -11,11 +13,30 @@ use crate::template::{TemplateMeta, VariableSpec};
 pub struct TemplateManifest {
     pub template: TemplateMetaRaw,
     #[serde(default)]
-    pub variables: Vec<VariableSpec>,
+    variables: VariablesField,
     #[serde(default)]
     pub files: Vec<FileRule>,
     #[serde(default)]
     pub hooks: Option<HooksSpec>,
+}
+
+/// Supports both `[[variables]]` array format and `[variables]` inline table format.
+///
+/// - `[[variables]]` — array of tables, each with an explicit `name` field (legacy)
+/// - `[variables]` — inline table where the key is the variable name (preferred)
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum VariablesField {
+    /// `[[variables]]` array format — name is an explicit field.
+    Array(Vec<VariableSpec>),
+    /// `[variables]` inline format — name comes from the map key.
+    Map(IndexMap<String, VariableSpecInline>),
+}
+
+impl Default for VariablesField {
+    fn default() -> Self {
+        VariablesField::Array(vec![])
+    }
 }
 
 /// Raw template metadata from `[template]` section.
@@ -127,6 +148,27 @@ impl TemplateManifest {
             .map_err(|e| DexError::Template(TemplateError::InvalidManifest(e.to_string())))
     }
 
+    /// Return variables in prompt order.
+    ///
+    /// Variables with an explicit `order` field are sorted by that value first.
+    /// Variables without `order` follow in their original definition order.
+    /// This means you can mix ordered and unordered variables: ordered ones are
+    /// promoted to the front, unordered ones trail in document order.
+    #[must_use]
+    pub fn variables(&self) -> Vec<VariableSpec> {
+        let mut vars: Vec<VariableSpec> = match &self.variables {
+            VariablesField::Array(v) => v.clone(),
+            VariablesField::Map(m) => m
+                .iter()
+                .map(|(name, spec)| spec.clone().into_spec(name.clone()))
+                .collect(),
+        };
+        // Stable sort: (has_no_order=false, order) < (has_no_order=true, 0)
+        // so explicitly-ordered vars come first, unordered trail in original position.
+        vars.sort_by_key(|v| (v.order.is_none(), v.order.unwrap_or(0)));
+        vars
+    }
+
     /// Convert to a `TemplateMeta` for listing.
     #[must_use]
     pub fn meta(&self) -> TemplateMeta {
@@ -153,7 +195,7 @@ mod tests {
         "#;
         let manifest = TemplateManifest::parse(toml_str).unwrap();
         assert_eq!(manifest.template.name, "default");
-        assert!(manifest.variables.is_empty());
+        assert!(manifest.variables().is_empty());
         assert!(manifest.files.is_empty());
     }
 
@@ -188,13 +230,13 @@ mod tests {
             condition = "include_ci"
         "#;
         let manifest = TemplateManifest::parse(toml_str).unwrap();
+        assert_eq!(manifest.variables().len(), 2);
         let dabs = manifest.template.dabs.unwrap();
         assert!(dabs.source.contains("bundle-examples"));
         assert_eq!(
             dabs.variable_map.get("project_name").unwrap(),
             "project_name"
         );
-        assert_eq!(manifest.variables.len(), 2);
     }
 
     #[test]
@@ -240,8 +282,51 @@ mod tests {
             post_scaffold = "hooks/post_scaffold.py"
         "#;
         let manifest = TemplateManifest::parse(toml_str).unwrap();
-        assert_eq!(manifest.variables.len(), 2);
+        assert_eq!(manifest.variables().len(), 2);
         assert_eq!(manifest.files.len(), 1);
         assert!(manifest.hooks.unwrap().post_scaffold.is_some());
+    }
+
+    #[test]
+    fn parse_inline_variables_format() {
+        let toml_str = r#"
+            [template]
+            name = "default"
+            description = "Default project template"
+            version = "0.1.0"
+
+            [variables]
+            project_name = { prompt = "Project name", required = true, order = 1 }
+            python_version = { prompt = "Python version", type = "choice", choices = ["3.12", "3.11"], default = "3.12", order = 2 }
+            author = { prompt = "Author name" }
+        "#;
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
+        let vars = manifest.variables();
+        assert_eq!(vars.len(), 3);
+        // ordered vars come first
+        assert_eq!(vars[0].name, "project_name");
+        assert_eq!(vars[1].name, "python_version");
+        // unordered trails
+        assert_eq!(vars[2].name, "author");
+    }
+
+    #[test]
+    fn inline_variables_order_field_sorts_correctly() {
+        let toml_str = r#"
+            [template]
+            name = "test"
+            description = "Test"
+            version = "0.1.0"
+
+            [variables]
+            b_var = { prompt = "B", order = 2 }
+            a_var = { prompt = "A", order = 1 }
+            c_var = { prompt = "C" }
+        "#;
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
+        let vars = manifest.variables();
+        assert_eq!(vars[0].name, "a_var");
+        assert_eq!(vars[1].name, "b_var");
+        assert_eq!(vars[2].name, "c_var");
     }
 }

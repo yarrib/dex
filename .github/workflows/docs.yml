@@ -33,6 +33,16 @@ jobs:
           UV_PYTHON: "3.12"
         run: uv sync --group docs
 
+      - name: Install git-cliff
+        uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Generate changelog
+        run: git-cliff --output docs/changelog.md
+        env:
+          GITHUB_REPO: ${{ github.repository }}
+
       - name: Configure git for mike
         run: |
           git config user.name "github-actions[bot]"

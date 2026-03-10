@@ -52,6 +52,7 @@ name = "dex-core"
 version = "0.1.0"
 dependencies = [
  "include_dir",
+ "indexmap",
  "insta",
  "minijinja",
  "regex",
