@@ -359,6 +359,35 @@ mod tests {
     }
 
     #[test]
+    fn load_project_config_not_found() {
+        let result = load_project_config(Path::new("/nonexistent/dex.toml"));
+        assert!(
+            matches!(result, Err(DexError::Config(ConfigError::NotFound(_)))),
+            "expected ConfigError::NotFound"
+        );
+    }
+
+    #[test]
+    fn load_project_config_invalid_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("dex.toml");
+        std::fs::write(&path, "this is not valid toml ][[[").unwrap();
+        let result = load_project_config(&path);
+        assert!(
+            matches!(result, Err(DexError::Config(ConfigError::Parse(_)))),
+            "expected ConfigError::Parse"
+        );
+    }
+
+    #[test]
+    fn load_standards_missing_path_returns_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonexistent.toml");
+        let standards = load_standards(Some(&path)).unwrap();
+        assert!(standards.is_empty());
+    }
+
+    #[test]
     fn load_standards_from_string() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("standards.toml");

@@ -188,6 +188,31 @@ mod tests {
     }
 
     #[test]
+    fn scaffold_overwrite_false_skips_existing_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let existing = dir.path().join("config.toml");
+        std::fs::write(&existing, "original").unwrap();
+
+        let mut files = HashMap::new();
+        files.insert(PathBuf::from("config.toml"), "overwritten".to_string());
+
+        let rules = vec![FileRule {
+            src: "config.toml".to_string(),
+            dest: None,
+            condition: None,
+            overwrite: false,
+        }];
+
+        let template = make_template(files, rules);
+        let result = scaffold(&template, dir.path(), &HashMap::new()).unwrap();
+
+        // File was skipped, so not in files_created
+        assert!(result.files_created.is_empty());
+        // Original content preserved
+        assert_eq!(std::fs::read_to_string(&existing).unwrap(), "original");
+    }
+
+    #[test]
     fn scaffold_conditional_exclusion() {
         let dir = tempfile::tempdir().unwrap();
         let mut files = HashMap::new();

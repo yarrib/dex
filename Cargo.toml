@@ -37,9 +37,7 @@ dialoguer = { version = "0.11", features = ["fuzzy-select"] }
 console = "0.15"
 indicatif = "0.17"
 
-# Python bindings (optional — for dex-py only)
-pyo3 = { version = "0.23", features = ["extension-module"] }
-
 # Testing
 insta = { version = "1", features = ["yaml"] }
 tempfile = "3"
+assert_cmd = "2"

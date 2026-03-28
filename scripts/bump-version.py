@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update version across pyproject.toml and Cargo.toml files.
+"""Update version across Cargo.toml files.
 
 Usage:
     python3 scripts/bump-version.py              # print current version
@@ -14,18 +14,17 @@ import re
 import sys
 from pathlib import Path
 
-PYPROJECT = Path("pyproject.toml")
 CARGO_FILES = [
     Path("crates/dex-core/Cargo.toml"),
-    Path("crates/dex-py/Cargo.toml"),
+    Path("crates/dex-cli/Cargo.toml"),
 ]
 
 
 def current_version() -> str:
-    text = PYPROJECT.read_text()
+    text = CARGO_FILES[0].read_text()
     m = re.search(r'^version = "(.+?)"', text, re.MULTILINE)
     if not m:
-        sys.exit("error: version not found in pyproject.toml")
+        sys.exit(f"error: version not found in {CARGO_FILES[0]}")
     return m.group(1)
 
 
@@ -66,7 +65,6 @@ def main() -> None:
             sys.exit(f"error: invalid version '{arg}' — expected X.Y.Z or patch/minor/major")
         new = arg
 
-    set_version(PYPROJECT, new)
     for cargo in CARGO_FILES:
         set_version(cargo, new)
 

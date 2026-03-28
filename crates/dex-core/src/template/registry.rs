@@ -138,7 +138,6 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
 
     // Collect files from the embedded "files/" subdirectory.
     let mut files = HashMap::new();
-    let files_prefix = Path::new("files");
 
     fn collect_files(
         dir: &include_dir::Dir<'_>,
@@ -157,9 +156,11 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         }
     }
 
+    // base_prefix must be the full embedded path of the "files/" dir so that
+    // strip_prefix produces paths relative to that dir (e.g. "src/main.py").
     let files_dir_path = template_dir.path().join("files");
     if let Some(files_dir) = template_dir.get_dir(&files_dir_path) {
-        collect_files(files_dir, files_prefix, &mut files);
+        collect_files(files_dir, &files_dir_path, &mut files);
     }
 
     Ok(Template {
@@ -190,6 +191,49 @@ fn list_embedded_templates() -> Result<Vec<TemplateMeta>, DexError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn load_embedded_template_not_found_returns_error() {
+        let result = load_embedded_template("does-not-exist");
+        assert!(
+            matches!(
+                result,
+                Err(crate::error::DexError::Template(
+                    crate::error::TemplateError::NotFound(_)
+                ))
+            ),
+            "expected TemplateError::NotFound"
+        );
+    }
+
+    #[test]
+    fn load_template_from_directory_source() {
+        let base = tempfile::tempdir().unwrap();
+        let tmpl_dir = base.path().join("my-tmpl");
+        let files_dir = tmpl_dir.join("files");
+        std::fs::create_dir_all(&files_dir).unwrap();
+        std::fs::write(
+            tmpl_dir.join("template.toml"),
+            r#"[template]
+name = "my-tmpl"
+description = "Test"
+version = "0.1.0"
+"#,
+        )
+        .unwrap();
+        std::fs::write(files_dir.join("hello.txt"), "hello world").unwrap();
+
+        let source = TemplateSource::Directory(base.path().to_path_buf());
+        let template = load_template(&source, "my-tmpl").unwrap();
+
+        assert_eq!(template.meta.name, "my-tmpl");
+        assert_eq!(template.files.len(), 1);
+        assert!(
+            template
+                .files
+                .contains_key(std::path::Path::new("hello.txt"))
+        );
+    }
 
     #[test]
     fn embedded_templates_are_not_empty() {
