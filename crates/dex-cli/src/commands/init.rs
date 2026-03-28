@@ -1,0 +1,258 @@
+//! `dex init` — scaffold a new project from a template.
+
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+
+use clap::Args;
+use console::style;
+use dialoguer::{Confirm, Input, Select};
+
+use dex_core::config::{load_dex_config, load_standards, resolve_remote};
+use dex_core::template::TemplateSource;
+use dex_core::template::registry::{list_templates, load_template};
+use dex_core::template::variables::VariableType;
+use dex_core::{DexError, scaffold};
+
+use crate::output;
+
+#[derive(Args)]
+pub struct InitArgs {
+    /// Template to scaffold from.
+    #[arg(short, long, default_value = "default")]
+    template: String,
+
+    /// Target directory.
+    #[arg(short, long, default_value = ".")]
+    dir: String,
+
+    /// Use defaults for all variables (non-interactive).
+    #[arg(long)]
+    no_prompt: bool,
+
+    /// TOML file of pre-filled variable values (skips prompts for matched vars).
+    #[arg(long)]
+    standards: Option<PathBuf>,
+}
+
+pub fn run(args: InitArgs) -> Result<(), DexError> {
+    let target = PathBuf::from(&args.dir)
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(&args.dir).to_path_buf());
+
+    // Collect templates from all sources.
+    let registry = collect_templates(None)?;
+
+    println!(
+        "\n{} — scaffolding with template {}\n",
+        style("dex init").bold(),
+        style(&args.template).cyan()
+    );
+
+    let entry = registry.get(&args.template).ok_or_else(|| {
+        let available: Vec<_> = registry.keys().map(|s| s.as_str()).collect();
+        DexError::Config(dex_core::error::ConfigError::Invalid(format!(
+            "template '{}' not found. Available: {}",
+            args.template,
+            available.join(", ")
+        )))
+    })?;
+
+    // Load standards (pre-filled values that skip prompts).
+    let standards = load_standards(args.standards.as_deref())?;
+
+    // Load the template.
+    let template = load_template(&entry.source, &args.template)?;
+
+    // Determine default project name from target directory.
+    let default_project_name = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("my_project")
+        .to_string();
+
+    // Collect variables via interactive prompts.
+    let mut variables: HashMap<String, minijinja::Value> = HashMap::new();
+
+    for spec in &template.variables {
+        let effective_default = if spec.name == "project_name" {
+            default_project_name.clone()
+        } else {
+            spec.default
+                .as_ref()
+                .map(toml_value_to_string)
+                .unwrap_or_default()
+        };
+
+        // Standards pre-fill: skip prompt entirely.
+        if let Some(val) = standards.get(&spec.name) {
+            variables.insert(spec.name.clone(), minijinja::Value::from(val.clone()));
+            continue;
+        }
+
+        if args.no_prompt {
+            let val = match spec.var_type {
+                VariableType::Bool => {
+                    let b = effective_default.is_empty() || effective_default == "true";
+                    minijinja::Value::from(b)
+                }
+                VariableType::Choice => {
+                    let v = if effective_default.is_empty() {
+                        spec.choices
+                            .as_ref()
+                            .and_then(|c| c.first().cloned())
+                            .unwrap_or_default()
+                    } else {
+                        effective_default
+                    };
+                    minijinja::Value::from(v)
+                }
+                _ => minijinja::Value::from(effective_default),
+            };
+            variables.insert(spec.name.clone(), val);
+        } else {
+            let val = match spec.var_type {
+                VariableType::Choice => {
+                    let choices = spec.choices.as_deref().unwrap_or(&[]);
+                    let default_idx = choices
+                        .iter()
+                        .position(|c| c == &effective_default)
+                        .unwrap_or(0);
+                    let selection = Select::new()
+                        .with_prompt(&spec.prompt)
+                        .items(choices)
+                        .default(default_idx)
+                        .interact()
+                        .map_err(io_error)?;
+                    minijinja::Value::from(choices[selection].clone())
+                }
+                VariableType::Bool => {
+                    let default = effective_default.is_empty() || effective_default == "true";
+                    let answer = Confirm::new()
+                        .with_prompt(&spec.prompt)
+                        .default(default)
+                        .interact()
+                        .map_err(io_error)?;
+                    minijinja::Value::from(answer)
+                }
+                _ => {
+                    let mut input = Input::<String>::new().with_prompt(&spec.prompt);
+                    if !effective_default.is_empty() {
+                        input = input.default(effective_default.clone());
+                    }
+
+                    // Add validation if a pattern is defined.
+                    if let Some(pattern) = &spec.validate {
+                        let re = regex::Regex::new(pattern).ok();
+                        let pattern_str = pattern.clone();
+                        input = input.validate_with(move |val: &String| -> Result<(), String> {
+                            if let Some(ref re) = re {
+                                if re.is_match(val) {
+                                    Ok(())
+                                } else {
+                                    Err(format!(
+                                        "value '{val}' does not match pattern '{pattern_str}'"
+                                    ))
+                                }
+                            } else {
+                                Ok(())
+                            }
+                        });
+                    }
+
+                    let answer = input.interact_text().map_err(io_error)?;
+                    minijinja::Value::from(answer)
+                }
+            };
+            variables.insert(spec.name.clone(), val);
+        }
+    }
+
+    let result = scaffold(&template, &target, &variables)?;
+
+    output::print_files_created(&result.files_created);
+
+    Ok(())
+}
+
+/// Registry entry for a discovered template.
+struct TemplateEntry {
+    source: TemplateSource,
+    #[allow(dead_code)]
+    description: String,
+}
+
+/// Collect all available templates from embedded + config + extra_dir.
+fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, TemplateEntry>, DexError> {
+    let mut registry = HashMap::new();
+
+    // 1. Embedded templates (lowest priority).
+    for meta in list_templates(&TemplateSource::Embedded)? {
+        registry.insert(
+            meta.name.clone(),
+            TemplateEntry {
+                source: TemplateSource::Embedded,
+                description: meta.description,
+            },
+        );
+    }
+
+    // 2. Config-based sources.
+    let config = load_dex_config();
+    let mut dirs_to_scan: Vec<(PathBuf, TemplateSource)> = Vec::new();
+
+    if let Some(dir) = &config.templates_dir {
+        dirs_to_scan.push((dir.clone(), TemplateSource::Directory(dir.clone())));
+    }
+
+    for remote in &config.remotes {
+        match resolve_remote(remote, true) {
+            Ok(local) => {
+                dirs_to_scan.push((local.clone(), TemplateSource::Directory(local)));
+            }
+            Err(e) => {
+                output::print_warning(&format!("could not resolve remote '{}': {e}", remote.name));
+            }
+        }
+    }
+
+    // 3. Extra dir (from extension).
+    if let Some(dir) = extra_dir {
+        dirs_to_scan.push((
+            dir.to_path_buf(),
+            TemplateSource::Directory(dir.to_path_buf()),
+        ));
+    }
+
+    for (_dir, source) in &dirs_to_scan {
+        if let Ok(metas) = list_templates(source) {
+            for meta in metas {
+                registry.insert(
+                    meta.name.clone(),
+                    TemplateEntry {
+                        source: source.clone(),
+                        description: meta.description,
+                    },
+                );
+            }
+        }
+    }
+
+    Ok(registry)
+}
+
+fn toml_value_to_string(v: &toml::Value) -> String {
+    match v {
+        toml::Value::String(s) => s.clone(),
+        toml::Value::Boolean(b) => b.to_string(),
+        toml::Value::Integer(i) => i.to_string(),
+        toml::Value::Float(f) => f.to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn io_error(e: impl std::fmt::Display) -> DexError {
+    DexError::Io {
+        path: PathBuf::from("<stdin>"),
+        source: std::io::Error::other(e.to_string()),
+    }
+}

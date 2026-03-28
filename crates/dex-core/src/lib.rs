@@ -10,7 +10,10 @@ pub mod scaffold;
 pub mod template;
 
 pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
-pub use config::ProjectConfig;
+pub use config::{
+    DexConfig, PassthroughSpec, ProjectConfig, RemoteSource, load_dex_config, load_project_config,
+    load_standards, resolve_remote,
+};
 pub use error::DexError;
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use template::{Template, TemplateMeta, TemplateSource};
