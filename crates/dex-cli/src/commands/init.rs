@@ -7,7 +7,7 @@ use clap::Args;
 use console::style;
 use dialoguer::{Confirm, Input, Select};
 
-use dex_core::config::{load_dex_config, load_standards, resolve_remote};
+use dex_core::config::{load_dex_config, load_preset, load_standards, resolve_remote};
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
@@ -32,6 +32,14 @@ pub struct InitArgs {
     /// TOML file of pre-filled variable values (skips prompts for matched vars).
     #[arg(long)]
     standards: Option<PathBuf>,
+
+    /// Named preset profile to load (from ~/.config/dex/presets.toml).
+    #[arg(long)]
+    preset: Option<String>,
+
+    /// TOML presets file to use instead of the default location.
+    #[arg(long)]
+    presets_file: Option<PathBuf>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -57,8 +65,21 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         )))
     })?;
 
-    // Load standards (pre-filled values that skip prompts).
+    // Load preset profile (lower-priority pre-fills).
+    let preset = if let Some(ref profile) = args.preset {
+        load_preset(args.presets_file.as_deref(), profile)?
+    } else {
+        HashMap::new()
+    };
+
+    // Load standards (higher-priority pre-fills; override preset for the same key).
     let standards = load_standards(args.standards.as_deref())?;
+
+    // Merge: preset as baseline, standards take precedence.
+    let mut prefills = preset;
+    for (k, v) in &standards {
+        prefills.insert(k.clone(), v.clone());
+    }
 
     // Load the template.
     let template = load_template(&entry.source, &args.template)?;
@@ -83,8 +104,8 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
                 .unwrap_or_default()
         };
 
-        // Standards pre-fill: skip prompt entirely.
-        if let Some(val) = standards.get(&spec.name) {
+        // Pre-fill: preset or standards value skips the prompt entirely.
+        if let Some(val) = prefills.get(&spec.name) {
             variables.insert(spec.name.clone(), minijinja::Value::from(val.clone()));
             continue;
         }

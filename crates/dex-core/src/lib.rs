@@ -11,8 +11,8 @@ pub mod template;
 
 pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
 pub use config::{
-    DexConfig, PassthroughSpec, ProjectConfig, RemoteSource, load_dex_config, load_project_config,
-    load_standards, resolve_remote,
+    DexConfig, PassthroughSpec, ProjectConfig, RemoteSource, load_dex_config, load_preset,
+    load_project_config, load_standards, presets_path, resolve_remote,
 };
 pub use error::DexError;
 pub use scaffold::{ScaffoldResult, scaffold};

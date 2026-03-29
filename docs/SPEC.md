@@ -58,8 +58,12 @@ acme-dex deploy staging
 
 ```
 dex init [--template <name>] [--dir <path>] [--no-prompt]
+         [--preset <profile>] [--presets-file <path>]
+         [--standards <path>]
     Scaffold a new project from a template. Prompts for variables interactively
-    unless --no-prompt is set (uses defaults).
+    unless --no-prompt is set (uses defaults). --preset loads a named profile
+    from the presets file; --standards loads flat key-value pre-fills. Both
+    skip prompts for matched variables. Standards override preset values.
 
 dex add <component> [--dry-run]                              # future
     Bolt a component onto an existing project. Components: ci, serving,
@@ -180,6 +184,58 @@ paths = ["~/dex-templates"]
 
 [ui]
 color = "auto"    # auto | always | never
+```
+
+### 5.3. Presets: `~/.config/dex/presets.toml`
+
+Named profiles of variable pre-fills. Select a profile with `dex init --preset <name>`;
+any matching template variables are filled in without prompting.
+
+```toml
+# ~/.config/dex/presets.toml
+
+[profiles.ml-project]
+workspace_url  = "https://ml.cloud.databricks.com"
+cluster_id     = "0123-456789-ml"
+python_version = "3.12"
+
+[profiles.etl]
+workspace_url  = "https://etl.cloud.databricks.com"
+python_version = "3.11"
+```
+
+```bash
+# Use the ml-project profile — skips prompts for workspace_url, cluster_id, python_version
+dex init --template dabs-ml --preset ml-project
+
+# Point to a team-shared presets file instead of the user default
+dex init --template dabs-ml --preset ml-project --presets-file ./team-presets.toml
+```
+
+**Pre-fill precedence (lowest → highest):**
+
+1. Template defaults (`template.toml`)
+2. Preset profile values (`--preset`)
+3. Standards values (`--standards` / `~/.config/dex/standards.toml`)
+4. Interactive prompt answer
+
+Standards always win when the same key appears in both a preset and standards.
+This lets org-wide policy (standards) override project-type hints (presets).
+
+### 5.4. Standards: `~/.config/dex/standards.toml`
+
+Flat key-value file. Pre-fills template variables org-wide without requiring a
+named profile. Useful for values that are the same across all project types.
+
+```toml
+# ~/.config/dex/standards.toml
+author         = "yarrib"
+python_version = "3.12"
+```
+
+```bash
+# Explicit path (e.g. team-managed file in a shared repo)
+dex init --template default --standards ./org-standards.toml
 ```
 
 ## 6. Template System
