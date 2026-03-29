@@ -1,0 +1,1427 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>dex</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="Extensible CLI framework for data project operations">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-8adf115d.css">
+        <link rel="stylesheet" href="css/general-2459343d.css">
+        <link rel="stylesheet" href="css/chrome-ae938929.css">
+        <link rel="stylesheet" href="css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "searchindex-d4722d47.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-8d10a28d.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">dex</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/yarrib/dex" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="dex"><a class="header" href="#dex">dex</a></h1>
+<p><strong>dex</strong> is an opinionated CLI framework for data project operations. It scaffolds Python packages, Databricks Asset Bundles, and AI agent projects — and can be extended by teams to wrap their own tooling.</p>
+<h2 id="install"><a class="header" href="#install">Install</a></h2>
+<pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
+</code></pre>
+<p>Installs via <a href="https://docs.astral.sh/uv/">uv</a> — auto-detects your platform and downloads the right wheel.
+See <a href="#installation">Installation</a> for manual uv install, Windows, and build-from-source options.</p>
+<h2 id="30-second-example"><a class="header" href="#30-second-example">30-second example</a></h2>
+<pre><code class="language-bash"># Scaffold a new Databricks Asset Bundle project
+dex init --template dabs-package my_project
+
+# Scaffold a plain Python package
+dex init --template default my_package
+
+# Non-interactive (use all defaults)
+dex init --template dabs-package --no-prompt my_project
+</code></pre>
+<h2 id="what-dex-generates"><a class="header" href="#what-dex-generates">What dex generates</a></h2>
+<p>For a <code>dabs-package</code> project:</p>
+<pre><code>my_project/
+├── src/my_project/
+│   ├── __init__.py
+│   └── main.py          # entry point with argparse
+├── resources/
+│   └── my_project_job.yml   # DABs job definition
+├── notebooks/
+│   └── exploration.py   # Databricks notebook
+├── tests/
+│   ├── __init__.py
+│   └── test_my_project.py
+├── databricks.yml       # bundle config (dev/staging/prod targets)
+├── pyproject.toml       # uv-compatible project config
+├── README.md
+└── .gitignore
+</code></pre>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next steps</a></h2>
+<ul>
+<li><a href="#installation">Installation</a> — install from GitHub Releases or build from source</li>
+<li><a href="#dex-init">Usage: dex init</a> — all options and templates</li>
+<li><a href="#template-reference">Templates</a> — template reference</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="quickstart"><a class="header" href="#quickstart">Quickstart</a></h1>
+<p>Install dex and scaffold your first project in under a minute.</p>
+<h2 id="1-install"><a class="header" href="#1-install">1. Install</a></h2>
+<pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
+</code></pre>
+<p>Or manually with uv (see <a href="#installation">Installation</a> for platform-specific wheel URLs).</p>
+<p>See <a href="#installation">Installation</a> for platform-specific wheels and Windows instructions.</p>
+<h2 id="2-scaffold-a-project"><a class="header" href="#2-scaffold-a-project">2. Scaffold a project</a></h2>
+<p><strong>Databricks Asset Bundle:</strong></p>
+<pre><code class="language-bash">dex init --template dabs-package --dir my_project
+</code></pre>
+<p>Prompts:</p>
+<pre><code>Project name [my_project]:
+Python version (3.12, 3.11) [3.12]:
+Include exploration notebook? [Y/n]:
+Include job definition? [Y/n]:
+Use serverless compute? [y/N]:
+</code></pre>
+<p><strong>Plain Python package:</strong></p>
+<pre><code class="language-bash">dex init --template default --dir my_package
+</code></pre>
+<p><strong>Non-interactive (CI / scripts):</strong></p>
+<pre><code class="language-bash">dex init --template dabs-package --no-prompt --dir my_project
+</code></pre>
+<h2 id="3-inspect-what-was-generated"><a class="header" href="#3-inspect-what-was-generated">3. Inspect what was generated</a></h2>
+<pre><code>my_project/
+├── src/my_project/
+│   ├── __init__.py
+│   └── main.py
+├── resources/
+│   └── my_project_job.yml
+├── notebooks/
+│   └── exploration.py
+├── tests/
+│   └── test_my_project.py
+├── databricks.yml
+├── pyproject.toml
+├── README.md
+└── .gitignore
+</code></pre>
+<h2 id="4-deploy-to-databricks"><a class="header" href="#4-deploy-to-databricks">4. Deploy to Databricks</a></h2>
+<pre><code class="language-bash">cd my_project
+databricks bundle deploy          # → dev target
+databricks bundle deploy --target prod
+</code></pre>
+<h2 id="next-steps-1"><a class="header" href="#next-steps-1">Next steps</a></h2>
+<ul>
+<li><a href="#dex-init">dex init reference</a> — all options and template variables</li>
+<li><a href="#template-reference">Template reference</a> — what each template generates</li>
+<li><a href="#dex-agent-new">dex agent new</a> — scaffold an AI agent project</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
+<p>dex is distributed as pre-built wheels on <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a>.
+No PyPI, no crates.io, no Rust toolchain required.</p>
+<h2 id="install-with-uv-recommended"><a class="header" href="#install-with-uv-recommended">Install with uv (recommended)</a></h2>
+<p>The fastest way to install dex is with the installer script, which uses <a href="https://docs.astral.sh/uv/">uv</a>
+to download and install the right wheel for your platform:</p>
+<pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
+</code></pre>
+<p>The script will:</p>
+<ol>
+<li>Detect your OS and CPU architecture</li>
+<li>Fetch the latest release from GitHub</li>
+<li>Install <a href="https://docs.astral.sh/uv/">uv</a> if it is not already present</li>
+<li>Run <code>uv tool install</code> with the correct wheel</li>
+</ol>
+<p>After install, <code>dex</code> is available globally:</p>
+<pre><code class="language-bash">dex --help
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> The install script does not support Windows. Use the manual install path below.</p>
+</blockquote>
+<h2 id="manual-install-with-uv"><a class="header" href="#manual-install-with-uv">Manual install with uv</a></h2>
+<p>If you already have <a href="https://docs.astral.sh/uv/">uv</a> and prefer not to pipe into <code>sh</code>:</p>
+<ol>
+<li>Go to the <a href="https://github.com/yarrib/dex/releases/latest">latest release</a></li>
+<li>Copy the wheel URL for your platform</li>
+</ol>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Platform</th><th>Filename pattern</th></tr>
+</thead>
+<tbody>
+<tr><td>Linux x86_64</td><td><code>*-manylinux_2_17_x86_64.whl</code></td></tr>
+<tr><td>macOS Apple Silicon</td><td><code>*-macosx_11_0_arm64.whl</code></td></tr>
+<tr><td>macOS Intel</td><td><code>*-macosx_10_12_x86_64.whl</code></td></tr>
+<tr><td>Windows x86_64</td><td><code>*-win_amd64.whl</code></td></tr>
+</tbody>
+</table>
+</div>
+<ol start="3">
+<li>Install:</li>
+</ol>
+<pre><code class="language-bash">uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/&lt;wheel-filename&gt;"
+</code></pre>
+<h2 id="upgrade"><a class="header" href="#upgrade">Upgrade</a></h2>
+<pre><code class="language-bash">uv tool upgrade dex
+</code></pre>
+<p>Or reinstall from a specific release:</p>
+<pre><code class="language-bash">uv tool install --force "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/&lt;wheel-filename&gt;"
+</code></pre>
+<h2 id="uninstall"><a class="header" href="#uninstall">Uninstall</a></h2>
+<pre><code class="language-bash">uv tool uninstall dex
+</code></pre>
+<h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
+<p>Requires <a href="https://rustup.rs/">Rust</a> and <a href="https://docs.astral.sh/uv/">uv</a>.</p>
+<pre><code class="language-bash">git clone https://github.com/yarrib/dex
+cd dex
+make dev
+</code></pre>
+<p><code>make dev</code> runs <code>uv sync</code> followed by <code>maturin develop</code>, which compiles the Rust extension
+and installs everything into the local virtual environment.</p>
+<p>After that, <code>dex</code> is available in the venv:</p>
+<pre><code class="language-bash">dex --help
+</code></pre>
+<h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
+<ul>
+<li>Python 3.11+</li>
+<li><a href="https://docs.astral.sh/uv/">uv</a> — for <code>uv tool install</code></li>
+<li>For building from source: Rust stable (<code>rustup update stable</code>)</li>
+</ul>
+<h2 id="pypi"><a class="header" href="#pypi">PyPI</a></h2>
+<p>Coming soon. Track progress in <a href="https://github.com/yarrib/dex/issues">GitHub Issues</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="usage-overview"><a class="header" href="#usage-overview">Usage Overview</a></h1>
+<p>dex provides three core commands:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Command</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>dex init</code></td><td>Scaffold a new project from a template</td></tr>
+<tr><td><code>dex agent new</code></td><td>Scaffold an AI agent project via Q&amp;A</td></tr>
+<tr><td><code>dex mcp serve</code></td><td>Start the MCP server for AI agent integration</td></tr>
+</tbody>
+</table>
+</div>
+<p>See the sidebar for detailed documentation on each command.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dex-init"><a class="header" href="#dex-init">dex init</a></h1>
+<p>Scaffold a new project from a template.</p>
+<h2 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h2>
+<pre><code>dex init [OPTIONS] [DIRECTORY]
+</code></pre>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Option</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>--template</code>, <code>-t</code></td><td><code>default</code></td><td>Template to scaffold from</td></tr>
+<tr><td><code>--dir</code>, <code>-d</code></td><td><code>.</code></td><td>Target directory</td></tr>
+<tr><td><code>--no-prompt</code></td><td>—</td><td>Use all defaults, skip interactive prompts</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<pre><code class="language-bash"># Scaffold into current directory, prompting for all variables
+dex init --template dabs-package
+
+# Scaffold into a new directory
+dex init --template dabs-package --dir my_project
+
+# Non-interactive: use all defaults
+dex init --template dabs-package --no-prompt --dir my_project
+</code></pre>
+<h2 id="interactive-prompts"><a class="header" href="#interactive-prompts">Interactive prompts</a></h2>
+<p>When you run <code>dex init</code> without <code>--no-prompt</code>, it asks for each variable defined in the template’s manifest. For example, <code>dabs-package</code> asks:</p>
+<pre><code>Project name [my_project]:
+Python version (3.12, 3.11) [3.12]:
+Include exploration notebook? [Y/n]:
+Include job definition? [Y/n]:
+Use serverless compute? [y/N]:
+</code></pre>
+<h2 id="listing-available-templates"><a class="header" href="#listing-available-templates">Listing available templates</a></h2>
+<pre><code class="language-bash">dex init --help
+</code></pre>
+<p>Use the MCP server or <code>dex</code> source to see all built-in templates, or run:</p>
+<pre><code class="language-python">from dex._core import list_embedded_templates
+for t in list_embedded_templates():
+    print(t.name, "-", t.description)
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="template-reference"><a class="header" href="#template-reference">Template Reference</a></h1>
+<h2 id="default"><a class="header" href="#default">default</a></h2>
+<p>A general-purpose Python + Databricks project.</p>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Python package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── main.py
+notebooks/
+└── exploration.py
+tests/
+├── __init__.py
+└── test_main.py
+databricks.yml
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<hr>
+<h2 id="dabs-package"><a class="header" href="#dabs-package">dabs-package</a></h2>
+<p>A full Databricks Asset Bundle Python package. Includes job definitions, multi-target deploy config, and optional notebook scaffolding.</p>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Python package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>include_notebook</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>notebooks/exploration.py</code></td></tr>
+<tr><td><code>include_job</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>resources/&lt;project_name&gt;_job.yml</code></td></tr>
+<tr><td><code>use_serverless</code></td><td>bool</td><td><code>false</code></td><td>Use serverless compute in the job definition</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── main.py              # entry point with --catalog / --schema args
+resources/               # only if include_job=true
+└── &lt;project_name&gt;_job.yml
+notebooks/               # only if include_notebook=true
+└── exploration.py
+tests/
+├── __init__.py
+└── test_&lt;project_name&gt;.py
+databricks.yml           # bundle config: artifacts, targets, variables
+pyproject.toml           # dev deps: pytest, ruff, databricks-connect
+README.md
+.gitignore
+</code></pre>
+<p><strong>DABs targets:</strong></p>
+<p>The generated <code>databricks.yml</code> includes three targets:</p>
+<ul>
+<li><code>dev</code> (default) — <code>mode: development</code>, catalog <code>dev</code></li>
+<li><code>staging</code> — <code>mode: development</code>, catalog <code>staging</code></li>
+<li><code>prod</code> — production catalog</li>
+</ul>
+<p>Deploy with:</p>
+<pre><code class="language-bash">databricks bundle deploy              # → dev
+databricks bundle deploy --target prod
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dex-agent-new"><a class="header" href="#dex-agent-new">dex agent new</a></h1>
+<p>Scaffold an AI agent project via an interactive Q&amp;A flow.</p>
+<h2 id="synopsis-1"><a class="header" href="#synopsis-1">Synopsis</a></h2>
+<pre><code>dex agent new
+</code></pre>
+<h2 id="qa-flow"><a class="header" href="#qa-flow">Q&amp;A flow</a></h2>
+<p><code>dex agent new</code> asks a series of questions to understand the agent’s purpose, and then generates a project skeleton with a <code>CLAUDE.md</code>, <code>system_prompt.md</code>, and starter code.</p>
+<p><strong>Questions asked:</strong></p>
+<ol>
+<li><strong>Name</strong> — short identifier for the agent</li>
+<li><strong>Description</strong> — what the agent does in one sentence</li>
+<li><strong>Trigger</strong> — how the agent is activated (<code>user_request</code>, <code>schedule</code>, <code>event</code>, <code>upstream_system</code>)</li>
+<li><strong>Success criteria</strong> — how you know the agent succeeded</li>
+<li><strong>Reads</strong> — data sources the agent reads from</li>
+<li><strong>Writes</strong> — data sinks or side effects</li>
+<li><strong>Handoff</strong> — whether the agent hands off to a human</li>
+<li><strong>Autonomous</strong> — whether the agent runs without human review</li>
+<li><strong>Example input</strong> — a concrete example of what the agent receives</li>
+<li><strong>Example output</strong> — what a good response looks like</li>
+<li><strong>Bad output</strong> — what a bad response looks like (for guardrails)</li>
+<li><strong>Deploy target</strong> — <code>job</code>, <code>serving_endpoint</code>, or <code>interactive</code></li>
+</ol>
+<h2 id="generated-files"><a class="header" href="#generated-files">Generated files</a></h2>
+<pre><code>&lt;agent_name&gt;/
+├── CLAUDE.md            # Agent instructions for Claude Code
+├── system_prompt.md     # System prompt template
+├── main.py              # Entry point skeleton
+└── README.md            # Setup and usage
+</code></pre>
+<h2 id="mcp-integration"><a class="header" href="#mcp-integration">MCP integration</a></h2>
+<p>After scaffolding, the agent project can be served via the dex MCP server:</p>
+<pre><code class="language-bash">dex mcp serve
+</code></pre>
+<p>This exposes the agent’s tools to Claude and other MCP clients.</p>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="dex-mcp-serve"><a class="header" href="#dex-mcp-serve">dex mcp serve</a></h1>
+<p>Start the dex MCP server to expose dex tools to Claude and other MCP clients.</p>
+<h2 id="synopsis-2"><a class="header" href="#synopsis-2">Synopsis</a></h2>
+<pre><code>dex mcp serve
+</code></pre>
+<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
+<p>The MCP (Model Context Protocol) server lets AI tools like Claude Desktop call dex operations directly — scaffolding projects, listing templates, and creating agents — without leaving the chat interface.</p>
+<h2 id="available-tools"><a class="header" href="#available-tools">Available tools</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Tool</th><th>Status</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>list_templates</code></td><td>Implemented</td><td>Returns all built-in templates with names and descriptions</td></tr>
+<tr><td><code>scaffold_project</code></td><td>Stub</td><td>Scaffold a project from a template</td></tr>
+<tr><td><code>scaffold_agent</code></td><td>Stub</td><td>Run the <code>dex agent new</code> Q&amp;A flow</td></tr>
+<tr><td><code>get_template_variables</code></td><td>Stub</td><td>Return variable specs for a template</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="wiring-into-claude-desktop"><a class="header" href="#wiring-into-claude-desktop">Wiring into Claude Desktop</a></h2>
+<p>Add the server to your <code>claude_desktop_config.json</code>:</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "dex": {
+      "command": "dex",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
+</code></pre>
+<p>Restart Claude Desktop. The dex tools will appear in the tool picker.</p>
+<h2 id="wiring-into-claude-code"><a class="header" href="#wiring-into-claude-code">Wiring into Claude Code</a></h2>
+<p>Add to your project’s <code>CLAUDE.md</code> or run from the terminal:</p>
+<pre><code class="language-bash">dex mcp serve
+</code></pre>
+<p>Claude Code will auto-detect the running MCP server on stdio.</p>
+<h2 id="example-list-templates-via-claude"><a class="header" href="#example-list-templates-via-claude">Example: list templates via Claude</a></h2>
+<p>Once connected, you can prompt Claude:</p>
+<pre><code>What templates does dex have?
+</code></pre>
+<p>Claude will call <code>list_templates</code> and return the current built-in list.</p>
+<h2 id="see-also"><a class="header" href="#see-also">See also</a></h2>
+<ul>
+<li><a href="https://github.com/yarrib/dex/blob/main/AGENTS.md">AGENTS.md</a> — full AI integration guide</li>
+<li><a href="#dex-agent-new">dex agent new</a> — scaffold an agent project first</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="built-in-templates"><a class="header" href="#built-in-templates">Built-in Templates</a></h1>
+<p>dex ships five built-in templates, embedded in the binary at compile time. All support <code>--no-prompt</code> for CI/scripting use.</p>
+<h2 id="choosing-a-template"><a class="header" href="#choosing-a-template">Choosing a template</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Template</th><th>Use when…</th></tr>
+</thead>
+<tbody>
+<tr><td><code>default</code></td><td>Starting a plain Python package or prototyping</td></tr>
+<tr><td><code>dabs-package</code></td><td>Building a production Databricks job in Python</td></tr>
+<tr><td><code>dabs-etl</code></td><td>Building a DLT pipeline with Autoloader ingestion</td></tr>
+<tr><td><code>dabs-ml</code></td><td>Training a model with MLflow and optionally serving it</td></tr>
+<tr><td><code>dabs-aiagent</code></td><td>Deploying an AI agent via mlflow.pyfunc + model serving</td></tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="default-1"><a class="header" href="#default-1">default</a></h2>
+<p>A minimal Python package for general-purpose development.</p>
+<p><strong>When to use:</strong> Prototyping, standalone scripts, or non-Databricks Python projects. No DABs config included.</p>
+<pre><code class="language-bash">dex init --template default --dir my_package
+</code></pre>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package name (lowercase, hyphens or underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── main.py
+notebooks/
+└── exploration.py
+tests/
+├── __init__.py
+└── test_main.py
+databricks.yml
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<hr>
+<h2 id="dabs-package-1"><a class="header" href="#dabs-package-1">dabs-package</a></h2>
+<p>A full Databricks Asset Bundle Python package. The go-to template for production Databricks jobs.</p>
+<p><strong>When to use:</strong> Any Databricks job that runs Python code — ETL scripts, batch jobs, data quality checks. Includes multi-target deploy config (dev/staging/prod) out of the box.</p>
+<pre><code class="language-bash">dex init --template dabs-package --dir my_project
+</code></pre>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>include_notebook</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>notebooks/exploration.py</code></td></tr>
+<tr><td><code>include_job</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>resources/&lt;name&gt;_job.yml</code></td></tr>
+<tr><td><code>use_serverless</code></td><td>bool</td><td><code>false</code></td><td>Use serverless compute in the job definition</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── main.py                         # entry point with --catalog / --schema args
+resources/                          # if include_job=true
+└── &lt;project_name&gt;_job.yml
+notebooks/                          # if include_notebook=true
+└── exploration.py
+tests/
+├── __init__.py
+└── test_&lt;project_name&gt;.py
+databricks.yml                      # dev / staging / prod targets
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<hr>
+<h2 id="dabs-etl"><a class="header" href="#dabs-etl">dabs-etl</a></h2>
+<p>A DLT (Delta Live Tables) pipeline project with Autoloader ingestion.</p>
+<p><strong>When to use:</strong> Streaming or batch ingestion pipelines where data arrives in cloud storage and needs to be loaded into Delta tables. Autoloader handles schema inference and file tracking automatically.</p>
+<pre><code class="language-bash">dex init --template dabs-etl --dir my_pipeline
+</code></pre>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>source_path</code></td><td>string</td><td><code>abfss://raw@&lt;storage-account&gt;.dfs.core.windows.net/landing/</code></td><td>Autoloader source path</td></tr>
+<tr><td><code>use_serverless</code></td><td>bool</td><td><code>false</code></td><td>Use serverless compute</td></tr>
+<tr><td><code>include_notebook</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>notebooks/exploration.py</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── pipeline.py                     # DLT pipeline definition
+resources/
+└── &lt;project_name&gt;_pipeline.yml     # DLT pipeline DABs resource
+notebooks/                          # if include_notebook=true
+└── exploration.py
+tests/
+├── __init__.py
+└── test_&lt;project_name&gt;.py
+databricks.yml
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<hr>
+<h2 id="dabs-ml"><a class="header" href="#dabs-ml">dabs-ml</a></h2>
+<p>An MLflow training project with model registry integration and optional model serving.</p>
+<p><strong>When to use:</strong> Supervised ML workflows — feature engineering, training, evaluation, and registration to Unity Catalog model registry. Optionally deploys a real-time serving endpoint.</p>
+<pre><code class="language-bash">dex init --template dabs-ml --dir my_model
+</code></pre>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>use_serverless</code></td><td>bool</td><td><code>false</code></td><td>Use serverless compute</td></tr>
+<tr><td><code>include_serving</code></td><td>bool</td><td><code>true</code></td><td>Generate model serving endpoint config</td></tr>
+<tr><td><code>include_notebook</code></td><td>bool</td><td><code>true</code></td><td>Generate <code>notebooks/exploration.py</code></td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+└── train.py                        # MLflow training script
+resources/
+└── &lt;project_name&gt;_training_job.yml
+serving/                            # if include_serving=true
+└── &lt;project_name&gt;_serving.yml      # Model serving endpoint definition
+notebooks/                          # if include_notebook=true
+└── exploration.py
+tests/
+├── __init__.py
+└── test_&lt;project_name&gt;.py
+databricks.yml
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<hr>
+<h2 id="dabs-aiagent"><a class="header" href="#dabs-aiagent">dabs-aiagent</a></h2>
+<p>An AI agent project using <code>mlflow.pyfunc</code> for packaging and Databricks model serving for deployment.</p>
+<p><strong>When to use:</strong> Building a custom AI agent or LLM-powered application that needs to be deployed as a Databricks model serving endpoint. Optionally includes a vector search retriever for RAG patterns.</p>
+<pre><code class="language-bash">dex init --template dabs-aiagent --dir my_agent
+</code></pre>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package name (lowercase, underscores)</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>include_vector_search</code></td><td>bool</td><td><code>false</code></td><td>Include a vector search retriever (RAG)</td></tr>
+<tr><td><code>use_serverless</code></td><td>bool</td><td><code>true</code></td><td>Use serverless compute for the deploy job</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Generated files:</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── __init__.py
+├── agent.py                        # mlflow.pyfunc agent wrapper
+└── tools/
+    ├── __init__.py
+    └── retriever.py                # if include_vector_search=true
+resources/
+├── &lt;project_name&gt;_deploy_job.yml   # DABs job to register + deploy the agent
+└── &lt;project_name&gt;_serving.yml      # Model serving endpoint definition
+notebooks/
+├── deploy_agent.py                 # notebook: register model + deploy endpoint
+└── evaluate_agent.py               # notebook: evaluate agent with MLflow
+tests/
+├── __init__.py
+└── test_&lt;project_name&gt;.py
+databricks.yml
+pyproject.toml
+README.md
+.gitignore
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="template-authoring-guide"><a class="header" href="#template-authoring-guide">Template Authoring Guide</a></h1>
+<p>A dex template is a directory with a manifest (<code>template.toml</code>) and a <code>files/</code> subtree of Jinja2 template files. Templates are embedded into the dex binary at compile time via <code>include_dir</code>.</p>
+<h2 id="directory-layout"><a class="header" href="#directory-layout">Directory layout</a></h2>
+<pre><code>templates/&lt;template-name&gt;/
+├── template.toml          # manifest: metadata, variables, file rules
+└── files/                 # files to render and write
+    ├── pyproject.toml.j2  # .j2 = rendered through Jinja2
+    ├── README.md.j2
+    └── src/
+        └── {{ project_name }}/   # directory names can use variables too
+            └── __init__.py
+</code></pre>
+<h2 id="templatetoml-reference"><a class="header" href="#templatetoml-reference">template.toml reference</a></h2>
+<h3 id="template--metadata"><a class="header" href="#template--metadata"><code>[template]</code> — metadata</a></h3>
+<pre><code class="language-toml">[template]
+name = "my-template"          # unique identifier, used with dex init --template
+description = "Short description shown in dex init --help"
+version = "0.1.0"
+min_dex_version = "0.1.0"    # minimum dex version required
+</code></pre>
+<h3 id="variables--input-variables"><a class="header" href="#variables--input-variables"><code>[[variables]]</code> — input variables</a></h3>
+<p>Each variable becomes a prompt in <code>dex init</code> and a value available in templates.</p>
+<pre><code class="language-toml">[[variables]]
+name = "project_name"         # variable name, referenced in templates as {{ project_name }}
+prompt = "Project name"       # text shown to the user
+type = "string"               # string | bool | choice
+required = true
+validate = "^[a-z][a-z0-9_]*$"  # optional regex; applied to string variables
+</code></pre>
+<p><strong>Variable types:</strong></p>
+<p><code>string</code>:</p>
+<pre><code class="language-toml">[[variables]]
+name = "author"
+prompt = "Author name"
+type = "string"
+required = false
+default = "me"
+</code></pre>
+<p><code>bool</code>:</p>
+<pre><code class="language-toml">[[variables]]
+name = "include_notebook"
+prompt = "Include exploration notebook?"
+type = "bool"
+default = true     # rendered as true/false
+required = false
+</code></pre>
+<p><code>choice</code>:</p>
+<pre><code class="language-toml">[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+</code></pre>
+<p><strong>All variable fields:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Field</th><th>Required</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>yes</td><td>Variable identifier. Referenced in templates as <code>{{ name }}</code>.</td></tr>
+<tr><td><code>prompt</code></td><td>yes</td><td>Text shown when prompting the user.</td></tr>
+<tr><td><code>type</code></td><td>yes</td><td><code>string</code>, <code>bool</code>, or <code>choice</code>.</td></tr>
+<tr><td><code>required</code></td><td>yes</td><td>If <code>true</code>, no default is accepted.</td></tr>
+<tr><td><code>default</code></td><td>no</td><td>Value used with <code>--no-prompt</code> or when the user presses Enter.</td></tr>
+<tr><td><code>choices</code></td><td>choice only</td><td>List of accepted values.</td></tr>
+<tr><td><code>validate</code></td><td>string only</td><td>Regex the value must match.</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="files--conditional-file-rules"><a class="header" href="#files--conditional-file-rules"><code>[[files]]</code> — conditional file rules</a></h3>
+<p>Use <code>[[files]]</code> to include or exclude entire directory trees based on a variable.</p>
+<pre><code class="language-toml">[[files]]
+src = "notebooks/"       # path relative to files/
+condition = "include_notebook"   # include only if this bool variable is true
+
+[[files]]
+src = "resources/"
+condition = "include_job"
+</code></pre>
+<p>If no <code>[[files]]</code> entry exists for a path, it is always included.</p>
+<h2 id="writing-template-files"><a class="header" href="#writing-template-files">Writing template files</a></h2>
+<p>Template files use <a href="https://jinja.palletsprojects.com/">Jinja2</a> syntax, rendered by <a href="https://github.com/mitsuhiko/minijinja">minijinja</a> in Rust. Use the <code>.j2</code> extension for any file that needs rendering.</p>
+<pre><code class="language-python"># src/{{ project_name }}/main.py.j2
+"""{{ project_name }} — entry point."""
+
+
+def main() -&gt; None:
+    print("Hello from {{ project_name }}")
+
+
+if __name__ == "__main__":
+    main()
+</code></pre>
+<p><strong>Variable substitution in filenames:</strong></p>
+<p>Directory and file names can also contain variable references. The engine substitutes them before writing.</p>
+<pre><code>files/src/{{ project_name }}/__init__.py   →   src/my_project/__init__.py
+</code></pre>
+<p><strong>Conditionals:</strong></p>
+<pre><code class="language-toml"># pyproject.toml.j2
+[project]
+name = "{{ project_name }}"
+requires-python = "&gt;={{ python_version }}"
+{% if use_serverless %}
+# serverless config here
+{% endif %}
+</code></pre>
+<p><strong>Loops:</strong></p>
+<pre><code>{% for dep in extra_deps %}
+"{{ dep }}",
+{% endfor %}
+</code></pre>
+<h2 id="building-and-testing"><a class="header" href="#building-and-testing">Building and testing</a></h2>
+<p>After adding or editing a template, rebuild to embed it in the binary:</p>
+<pre><code class="language-bash">make build
+</code></pre>
+<p>Then test with:</p>
+<pre><code class="language-bash">dex init --template my-template --dir /tmp/test-output
+dex init --template my-template --no-prompt --dir /tmp/test-output-defaults
+</code></pre>
+<p>Inspect the output to verify files were rendered correctly.</p>
+<h2 id="tips"><a class="header" href="#tips">Tips</a></h2>
+<ul>
+<li><strong>Non-template files</strong> (files without <code>.j2</code>) are copied verbatim — useful for binary assets or files where Jinja2 syntax would conflict.</li>
+<li><strong>Validate regex early.</strong> Use <code>validate</code> on <code>project_name</code> to enforce naming conventions before the user gets to see broken output.</li>
+<li><strong>Use <code>bool</code> variables for optional sections.</strong> Combine with <code>[[files]]</code> to omit entire directories, and with <code>{% if %}</code> inside templates to omit sections within a file.</li>
+<li><strong>Keep defaults sensible.</strong> Templates should work correctly with <code>--no-prompt</code>, so every optional variable needs a reasonable default.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="org-template-registries"><a class="header" href="#org-template-registries">Org Template Registries</a></h1>
+<p>Teams can publish their own template registries and surface them through a custom org CLI built with <code>create_cli()</code>. Users get <code>dex init --template &lt;your-template&gt;</code> alongside all built-in templates, under your own CLI name.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<ol>
+<li>Create a Python package containing your templates</li>
+<li>Wire the templates directory into <code>create_cli()</code> via <code>templates_dir</code></li>
+<li>Distribute the org CLI package via internal PyPI, Artifactory, or Git URL</li>
+<li>Users install the org CLI once and get all your org templates</li>
+</ol>
+<hr>
+<h2 id="1-create-the-template-registry-package"><a class="header" href="#1-create-the-template-registry-package">1. Create the template registry package</a></h2>
+<pre><code>acme-dex/
+├── pyproject.toml
+├── acme_dex/
+│   ├── __init__.py
+│   ├── cli.py              # org CLI entry point
+│   └── templates/          # your org templates
+│       ├── acme-etl/
+│       │   ├── template.toml
+│       │   └── files/
+│       └── acme-ml/
+│           ├── template.toml
+│           └── files/
+</code></pre>
+<p>Templates follow the same format as built-in templates. See the <a href="#template-authoring-guide">authoring guide</a>.</p>
+<h2 id="2-wire-templates-into-create_cli"><a class="header" href="#2-wire-templates-into-create_cli">2. Wire templates into create_cli()</a></h2>
+<pre><code class="language-python"># acme_dex/cli.py
+from pathlib import Path
+from dex.ext import create_cli, passthrough
+
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+cli = create_cli(
+    name="acme-dex",
+    templates_dir=_TEMPLATES_DIR,
+    passthroughs=[
+        passthrough("db", "databricks", "Databricks CLI"),
+    ],
+)
+</code></pre>
+<p>The <code>templates_dir</code> path is resolved relative to the installed package, so it works correctly regardless of where users install it.</p>
+<h2 id="3-package-and-distribute"><a class="header" href="#3-package-and-distribute">3. Package and distribute</a></h2>
+<pre><code class="language-toml"># pyproject.toml
+[project]
+name = "acme-dex"
+version = "0.1.0"
+dependencies = ["dex&gt;=0.1.0"]
+
+[project.scripts]
+acme-dex = "acme_dex.cli:cli"
+
+[tool.setuptools.package-data]
+acme_dex = ["templates/**/*"]
+</code></pre>
+<blockquote>
+<p><strong>Important:</strong> Template files must be declared in <code>package-data</code> (setuptools) or <code>include</code> (hatch/flit) so they are bundled into the wheel. Without this, the <code>templates/</code> directory will be missing after install.</p>
+</blockquote>
+<h3 id="distribute-via-internal-pypi"><a class="header" href="#distribute-via-internal-pypi">Distribute via internal PyPI</a></h3>
+<pre><code class="language-bash"># Build and publish
+uv build
+uv publish --index https://pypi.internal.acme.com/
+
+# Users install with
+uv tool install acme-dex --index https://pypi.internal.acme.com/
+</code></pre>
+<h3 id="distribute-via-git-url-pull-and-attach"><a class="header" href="#distribute-via-git-url-pull-and-attach">Distribute via Git URL (“pull and attach”)</a></h3>
+<p>No internal PyPI needed — users install directly from the repo:</p>
+<pre><code class="language-bash">uv tool install "acme-dex @ git+https://github.com/acme/acme-dex"
+</code></pre>
+<p>Pin a specific release:</p>
+<pre><code class="language-bash">uv tool install "acme-dex @ git+https://github.com/acme/acme-dex@v1.2.0"
+</code></pre>
+<hr>
+<h2 id="user-experience"><a class="header" href="#user-experience">User experience</a></h2>
+<p>After installing the org CLI, users have all built-in dex templates plus your org templates:</p>
+<pre><code class="language-bash">acme-dex init --template default        # built-in
+acme-dex init --template dabs-package   # built-in
+acme-dex init --template acme-etl       # org template
+acme-dex init --template acme-ml        # org template
+</code></pre>
+<p>If an org template name conflicts with a built-in, the org template takes precedence.</p>
+<hr>
+<h2 id="versioning-org-templates"><a class="header" href="#versioning-org-templates">Versioning org templates</a></h2>
+<p>Tag releases and pin the version in your team’s install instructions:</p>
+<pre><code class="language-bash"># Install a specific version
+uv tool install "acme-dex==1.2.0" --index https://pypi.internal.acme.com/
+
+# Upgrade
+uv tool upgrade acme-dex --index https://pypi.internal.acme.com/
+</code></pre>
+<h2 id="monorepo-pattern"><a class="header" href="#monorepo-pattern">Monorepo pattern</a></h2>
+<p>If your templates live in a monorepo alongside other tooling, point <code>templates_dir</code> at the right subdirectory:</p>
+<pre><code class="language-python">_TEMPLATES_DIR = Path(__file__).parent.parent / "platform" / "dex-templates"
+
+cli = create_cli(name="acme-dex", templates_dir=_TEMPLATES_DIR)
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="extending-dex--org-clis"><a class="header" href="#extending-dex--org-clis">Extending dex — Org CLIs</a></h1>
+<p>dex is designed to be wrapped by teams into their own internal CLI. You get all the built-in dex commands (<code>init</code>, <code>agent new</code>, <code>mcp serve</code>) plus the ability to add custom commands, custom templates, and pass-throughs to other tools — all under your own CLI name.</p>
+<h2 id="quick-example"><a class="header" href="#quick-example">Quick example</a></h2>
+<pre><code class="language-python"># acme_dex/cli.py
+from dex.ext import create_cli, passthrough
+
+cli = create_cli(
+    name="acme-dex",
+    passthroughs=[
+        passthrough("db", "databricks", "Databricks CLI"),
+        passthrough("tf", "terraform", "Terraform"),
+    ],
+)
+
+@cli.command()
+def deploy():
+    """Deploy the current bundle to dev."""
+    import subprocess
+    subprocess.run(["databricks", "bundle", "deploy"], check=True)
+</code></pre>
+<pre><code class="language-toml"># pyproject.toml
+[project.scripts]
+acme-dex = "acme_dex.cli:cli"
+</code></pre>
+<p>Your users now have:</p>
+<pre><code class="language-bash">acme-dex init --template dabs-package   # built-in
+acme-dex deploy                         # your custom command
+acme-dex db clusters list               # pass-through to databricks
+acme-dex tf plan                        # pass-through to terraform
+</code></pre>
+<h2 id="create_cli"><a class="header" href="#create_cli"><code>create_cli()</code></a></h2>
+<p>The factory that wires everything together.</p>
+<pre><code class="language-python">from dex.ext import create_cli
+
+cli = create_cli(
+    name="acme-dex",           # CLI name shown in --help
+    templates_dir="./templates",  # path to your org's custom templates (optional)
+    passthroughs=[...],        # list of PassthroughSpec (optional)
+)
+</code></pre>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Type</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td><code>str</code></td><td>CLI name. Defaults to <code>"dex"</code>.</td></tr>
+<tr><td><code>templates_dir</code></td><td><code>str | Path | None</code></td><td>Directory of custom templates to add alongside built-ins.</td></tr>
+<tr><td><code>passthroughs</code></td><td><code>list[PassthroughSpec]</code></td><td>External CLIs to expose as subcommands.</td></tr>
+</tbody>
+</table>
+</div>
+<p><code>create_cli()</code> returns a <code>DexGroup</code> (a <code>click.Group</code> subclass). Add commands to it exactly as you would with click.</p>
+<h2 id="pass-through-commands"><a class="header" href="#pass-through-commands">Pass-through commands</a></h2>
+<p>Pass-throughs proxy a subcommand directly to an external CLI, forwarding all arguments and inheriting stdin/stdout/stderr for full interactivity.</p>
+<pre><code class="language-python">from dex.ext import create_cli, passthrough
+
+cli = create_cli(
+    name="acme-dex",
+    passthroughs=[
+        passthrough("db", "databricks", "Databricks CLI"),
+    ],
+)
+</code></pre>
+<p><code>passthrough(name, command, description)</code>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Parameter</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>name</code></td><td>Subcommand name in your CLI (<code>acme-dex db ...</code>)</td></tr>
+<tr><td><code>command</code></td><td>Executable to invoke (<code>databricks</code>)</td></tr>
+<tr><td><code>description</code></td><td>Help text shown in <code>--help</code></td></tr>
+</tbody>
+</table>
+</div>
+<p>You can also construct <code>PassthroughSpec</code> directly:</p>
+<pre><code class="language-python">from dex.ext import PassthroughSpec
+
+spec = PassthroughSpec(name="db", command="databricks", description="Databricks CLI")
+</code></pre>
+<h2 id="custom-commands"><a class="header" href="#custom-commands">Custom commands</a></h2>
+<p>After calling <code>create_cli()</code>, decorate commands onto the returned group:</p>
+<pre><code class="language-python">cli = create_cli(name="acme-dex")
+
+@cli.command()
+@click.option("--target", default="dev")
+def deploy(target: str):
+    """Deploy the current bundle."""
+    import subprocess
+    subprocess.run(["databricks", "bundle", "deploy", "--target", target], check=True)
+</code></pre>
+<p>Commands can also be added programmatically:</p>
+<pre><code class="language-python">cli.add_command(my_command_func, name="my-command")
+</code></pre>
+<h2 id="custom-templates"><a class="header" href="#custom-templates">Custom templates</a></h2>
+<p>Point <code>templates_dir</code> at a directory of templates following the <a href="#template-authoring-guide">authoring guide</a>. Users can then use them with <code>dex init --template &lt;name&gt;</code>:</p>
+<pre><code class="language-python">cli = create_cli(
+    name="acme-dex",
+    templates_dir=Path(__file__).parent / "templates",
+)
+</code></pre>
+<p>Your org templates live alongside the dex built-ins. If a name conflicts, your template wins.</p>
+<h2 id="distributing-your-org-cli"><a class="header" href="#distributing-your-org-cli">Distributing your org CLI</a></h2>
+<p>Package it as a standard Python package and distribute via your internal PyPI, Artifactory, or direct install:</p>
+<pre><code class="language-bash"># Install from internal PyPI
+uv tool install acme-dex --index https://pypi.internal.acme.com/
+
+# Or from a Git repo
+uv tool install "acme-dex @ git+https://github.com/acme/acme-dex"
+</code></pre>
+<p>Your users run <code>acme-dex</code> directly — they never need to know about dex.</p>
+<h2 id="dexgroup"><a class="header" href="#dexgroup"><code>DexGroup</code></a></h2>
+<p><code>DexGroup</code> is the <code>click.Group</code> subclass returned by <code>create_cli()</code>. It handles pass-through resolution and can be used directly if you need lower-level control:</p>
+<pre><code class="language-python">from dex.ext import DexGroup
+
+@click.group(cls=DexGroup, passthroughs={"db": db_spec})
+def cli():
+    """Acme internal tooling."""
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
+<h2 id="dev-setup"><a class="header" href="#dev-setup">Dev setup</a></h2>
+<p>Requires <a href="https://rustup.rs/">Rust</a> and <a href="https://docs.astral.sh/uv/">uv</a>.</p>
+<pre><code class="language-bash">git clone https://github.com/yarrib/dex
+cd dex
+make dev
+</code></pre>
+<h2 id="make-targets"><a class="header" href="#make-targets">Make targets</a></h2>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Target</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>make dev</code></td><td><code>uv sync</code> + <code>maturin develop</code></td></tr>
+<tr><td><code>make build</code></td><td><code>cargo build</code> + <code>maturin develop</code></td></tr>
+<tr><td><code>make test</code></td><td><code>cargo test</code> + <code>uv run pytest</code></td></tr>
+<tr><td><code>make lint</code></td><td><code>cargo clippy -D warnings</code> + <code>uv run ruff check python/</code></td></tr>
+<tr><td><code>make fmt</code></td><td><code>cargo fmt</code> + <code>uv run ruff format python/</code></td></tr>
+<tr><td><code>make fmt-check</code></td><td>Format check only (no writes)</td></tr>
+<tr><td><code>make clean</code></td><td>Remove build artifacts</td></tr>
+<tr><td><code>make docs</code></td><td>Build docs site (strict mode)</td></tr>
+<tr><td><code>make docs-serve</code></td><td>Serve docs site at localhost:8000</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code>crates/dex-core/    Rust library — all business logic, no UI
+crates/dex-py/      PyO3 bindings — thin FFI layer, type conversion only
+python/dex/         Python package — click CLI, rich output, pass-throughs
+templates/          Built-in Jinja2 templates, embedded at compile time
+</code></pre>
+<p><strong>Rules:</strong></p>
+<ul>
+<li><code>dex-core</code> has no terminal output. It returns data; Python renders it.</li>
+<li><code>dex-py</code> is a thin bridge. Business logic belongs in <code>dex-core</code>.</li>
+<li>Config is TOML. No YAML, no JSON for config.</li>
+<li>Template files use <code>.j2</code> extension (Jinja2/minijinja syntax).</li>
+<li>No <code>unwrap()</code> or <code>expect()</code> in library code — propagate with <code>?</code>.</li>
+</ul>
+<h2 id="adding-a-template"><a class="header" href="#adding-a-template">Adding a template</a></h2>
+<ol>
+<li>Create <code>templates/&lt;name&gt;/template.toml</code> (see <a href="#template-reference">Template Reference</a>)</li>
+<li>Create <code>templates/&lt;name&gt;/files/</code> with Jinja2 template files</li>
+<li>Run <code>make build</code> to embed the template in the binary</li>
+<li>Test with <code>dex init --template &lt;name&gt;</code></li>
+</ol>
+<h2 id="docs-versioning"><a class="header" href="#docs-versioning">Docs versioning</a></h2>
+<p>The docs site uses <a href="https://github.com/jimporter/mike">mike</a> for versioned deployments to GitHub Pages.</p>
+<p><strong>How it works:</strong></p>
+<ul>
+<li>Push to <code>main</code> → deploys the <code>latest</code> alias (unversioned dev docs)</li>
+<li>Push a <code>v*</code> tag → deploys a minor-version alias (e.g. <code>0.1</code>) and updates <code>latest</code></li>
+<li>All versions live on the <code>gh-pages</code> branch; mike manages the index</li>
+</ul>
+<p><strong>Version selector</strong> is shown in the top-right corner of the site (provided by mkdocs-material + mike).</p>
+<p><strong>One-time setup</strong> (already done): the GitHub Pages source must be set to “Deploy from branch: <code>gh-pages</code>” in the repo Settings → Pages. Do not use the “GitHub Actions” artifact mode — mike writes directly to the branch.</p>
+<p><strong>Local preview:</strong></p>
+<pre><code class="language-bash">uv run mike serve           # browse versioned docs locally
+uv run mkdocs serve         # browse unversioned docs (faster for writing)
+</code></pre>
+<p><strong>Manually deploy a version</strong> (maintainers only):</p>
+<pre><code class="language-bash">uv run mike deploy --push --update-aliases 0.2 latest
+uv run mike set-default --push latest
+</code></pre>
+<h2 id="commit-conventions"><a class="header" href="#commit-conventions">Commit conventions</a></h2>
+<pre><code>feat:      new feature
+fix:       bug fix
+refactor:  code change without behaviour change
+docs:      documentation only
+test:      tests only
+chore:     build, deps, tooling
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="releasing"><a class="header" href="#releasing">Releasing</a></h1>
+<p>Releases are manual and tag-driven. Because <code>main</code> is protected, version bumps go through a PR. The tag is pushed after the PR is merged, which triggers the release workflow.</p>
+<h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
+<ul>
+<li>All changes for the release are merged to <code>main</code></li>
+<li>You have push access to the repo (to push tags)</li>
+</ul>
+<h2 id="release-flow"><a class="header" href="#release-flow">Release flow</a></h2>
+<h3 id="1-decide-the-version-bump"><a class="header" href="#1-decide-the-version-bump">1. Decide the version bump</a></h3>
+<p>Follow <a href="https://semver.org/">Semantic Versioning</a>:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Change type</th><th>Command</th></tr>
+</thead>
+<tbody>
+<tr><td>Bug fixes, docs, chores</td><td><code>make bump-patch</code> → <code>0.1.0</code> → <code>0.1.1</code></td></tr>
+<tr><td>New features, backwards-compatible</td><td><code>make bump-minor</code> → <code>0.1.0</code> → <code>0.2.0</code></td></tr>
+<tr><td>Breaking changes</td><td><code>make bump-major</code> → <code>0.1.0</code> → <code>1.0.0</code></td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="2-create-the-version-bump-pr"><a class="header" href="#2-create-the-version-bump-pr">2. Create the version bump PR</a></h3>
+<pre><code class="language-bash">git checkout main &amp;&amp; git pull
+git checkout -b chore/release-v0.x.y
+make bump-patch   # or bump-minor / bump-major
+git push -u origin chore/release-v0.x.y
+</code></pre>
+<p><code>make bump-patch</code> will:</p>
+<ol>
+<li>Update the version in <code>Cargo.toml</code> and both <code>Cargo.toml</code> files</li>
+<li>Commit the changes with message <code>chore: bump version to vX.Y.Z</code></li>
+</ol>
+<p>Open a PR for the branch, get it merged.</p>
+<blockquote>
+<p><strong>Warning:</strong> The bump commands check for uncommitted changes and will abort if any exist.</p>
+</blockquote>
+<h3 id="3-tag-and-push"><a class="header" href="#3-tag-and-push">3. Tag and push</a></h3>
+<p>After the PR is merged:</p>
+<pre><code class="language-bash">git checkout main &amp;&amp; git pull
+make tag-release
+</code></pre>
+<p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>Cargo.toml</code> and pushes the tag to GitHub. It also guards against running on the wrong branch.</p>
+<h3 id="4-watch-the-release-workflow"><a class="header" href="#4-watch-the-release-workflow">4. Watch the release workflow</a></h3>
+<p>Go to <strong>Actions → Release</strong> on GitHub. The workflow:</p>
+<ol>
+<li>Validates the tag format (<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>)</li>
+<li>Verifies <code>Cargo.toml</code> version matches the tag</li>
+<li>Generates a changelog from conventional commits (git-cliff)</li>
+<li>Builds wheels for Linux x86_64, macOS Apple Silicon, macOS Intel</li>
+<li>Builds an sdist</li>
+<li>Creates a GitHub Release with all artifacts attached</li>
+</ol>
+<h3 id="5-verify-the-release"><a class="header" href="#5-verify-the-release">5. Verify the release</a></h3>
+<ul>
+<li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
+<li>Confirm wheels are attached for all platforms</li>
+<li>Confirm the changelog looks correct</li>
+<li>The docs site will auto-deploy the new versioned docs (e.g. <code>0.2</code>) via the <code>docs.yml</code> workflow</li>
+</ul>
+<hr>
+<h2 id="commit-conventions-and-changelog"><a class="header" href="#commit-conventions-and-changelog">Commit conventions and changelog</a></h2>
+<p>The changelog is generated automatically from commit messages using <a href="https://git-cliff.org/">git-cliff</a>. Use conventional commit prefixes so changes appear correctly:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Prefix</th><th>Changelog section</th></tr>
+</thead>
+<tbody>
+<tr><td><code>feat:</code></td><td>Features</td></tr>
+<tr><td><code>fix:</code></td><td>Bug Fixes</td></tr>
+<tr><td><code>refactor:</code></td><td>Refactoring</td></tr>
+<tr><td><code>docs:</code></td><td>Documentation</td></tr>
+<tr><td><code>test:</code></td><td>Testing</td></tr>
+<tr><td><code>chore:</code></td><td>Chores</td></tr>
+<tr><td><code>perf:</code></td><td>Performance</td></tr>
+</tbody>
+</table>
+</div>
+<p>Commits without a conventional prefix are filtered out of the changelog.</p>
+<hr>
+<h2 id="hotfix-releases"><a class="header" href="#hotfix-releases">Hotfix releases</a></h2>
+<p>Same flow as a regular release — fix on a branch, PR to main, then tag:</p>
+<pre><code class="language-bash">git checkout -b fix/critical-bug
+# make your fix
+git push -u origin fix/critical-bug
+# open PR, merge
+git checkout main &amp;&amp; git pull
+make bump-patch
+git push -u origin chore/release-vX.Y.Z
+# open PR, merge
+git checkout main &amp;&amp; git pull
+make tag-release
+</code></pre>
+<p>There is no separate hotfix branch — all releases go through main.</p>
+<hr>
+<h2 id="if-the-release-workflow-fails"><a class="header" href="#if-the-release-workflow-fails">If the release workflow fails</a></h2>
+<p>The most common causes:</p>
+<ul>
+<li><strong>Tag/version mismatch</strong> — <code>Cargo.toml</code> version doesn’t match the tag. Delete the tag, fix the version, re-tag.</li>
+<li><strong>Build failure</strong> — a Rust compilation error in the wheel build. Fix the code, delete the tag, re-tag.</li>
+</ul>
+<p>To delete a tag and re-release:</p>
+<pre><code class="language-bash">git tag -d v0.1.1
+git push origin :refs/tags/v0.1.1
+# fix the issue, then
+make tag-release
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
+<p>All notable changes to dex are documented here.</p>
+<h2 id="unreleased"><a class="header" href="#unreleased">[Unreleased]</a></h2>
+<h3 id="chores"><a class="header" href="#chores">Chores</a></h3>
+<ul>
+<li>Remove Python layer and expand Rust test coverage (#22) (<a href="https://github.com/yarrib/dex/commit/f085abb8a81d0b68485129b93632bca7478430ff"><code>f085abb</code></a>)</li>
+</ul>
+<h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
+<ul>
+<li>Migrate from MkDocs to mdBook (#23) (<a href="https://github.com/yarrib/dex/commit/8f177a014412abd6b4523f796e9633ddc43591b4"><code>8f177a0</code></a>)</li>
+<li>Add changelog.md placeholder for mdBook build (#24) (<a href="https://github.com/yarrib/dex/commit/10844036b12f96dcf4d2187cca052ef4378ae0b2"><code>1084403</code></a>)</li>
+</ul>
+<h3 id="features"><a class="header" href="#features">Features</a></h3>
+<ul>
+<li><strong>templates</strong>: Inline variables format, order field, and standards pre-fill (#20) (<a href="https://github.com/yarrib/dex/commit/77195797fa78b5242d945be4c1a1b0f36feb437c"><code>7719579</code></a>)</li>
+<li>Port dex to pure Rust single binary (#21) (<a href="https://github.com/yarrib/dex/commit/30690b9633c05da429f7e01eb1ec5dcb0a2b28ef"><code>30690b9</code></a>)</li>
+</ul>
+<h2 id="010--2026-03-10"><a class="header" href="#010--2026-03-10">[0.1.0] — 2026-03-10</a></h2>
+<h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<ul>
+<li>Tag-only versioning to work with branch protection rules (<a href="https://github.com/yarrib/dex/commit/22f9f8085ebaca22d64a86d33f5c6446abb984e6"><code>22f9f80</code></a>)</li>
+<li>Slugify hyphens to underscores, expose system_prompt and claude_md in PyO3 binding (<a href="https://github.com/yarrib/dex/commit/c57622776889e2a3b3a61a1024af25aca7f44e47"><code>c576227</code></a>)</li>
+<li><strong>ci</strong>: Use dtolnay/rust-toolchain@master with explicit toolchain input (<a href="https://github.com/yarrib/dex/commit/d439535a9d7060259e7d727560ef606100a9cc4c"><code>d439535</code></a>)</li>
+<li><strong>fmt</strong>: Apply cargo fmt to bring Rust sources in line with rustfmt (<a href="https://github.com/yarrib/dex/commit/4dc2eb070873d9037b29a6b79d324f66c7242601"><code>4dc2eb0</code></a>)</li>
+<li><strong>fmt</strong>: Apply ruff format to cli.py (<a href="https://github.com/yarrib/dex/commit/c8b5f61aa64356c61dc27fe2e6dc57319b456b39"><code>c8b5f61</code></a>)</li>
+<li><strong>lint</strong>: Resolve clippy collapsible_if and ruff errors (<a href="https://github.com/yarrib/dex/commit/0269bf6551b44f78c9c6650d72564287a7a6bfc6"><code>0269bf6</code></a>)</li>
+<li><strong>ci</strong>: Add maturin to dev extras, set fail-fast: false on Python matrix (<a href="https://github.com/yarrib/dex/commit/289e43ea44eee5c3e20a041a8fb14814a5000822"><code>289e43e</code></a>)</li>
+<li><strong>ci</strong>: Hoist UV_PYTHON to job-level env (<a href="https://github.com/yarrib/dex/commit/cfee45e8aa1927fbedf28e75c3dc8ed776736289"><code>cfee45e</code></a>)</li>
+<li><strong>types</strong>: Add _core.pyi stubs, suppress ty false positives on click.BaseCommand (<a href="https://github.com/yarrib/dex/commit/2f9817c2478245e0917b4c74a18e1a545a2f9354"><code>2f9817c</code></a>)</li>
+<li><strong>cli</strong>: Resolve all Python bug backlog items (<a href="https://github.com/yarrib/dex/commit/22e29a5d5372216fe70b3c47e2705174ab266f65"><code>22e29a5</code></a>)</li>
+<li><strong>release</strong>: Fix bump-version idempotency and replace git-cliff Docker action (<a href="https://github.com/yarrib/dex/commit/b5d760e8b5a39c6edf6c03a7e23fcd4c285e826d"><code>b5d760e</code></a>)</li>
+<li><strong>release</strong>: Remove redundant version stamp step in build jobs (<a href="https://github.com/yarrib/dex/commit/18f3db6176ef39f9146f4bbbe263273f3c66a2fd"><code>18f3db6</code></a>)</li>
+<li><strong>docs</strong>: Resolve gh-pages deploy alias conflict (#18) (<a href="https://github.com/yarrib/dex/commit/439426a45e6e0aa4ef07bd327f4741138ba765eb"><code>439426a</code></a>)</li>
+<li><strong>docs</strong>: Add mike set-default to create root redirect (#19) (<a href="https://github.com/yarrib/dex/commit/d8715ff07f221c05956cdeb4954a5812e67eba66"><code>d8715ff</code></a>)</li>
+<li><strong>docs</strong>: Use latest as version name, deploy numbered versions on tags (<a href="https://github.com/yarrib/dex/commit/0c7c4f812d251b4f89353eb3a7f58aec3ab8283a"><code>0c7c4f8</code></a>)</li>
+<li><strong>docs</strong>: Suppress MkDocs 2.0 compatibility warning (<a href="https://github.com/yarrib/dex/commit/0dcf50529e8d6ec07c44b9c7247081b11d6e13b8"><code>0dcf505</code></a>)</li>
+<li><strong>docs</strong>: Move NO_MKDOCS_2_WARNING to job level, delete version before deploy (<a href="https://github.com/yarrib/dex/commit/bfeb2a55ca567aa6b21727b6e93a45d3f47f8dc5"><code>bfeb2a5</code></a>)</li>
+</ul>
+<h3 id="chores-1"><a class="header" href="#chores-1">Chores</a></h3>
+<ul>
+<li>Add root .gitignore (<a href="https://github.com/yarrib/dex/commit/d88daab4c82177ad43035eb91a546b9fb5e9e185"><code>d88daab</code></a>)</li>
+<li>Apply cargo fmt formatting fixes (<a href="https://github.com/yarrib/dex/commit/2cadc0efc21666b4ae485ca86e142c09bfb7cbe5"><code>2cadc0e</code></a>)</li>
+<li>Add TASKS.md backlog (<a href="https://github.com/yarrib/dex/commit/f776c9134ab039c17c2253a9b9223ea03e4c5bd1"><code>f776c91</code></a>)</li>
+<li>Infrastructure, installer, and docs improvements (<a href="https://github.com/yarrib/dex/commit/d21108e47bfd908745b32a517f943f3cbff3d2d0"><code>d21108e</code></a>)</li>
+<li>Note PassthroughCommand click.BaseCommand deprecation in backlog (<a href="https://github.com/yarrib/dex/commit/1458fb4af7bfad45ef85087f84ab53ad9a6c47d8"><code>1458fb4</code></a>)</li>
+<li><strong>docs</strong>: Add workflow_dispatch to docs deploy workflow (<a href="https://github.com/yarrib/dex/commit/0e067c2e0da86e913d5d893238eef01320e60570"><code>0e067c2</code></a>)</li>
+<li><strong>release</strong>: Remove auto-version workflow, add release guide (#13) (<a href="https://github.com/yarrib/dex/commit/1f9f2e9837be7cd813ef3df2ab70cdba9ed8cb16"><code>1f9f2e9</code></a>)</li>
+<li>Release v0.1.0 (#17) (<a href="https://github.com/yarrib/dex/commit/7b9ade03d7be3d2f6391fa2cb69712decebd861b"><code>7b9ade0</code></a>)</li>
+</ul>
+<h3 id="documentation-1"><a class="header" href="#documentation-1">Documentation</a></h3>
+<ul>
+<li>Default to uv tool install from GitHub Releases, remove pip/PyPI references (<a href="https://github.com/yarrib/dex/commit/1772eb71ecf9ef922684f02d0479700cf64c7694"><code>1772eb7</code></a>)</li>
+<li>Add quickstart, mcp serve page, versioning guide, and template … (#11) (<a href="https://github.com/yarrib/dex/commit/d7b6caf5248af05323f000bed9dbf07f25b7358b"><code>d7b6caf</code></a>)</li>
+</ul>
+<h3 id="features-1"><a class="header" href="#features-1">Features</a></h3>
+<ul>
+<li>Add project specification, architecture, and initial scaffolding (<a href="https://github.com/yarrib/dex/commit/4188e3b05c9fa61787a26aa4a76bca6e1a387333"><code>4188e3b</code></a>)</li>
+<li>Add DABs template composition model (<a href="https://github.com/yarrib/dex/commit/32f9d15c24ba754f182005484401d73d768edea2"><code>32f9d15</code></a>)</li>
+<li>Add DABs prompt modes and agent scaffolding (<a href="https://github.com/yarrib/dex/commit/74091102ca62cea7d75a4b3f9ce61dd757a04f22"><code>7409110</code></a>)</li>
+<li>Add dabs-package template, fix multi-variable scaffolding, add docs site (<a href="https://github.com/yarrib/dex/commit/476e1ac3e6d06a6222610df9efb1911c3b8f8925"><code>476e1ac</code></a>)</li>
+<li>Add Actions-based Pages deploy, release pipeline, and auto-versioning (<a href="https://github.com/yarrib/dex/commit/8e0557a795e076ae193d22500bdfd67f4dd8b12e"><code>8e0557a</code></a>)</li>
+<li><strong>templates</strong>: Add dabs-etl, dabs-ml, and dabs-aiagent pattern templates (<a href="https://github.com/yarrib/dex/commit/c3a752811726023211d377a96f525628ecd1ff1d"><code>c3a7528</code></a>)</li>
+</ul>
+<h3 id="refactoring"><a class="header" href="#refactoring">Refactoring</a></h3>
+<ul>
+<li><strong>dabs-aiagent</strong>: Lighten AI agent template — no LangChain, dbutils notebooks, DABs deploy job (<a href="https://github.com/yarrib/dex/commit/1ad4db2ac29eb491f07515b6eeff0405108095f9"><code>1ad4db2</code></a>)</li>
+</ul>
+<h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
+<ul>
+<li>Add CLI smoke tests to fix pytest exit code 5 (<a href="https://github.com/yarrib/dex/commit/0ecad9f9b7c504dd9c136bdea487055ac24e2419"><code>0ecad9f</code></a>)</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-c2a407aa.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-a0b12cfe.js"></script>
+
+        <!-- Custom JS scripts -->
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+
+    </div>
+    </body>
+</html>
