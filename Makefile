@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt fmt-check clean all docs docs-serve help
+.PHONY: build test lint fmt fmt-check clean all docs docs-serve docs-install help
 .PHONY: version bump-patch bump-minor bump-major tag-release _bump-guard
 
 all: lint test
@@ -15,8 +15,9 @@ help:
 	@echo "  clean        remove build artifacts"
 	@echo ""
 	@echo "Docs"
-	@echo "  docs         build docs"
-	@echo "  docs-serve   serve docs at localhost:3000"
+	@echo "  docs-install install mdbook and git-cliff via cargo"
+	@echo "  docs         build docs (generates changelog if git-cliff is available)"
+	@echo "  docs-serve   serve docs at localhost:3000 and open browser"
 	@echo ""
 	@echo "Releases"
 	@echo "  version      print current version"
@@ -40,11 +41,21 @@ fmt:
 fmt-check:
 	cargo fmt --check
 
+docs-install:
+	cargo install mdbook
+	cargo install git-cliff
+
 docs:
+	@if command -v git-cliff >/dev/null 2>&1; then \
+		git-cliff --output docs/changelog.md; \
+	fi
 	mdbook build
 
 docs-serve:
-	mdbook serve
+	@if command -v git-cliff >/dev/null 2>&1; then \
+		git-cliff --output docs/changelog.md; \
+	fi
+	mdbook serve --open
 
 clean:
 	cargo clean
