@@ -15,8 +15,8 @@ help:
 	@echo "  clean        remove build artifacts"
 	@echo ""
 	@echo "Docs"
-	@echo "  docs         build docs (strict mode)"
-	@echo "  docs-serve   build then serve docs at localhost:8000"
+	@echo "  docs         build docs"
+	@echo "  docs-serve   serve docs at localhost:3000"
 	@echo ""
 	@echo "Releases"
 	@echo "  version      print current version"
@@ -41,11 +41,10 @@ fmt-check:
 	cargo fmt --check
 
 docs:
-	uv sync --group docs
-	uv run mkdocs build --strict
+	mdbook build
 
-docs-serve: docs
-	uv run mkdocs serve
+docs-serve:
+	mdbook serve
 
 clean:
 	cargo clean
@@ -53,22 +52,22 @@ clean:
 # --- Versioning ---
 
 version:
-	@python3 scripts/bump-version.py
+	@bash scripts/bump-version.sh
 
 bump-patch: _bump-guard
-	$(eval NEW := $(shell python3 scripts/bump-version.py patch))
+	$(eval NEW := $(shell bash scripts/bump-version.sh patch))
 	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
 bump-minor: _bump-guard
-	$(eval NEW := $(shell python3 scripts/bump-version.py minor))
+	$(eval NEW := $(shell bash scripts/bump-version.sh minor))
 	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
 bump-major: _bump-guard
-	$(eval NEW := $(shell python3 scripts/bump-version.py major))
+	$(eval NEW := $(shell bash scripts/bump-version.sh major))
 	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
 	git commit -m "chore: bump version to v$(NEW)"
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
@@ -76,7 +75,7 @@ bump-major: _bump-guard
 # Run this on main after the version bump PR is merged.
 # Tags the current HEAD and pushes — triggers the release workflow.
 tag-release: _bump-guard
-	$(eval VER := $(shell python3 scripts/bump-version.py))
+	$(eval VER := $(shell bash scripts/bump-version.sh))
 	@git branch --show-current | grep -q '^main$$' || (echo "error: must be on main branch"; exit 1)
 	git tag v$(VER)
 	git push origin v$(VER)

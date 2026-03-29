@@ -30,7 +30,7 @@ jobs:
           CARGO_VERSION="$(grep '^version = ' crates/dex-cli/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
           if [ "${TAG_VERSION}" != "${CARGO_VERSION}" ]; then
             echo "Error: tag version '${TAG_VERSION}' does not match crates/dex-cli/Cargo.toml version '${CARGO_VERSION}'"
-            echo "Run 'python3 scripts/bump-version.py ${TAG_VERSION}' locally and commit before tagging."
+            echo "Run 'bash scripts/bump-version.sh ${TAG_VERSION}' locally and commit before tagging."
             exit 1
           fi
 

@@ -42,39 +42,39 @@ validate = "^[a-z][a-z0-9_]*$"  # optional regex; applied to string variables
 
 **Variable types:**
 
-=== "string"
+`string`:
 
-    ```toml
-    [[variables]]
-    name = "author"
-    prompt = "Author name"
-    type = "string"
-    required = false
-    default = "me"
-    ```
+```toml
+[[variables]]
+name = "author"
+prompt = "Author name"
+type = "string"
+required = false
+default = "me"
+```
 
-=== "bool"
+`bool`:
 
-    ```toml
-    [[variables]]
-    name = "include_notebook"
-    prompt = "Include exploration notebook?"
-    type = "bool"
-    default = true     # rendered as true/false
-    required = false
-    ```
+```toml
+[[variables]]
+name = "include_notebook"
+prompt = "Include exploration notebook?"
+type = "bool"
+default = true     # rendered as true/false
+required = false
+```
 
-=== "choice"
+`choice`:
 
-    ```toml
-    [[variables]]
-    name = "python_version"
-    prompt = "Python version"
-    type = "choice"
-    choices = ["3.12", "3.11"]
-    default = "3.12"
-    required = false
-    ```
+```toml
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+```
 
 **All variable fields:**
 

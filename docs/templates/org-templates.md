@@ -66,8 +66,7 @@ acme-dex = "acme_dex.cli:cli"
 acme_dex = ["templates/**/*"]
 ```
 
-!!! important "Include template files in the package"
-    Template files must be declared in `package-data` (setuptools) or `include` (hatch/flit) so they are bundled into the wheel. Without this, the `templates/` directory will be missing after install.
+> **Important:** Template files must be declared in `package-data` (setuptools) or `include` (hatch/flit) so they are bundled into the wheel. Without this, the `templates/` directory will be missing after install.
 
 ### Distribute via internal PyPI
 

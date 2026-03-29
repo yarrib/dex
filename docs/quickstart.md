@@ -14,33 +14,33 @@ See [Installation](installation.md) for platform-specific wheels and Windows ins
 
 ## 2. Scaffold a project
 
-=== "Databricks Asset Bundle"
+**Databricks Asset Bundle:**
 
-    ```bash
-    dex init --template dabs-package --dir my_project
-    ```
+```bash
+dex init --template dabs-package --dir my_project
+```
 
-    Prompts:
+Prompts:
 
-    ```
-    Project name [my_project]:
-    Python version (3.12, 3.11) [3.12]:
-    Include exploration notebook? [Y/n]:
-    Include job definition? [Y/n]:
-    Use serverless compute? [y/N]:
-    ```
+```
+Project name [my_project]:
+Python version (3.12, 3.11) [3.12]:
+Include exploration notebook? [Y/n]:
+Include job definition? [Y/n]:
+Use serverless compute? [y/N]:
+```
 
-=== "Plain Python package"
+**Plain Python package:**
 
-    ```bash
-    dex init --template default --dir my_package
-    ```
+```bash
+dex init --template default --dir my_package
+```
 
-=== "Non-interactive (CI / scripts)"
+**Non-interactive (CI / scripts):**
 
-    ```bash
-    dex init --template dabs-package --no-prompt --dir my_project
-    ```
+```bash
+dex init --template dabs-package --no-prompt --dir my_project
+```
 
 ## 3. Inspect what was generated
 

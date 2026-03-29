@@ -30,13 +30,12 @@ git push -u origin chore/release-v0.x.y
 
 `make bump-patch` will:
 
-1. Update the version in `pyproject.toml` and both `Cargo.toml` files
+1. Update the version in `Cargo.toml` and both `Cargo.toml` files
 2. Commit the changes with message `chore: bump version to vX.Y.Z`
 
 Open a PR for the branch, get it merged.
 
-!!! warning "Working tree must be clean"
-    The bump commands check for uncommitted changes and will abort if any exist.
+> **Warning:** The bump commands check for uncommitted changes and will abort if any exist.
 
 ### 3. Tag and push
 
@@ -47,14 +46,14 @@ git checkout main && git pull
 make tag-release
 ```
 
-`make tag-release` tags the current `HEAD` with the version in `pyproject.toml` and pushes the tag to GitHub. It also guards against running on the wrong branch.
+`make tag-release` tags the current `HEAD` with the version in `Cargo.toml` and pushes the tag to GitHub. It also guards against running on the wrong branch.
 
 ### 4. Watch the release workflow
 
 Go to **Actions → Release** on GitHub. The workflow:
 
 1. Validates the tag format (`v<major>.<minor>.<patch>`)
-2. Verifies `pyproject.toml` version matches the tag
+2. Verifies `Cargo.toml` version matches the tag
 3. Generates a changelog from conventional commits (git-cliff)
 4. Builds wheels for Linux x86\_64, macOS Apple Silicon, macOS Intel
 5. Builds an sdist
@@ -112,7 +111,7 @@ There is no separate hotfix branch — all releases go through main.
 
 The most common causes:
 
-- **Tag/version mismatch** — `pyproject.toml` version doesn't match the tag. Delete the tag, fix the version, re-tag.
+- **Tag/version mismatch** — `Cargo.toml` version doesn't match the tag. Delete the tag, fix the version, re-tag.
 - **Build failure** — a Rust compilation error in the wheel build. Fix the code, delete the tag, re-tag.
 
 To delete a tag and re-release:
