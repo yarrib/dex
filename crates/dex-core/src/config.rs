@@ -115,6 +115,13 @@ pub fn standards_path() -> PathBuf {
         .join("standards.toml")
 }
 
+pub fn presets_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("~/.config"))
+        .join("dex")
+        .join("presets.toml")
+}
+
 pub fn remote_cache_dir() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| PathBuf::from("~/.cache"))
@@ -146,6 +153,78 @@ pub fn load_standards(path: Option<&Path>) -> Result<HashMap<String, String>, De
     Ok(table
         .into_iter()
         .map(|(k, v)| (k, toml_value_to_string(&v)))
+        .collect())
+}
+
+/// Load variable pre-fills for a named preset profile.
+///
+/// Presets group related variable values under named profiles so you can
+/// pre-fill different sets of variables depending on the project type:
+///
+/// ```toml
+/// # ~/.config/dex/presets.toml
+///
+/// [profiles.ml-project]
+/// workspace_url  = "https://ml.cloud.databricks.com"
+/// cluster_id     = "0123-456789-ml"
+/// python_version = "3.12"
+///
+/// [profiles.etl]
+/// workspace_url  = "https://etl.cloud.databricks.com"
+/// python_version = "3.11"
+/// ```
+///
+/// Select a profile with `dex init --preset ml-project`.
+///
+/// Returns an error if the file does not exist or the named profile is missing.
+pub fn load_preset(
+    path: Option<&Path>,
+    profile: &str,
+) -> Result<HashMap<String, String>, DexError> {
+    let target = match path {
+        Some(p) => p.to_path_buf(),
+        None => presets_path(),
+    };
+
+    if !target.exists() {
+        return Err(DexError::Config(ConfigError::NotFound(target)));
+    }
+
+    let content = std::fs::read_to_string(&target).map_err(|source| DexError::Io {
+        path: target.clone(),
+        source,
+    })?;
+
+    let table: toml::Table = toml::from_str(&content).map_err(ConfigError::Parse)?;
+
+    let profiles = table
+        .get("profiles")
+        .and_then(|v| v.as_table())
+        .ok_or_else(|| {
+            DexError::Config(ConfigError::Invalid(
+                "presets file has no [profiles] section".to_string(),
+            ))
+        })?;
+
+    let profile_table = profiles
+        .get(profile)
+        .and_then(|v| v.as_table())
+        .ok_or_else(|| {
+            let available: Vec<&str> = profiles.keys().map(String::as_str).collect();
+            DexError::Config(ConfigError::Invalid(format!(
+                "preset '{}' not found. Available: {}",
+                profile,
+                if available.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    available.join(", ")
+                }
+            )))
+        })?;
+
+    Ok(profile_table
+        .iter()
+        .map(|(k, v)| (k.clone(), toml_value_to_string(v)))
         .collect())
 }
 
@@ -356,6 +435,68 @@ mod tests {
         );
         assert_eq!(merged.remotes.len(), 1);
         assert_eq!(merged.remotes[0].name, "shared");
+    }
+
+    #[test]
+    fn load_preset_happy_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("presets.toml");
+        std::fs::write(
+            &path,
+            r#"
+[profiles.ml-project]
+workspace_url = "https://ml.cloud.databricks.com"
+cluster_id = "0123-ml"
+python_version = "3.12"
+
+[profiles.etl]
+workspace_url = "https://etl.cloud.databricks.com"
+"#,
+        )
+        .unwrap();
+
+        let preset = load_preset(Some(&path), "ml-project").unwrap();
+        assert_eq!(
+            preset.get("workspace_url").unwrap(),
+            "https://ml.cloud.databricks.com"
+        );
+        assert_eq!(preset.get("cluster_id").unwrap(), "0123-ml");
+        assert_eq!(preset.get("python_version").unwrap(), "3.12");
+
+        // Other profile is unaffected
+        let etl = load_preset(Some(&path), "etl").unwrap();
+        assert_eq!(
+            etl.get("workspace_url").unwrap(),
+            "https://etl.cloud.databricks.com"
+        );
+        assert!(!etl.contains_key("cluster_id"));
+    }
+
+    #[test]
+    fn load_preset_unknown_profile_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("presets.toml");
+        std::fs::write(
+            &path,
+            "[profiles.ml-project]\nworkspace_url = \"https://example.com\"\n",
+        )
+        .unwrap();
+        let result = load_preset(Some(&path), "does-not-exist");
+        assert!(
+            matches!(result, Err(DexError::Config(ConfigError::Invalid(_)))),
+            "expected ConfigError::Invalid for unknown profile"
+        );
+    }
+
+    #[test]
+    fn load_preset_missing_file_returns_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonexistent.toml");
+        let result = load_preset(Some(&path), "ml-project");
+        assert!(
+            matches!(result, Err(DexError::Config(ConfigError::NotFound(_)))),
+            "expected ConfigError::NotFound for missing file"
+        );
     }
 
     #[test]
