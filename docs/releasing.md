@@ -35,8 +35,7 @@ git push -u origin chore/release-v0.x.y
 
 Open a PR for the branch, get it merged.
 
-!!! warning "Working tree must be clean"
-    The bump commands check for uncommitted changes and will abort if any exist.
+> **Warning:** The bump commands check for uncommitted changes and will abort if any exist.
 
 ### 3. Tag and push
 

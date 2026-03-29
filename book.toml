@@ -1,0 +1,9 @@
+[book]
+title = "dex"
+description = "Extensible CLI framework for data project operations"
+src = "docs"
+
+[output.html]
+site-url = "/dex/"
+git-repository-url = "https://github.com/yarrib/dex"
+edit-url-template = "https://github.com/yarrib/dex/edit/main/{path}"

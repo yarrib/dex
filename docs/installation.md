@@ -25,8 +25,7 @@ After install, `dex` is available globally:
 dex --help
 ```
 
-!!! note "Windows"
-    The install script does not support Windows. Use the manual install path below.
+> **Note:** The install script does not support Windows. Use the manual install path below.
 
 ## Manual install with uv
 
