@@ -154,7 +154,7 @@ requires-python = ">={{ python_version }}"
 After adding or editing a template, rebuild to embed it in the binary:
 
 ```bash
-make build
+cargo build
 ```
 
 Then test with:

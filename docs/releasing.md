@@ -30,7 +30,7 @@ git push -u origin chore/release-v0.x.y
 
 `make bump-patch` will:
 
-1. Update the version in `Cargo.toml` and both `Cargo.toml` files
+1. Update the version in `Cargo.toml` files
 2. Commit the changes with message `chore: bump version to vX.Y.Z`
 
 Open a PR for the branch, get it merged.
@@ -46,7 +46,7 @@ git checkout main && git pull
 make tag-release
 ```
 
-`make tag-release` tags the current `HEAD` with the version in `Cargo.toml` and pushes the tag to GitHub. It also guards against running on the wrong branch.
+`make tag-release` tags the current `HEAD` with the version in `Cargo.toml` and pushes the tag to GitHub.
 
 ### 4. Watch the release workflow
 
@@ -55,16 +55,20 @@ Go to **Actions → Release** on GitHub. The workflow:
 1. Validates the tag format (`v<major>.<minor>.<patch>`)
 2. Verifies `Cargo.toml` version matches the tag
 3. Generates a changelog from conventional commits (git-cliff)
-4. Builds wheels for Linux x86\_64, macOS Apple Silicon, macOS Intel
-5. Builds an sdist
-6. Creates a GitHub Release with all artifacts attached
+4. Builds native binaries for all target platforms:
+   - Linux x86\_64
+   - Linux aarch64
+   - macOS Apple Silicon
+   - macOS Intel
+   - Windows x86\_64
+5. Creates a GitHub Release with all binaries attached
 
 ### 5. Verify the release
 
 - Check [GitHub Releases](https://github.com/yarrib/dex/releases) for the new release
-- Confirm wheels are attached for all platforms
+- Confirm binaries are attached for all platforms
 - Confirm the changelog looks correct
-- The docs site will auto-deploy the new versioned docs (e.g. `0.2`) via the `docs.yml` workflow
+- The docs site will auto-deploy the new versioned docs via the `docs.yml` workflow
 
 ---
 
@@ -103,8 +107,6 @@ git checkout main && git pull
 make tag-release
 ```
 
-There is no separate hotfix branch — all releases go through main.
-
 ---
 
 ## If the release workflow fails
@@ -112,7 +114,7 @@ There is no separate hotfix branch — all releases go through main.
 The most common causes:
 
 - **Tag/version mismatch** — `Cargo.toml` version doesn't match the tag. Delete the tag, fix the version, re-tag.
-- **Build failure** — a Rust compilation error in the wheel build. Fix the code, delete the tag, re-tag.
+- **Build failure** — a Rust compilation error. Fix the code, delete the tag, re-tag.
 
 To delete a tag and re-release:
 

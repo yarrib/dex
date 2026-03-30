@@ -2,26 +2,28 @@
 
 **dex** is an opinionated CLI framework for data project operations. It scaffolds Python packages, Databricks Asset Bundles, and AI agent projects — and can be extended by teams to wrap their own tooling.
 
+100% Rust. Single binary. No runtime required.
+
 ## Install
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-Installs via [uv](https://docs.astral.sh/uv/) — auto-detects your platform and downloads the right wheel.
-See [Installation](installation.md) for manual uv install, Windows, and build-from-source options.
+Auto-detects your platform and downloads the right binary from [GitHub Releases](https://github.com/yarrib/dex/releases).
+See [Installation](installation.md) for manual install, Windows, and build-from-source options.
 
 ## 30-second example
 
 ```bash
 # Scaffold a new Databricks Asset Bundle project
-dex init --template dabs-package my_project
+dex init --template dabs-package --dir my_project
 
 # Scaffold a plain Python package
-dex init --template default my_package
+dex init --template default --dir my_package
 
 # Non-interactive (use all defaults)
-dex init --template dabs-package --no-prompt my_project
+dex init --template dabs-package --no-prompt --dir my_project
 ```
 
 ## What dex generates
@@ -41,7 +43,8 @@ my_project/
 │   ├── __init__.py
 │   └── test_my_project.py
 ├── databricks.yml       # bundle config (dev/staging/prod targets)
-├── pyproject.toml       # uv-compatible project config
+├── pyproject.toml       # project config
+├── dex.toml             # dex project config
 ├── README.md
 └── .gitignore
 ```

@@ -1,12 +1,11 @@
 # Installation
 
-dex is distributed as pre-built wheels on [GitHub Releases](https://github.com/yarrib/dex/releases).
-No PyPI, no crates.io, no Rust toolchain required.
+dex is distributed as a pre-built native binary on [GitHub Releases](https://github.com/yarrib/dex/releases).
+No Python, no runtime, no toolchain required to run it.
 
-## Install with uv (recommended)
+## Install script (recommended)
 
-The fastest way to install dex is with the installer script, which uses [uv](https://docs.astral.sh/uv/)
-to download and install the right wheel for your platform:
+The fastest way to install dex is with the installer script, which downloads the right binary for your platform:
 
 ```bash
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
@@ -16,8 +15,8 @@ The script will:
 
 1. Detect your OS and CPU architecture
 2. Fetch the latest release from GitHub
-3. Install [uv](https://docs.astral.sh/uv/) if it is not already present
-4. Run `uv tool install` with the correct wheel
+3. Download the correct binary
+4. Place it in `~/.local/bin` (or the platform default)
 
 After install, `dex` is available globally:
 
@@ -25,71 +24,65 @@ After install, `dex` is available globally:
 dex --help
 ```
 
-> **Note:** The install script does not support Windows. Use the manual install path below.
+> **Note:** The install script supports Linux and macOS. For Windows, use the manual install path below.
 
-## Manual install with uv
-
-If you already have [uv](https://docs.astral.sh/uv/) and prefer not to pipe into `sh`:
+## Manual install
 
 1. Go to the [latest release](https://github.com/yarrib/dex/releases/latest)
-2. Copy the wheel URL for your platform
+2. Download the binary for your platform:
 
-| Platform | Filename pattern |
+| Platform | Filename |
 |---|---|
-| Linux x86\_64 | `*-manylinux_2_17_x86_64.whl` |
-| macOS Apple Silicon | `*-macosx_11_0_arm64.whl` |
-| macOS Intel | `*-macosx_10_12_x86_64.whl` |
-| Windows x86\_64 | `*-win_amd64.whl` |
+| Linux x86\_64 | `dex-linux-x86_64` |
+| Linux aarch64 | `dex-linux-aarch64` |
+| macOS Apple Silicon | `dex-macos-aarch64` |
+| macOS Intel | `dex-macos-x86_64` |
+| Windows x86\_64 | `dex-windows-x86_64.exe` |
 
-3. Install:
+3. Make it executable and move it onto your `PATH`:
 
 ```bash
-uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
+chmod +x dex-linux-x86_64
+mv dex-linux-x86_64 ~/.local/bin/dex
 ```
 
 ## Upgrade
 
-```bash
-uv tool upgrade dex
-```
-
-Or reinstall from a specific release:
+Re-run the install script to upgrade to the latest release:
 
 ```bash
-uv tool install --force "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/<wheel-filename>"
+curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
+
+Or download the new binary manually from [GitHub Releases](https://github.com/yarrib/dex/releases).
 
 ## Uninstall
 
+Remove the binary from wherever you placed it:
+
 ```bash
-uv tool uninstall dex
+rm ~/.local/bin/dex
 ```
 
 ## Build from source
 
-Requires [Rust](https://rustup.rs/) and [uv](https://docs.astral.sh/uv/).
+Requires [Rust](https://rustup.rs/) (stable).
 
 ```bash
 git clone https://github.com/yarrib/dex
 cd dex
-make dev
+cargo build --release
+# Binary at: target/release/dex
 ```
 
-`make dev` runs `uv sync` followed by `maturin develop`, which compiles the Rust extension
-and installs everything into the local virtual environment.
-
-After that, `dex` is available in the venv:
+Install directly:
 
 ```bash
-dex --help
+cargo install --path crates/dex-cli
 ```
 
 ## Requirements
 
-- Python 3.11+
-- [uv](https://docs.astral.sh/uv/) — for `uv tool install`
-- For building from source: Rust stable (`rustup update stable`)
+No runtime dependencies. The `dex` binary is fully self-contained.
 
-## PyPI
-
-Coming soon. Track progress in [GitHub Issues](https://github.com/yarrib/dex/issues).
+For building from source: Rust stable toolchain (`rustup update stable`).
