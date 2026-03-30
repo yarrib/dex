@@ -17,9 +17,9 @@ The MCP (Model Context Protocol) server lets AI tools like Claude Desktop call d
 | Tool | Status | Description |
 |---|---|---|
 | `list_templates` | Implemented | Returns all built-in templates with names and descriptions |
-| `scaffold_project` | Stub | Scaffold a project from a template |
-| `scaffold_agent` | Stub | Run the `dex agent new` Q&A flow |
-| `get_template_variables` | Stub | Return variable specs for a template |
+| `get_template_variables` | Implemented | Return variable specs for a template |
+| `scaffold_project` | Implemented | Scaffold a project from a template |
+| `scaffold_agent` | Future | Run the `dex agent new` Q&A flow |
 
 ## Wiring into Claude Desktop
 
