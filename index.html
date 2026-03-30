@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8d10a28d.js"></script>
+        <script src="toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,20 +182,21 @@
                     <main>
                         <h1 id="dex"><a class="header" href="#dex">dex</a></h1>
 <p><strong>dex</strong> is an opinionated CLI framework for data project operations. It scaffolds Python packages, Databricks Asset Bundles, and AI agent projects — and can be extended by teams to wrap their own tooling.</p>
+<p>100% Rust. Single binary. No runtime required.</p>
 <h2 id="install"><a class="header" href="#install">Install</a></h2>
 <pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 </code></pre>
-<p>Installs via <a href="https://docs.astral.sh/uv/">uv</a> — auto-detects your platform and downloads the right wheel.
-See <a href="installation.html">Installation</a> for manual uv install, Windows, and build-from-source options.</p>
+<p>Auto-detects your platform and downloads the right binary from <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a>.
+See <a href="installation.html">Installation</a> for manual install, Windows, and build-from-source options.</p>
 <h2 id="30-second-example"><a class="header" href="#30-second-example">30-second example</a></h2>
 <pre><code class="language-bash"># Scaffold a new Databricks Asset Bundle project
-dex init --template dabs-package my_project
+dex init --template dabs-package --dir my_project
 
 # Scaffold a plain Python package
-dex init --template default my_package
+dex init --template default --dir my_package
 
 # Non-interactive (use all defaults)
-dex init --template dabs-package --no-prompt my_project
+dex init --template dabs-package --no-prompt --dir my_project
 </code></pre>
 <h2 id="what-dex-generates"><a class="header" href="#what-dex-generates">What dex generates</a></h2>
 <p>For a <code>dabs-package</code> project:</p>
@@ -211,7 +212,8 @@ dex init --template dabs-package --no-prompt my_project
 │   ├── __init__.py
 │   └── test_my_project.py
 ├── databricks.yml       # bundle config (dev/staging/prod targets)
-├── pyproject.toml       # uv-compatible project config
+├── pyproject.toml       # project config
+├── dex.toml             # dex project config
 ├── README.md
 └── .gitignore
 </code></pre>

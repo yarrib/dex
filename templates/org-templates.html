@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "../searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-8d10a28d.js"></script>
+        <script src="../toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,107 +181,85 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="org-template-registries"><a class="header" href="#org-template-registries">Org Template Registries</a></h1>
-<p>Teams can publish their own template registries and surface them through a custom org CLI built with <code>create_cli()</code>. Users get <code>dex init --template &lt;your-template&gt;</code> alongside all built-in templates, under your own CLI name.</p>
+<p>Teams can publish their own templates and share them across the org via a shared directory
+or git repository. Users reference them the same way as built-in templates.</p>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
 <ol>
-<li>Create a Python package containing your templates</li>
-<li>Wire the templates directory into <code>create_cli()</code> via <code>templates_dir</code></li>
-<li>Distribute the org CLI package via internal PyPI, Artifactory, or Git URL</li>
-<li>Users install the org CLI once and get all your org templates</li>
+<li>Create a directory of templates following the <a href="authoring.html">authoring guide</a></li>
+<li>Distribute the directory (git repo, shared filesystem, etc.)</li>
+<li>Users point dex at the directory via <code>~/.config/dex/config.toml</code> or <code>--template-dir</code></li>
 </ol>
+<p>No package manager, no Python, no runtime required.</p>
 <hr>
-<h2 id="1-create-the-template-registry-package"><a class="header" href="#1-create-the-template-registry-package">1. Create the template registry package</a></h2>
-<pre><code>acme-dex/
-├── pyproject.toml
-├── acme_dex/
-│   ├── __init__.py
-│   ├── cli.py              # org CLI entry point
-│   └── templates/          # your org templates
-│       ├── acme-etl/
-│       │   ├── template.toml
-│       │   └── files/
-│       └── acme-ml/
-│           ├── template.toml
-│           └── files/
+<h2 id="1-create-the-template-directory"><a class="header" href="#1-create-the-template-directory">1. Create the template directory</a></h2>
+<pre><code>acme-dex-templates/
+├── acme-etl/
+│   ├── template.toml
+│   └── files/
+│       ├── dex.toml.j2
+│       ├── pyproject.toml.j2
+│       ├── README.md.j2
+│       └── src/
+│           └── {{ project_name }}/
+│               └── pipeline.py.j2
+└── acme-ml/
+    ├── template.toml
+    └── files/
 </code></pre>
 <p>Templates follow the same format as built-in templates. See the <a href="authoring.html">authoring guide</a>.</p>
-<h2 id="2-wire-templates-into-create_cli"><a class="header" href="#2-wire-templates-into-create_cli">2. Wire templates into create_cli()</a></h2>
-<pre><code class="language-python"># acme_dex/cli.py
-from pathlib import Path
-from dex.ext import create_cli, passthrough
-
-_TEMPLATES_DIR = Path(__file__).parent / "templates"
-
-cli = create_cli(
-    name="acme-dex",
-    templates_dir=_TEMPLATES_DIR,
-    passthroughs=[
-        passthrough("db", "databricks", "Databricks CLI"),
-    ],
-)
+<hr>
+<h2 id="2-distribute-via-git"><a class="header" href="#2-distribute-via-git">2. Distribute via git</a></h2>
+<p>Host the templates in a git repository:</p>
+<pre><code class="language-bash">git clone https://github.com/acme/acme-dex-templates
 </code></pre>
-<p>The <code>templates_dir</code> path is resolved relative to the installed package, so it works correctly regardless of where users install it.</p>
-<h2 id="3-package-and-distribute"><a class="header" href="#3-package-and-distribute">3. Package and distribute</a></h2>
-<pre><code class="language-toml"># pyproject.toml
-[project]
-name = "acme-dex"
-version = "0.1.0"
-dependencies = ["dex&gt;=0.1.0"]
-
-[project.scripts]
-acme-dex = "acme_dex.cli:cli"
-
-[tool.setuptools.package-data]
-acme_dex = ["templates/**/*"]
+<hr>
+<h2 id="3-configure-dex-to-find-the-templates"><a class="header" href="#3-configure-dex-to-find-the-templates">3. Configure dex to find the templates</a></h2>
+<h3 id="per-user-global"><a class="header" href="#per-user-global">Per-user (global)</a></h3>
+<p>Add the templates directory to <code>~/.config/dex/config.toml</code>:</p>
+<pre><code class="language-toml">[templates]
+paths = ["~/acme-dex-templates"]
 </code></pre>
-<blockquote>
-<p><strong>Important:</strong> Template files must be declared in <code>package-data</code> (setuptools) or <code>include</code> (hatch/flit) so they are bundled into the wheel. Without this, the <code>templates/</code> directory will be missing after install.</p>
-</blockquote>
-<h3 id="distribute-via-internal-pypi"><a class="header" href="#distribute-via-internal-pypi">Distribute via internal PyPI</a></h3>
-<pre><code class="language-bash"># Build and publish
-uv build
-uv publish --index https://pypi.internal.acme.com/
-
-# Users install with
-uv tool install acme-dex --index https://pypi.internal.acme.com/
+<p>Now all <code>dex</code> commands on this machine can use the org templates.</p>
+<h3 id="per-project"><a class="header" href="#per-project">Per-project</a></h3>
+<p>Place templates in a <code>templates/</code> directory at the project root:</p>
+<pre><code>my-project/
+├── dex.toml
+└── templates/
+    └── acme-etl/
+        ├── template.toml
+        └── files/
 </code></pre>
-<h3 id="distribute-via-git-url-pull-and-attach"><a class="header" href="#distribute-via-git-url-pull-and-attach">Distribute via Git URL (“pull and attach”)</a></h3>
-<p>No internal PyPI needed — users install directly from the repo:</p>
-<pre><code class="language-bash">uv tool install "acme-dex @ git+https://github.com/acme/acme-dex"
-</code></pre>
-<p>Pin a specific release:</p>
-<pre><code class="language-bash">uv tool install "acme-dex @ git+https://github.com/acme/acme-dex@v1.2.0"
+<p>dex discovers them automatically.</p>
+<h3 id="one-off-via-cli-flag"><a class="header" href="#one-off-via-cli-flag">One-off (via CLI flag)</a></h3>
+<pre><code class="language-bash">dex init --template-dir ~/acme-dex-templates --template acme-etl --dir my_pipeline
 </code></pre>
 <hr>
 <h2 id="user-experience"><a class="header" href="#user-experience">User experience</a></h2>
-<p>After installing the org CLI, users have all built-in dex templates plus your org templates:</p>
-<pre><code class="language-bash">acme-dex init --template default        # built-in
-acme-dex init --template dabs-package   # built-in
-acme-dex init --template acme-etl       # org template
-acme-dex init --template acme-ml        # org template
+<p>After configuring the templates path, users have all built-in templates plus the org templates:</p>
+<pre><code class="language-bash">dex init --template default       # built-in
+dex init --template dabs-package  # built-in
+dex init --template acme-etl      # org template
+dex init --template acme-ml       # org template
 </code></pre>
 <p>If an org template name conflicts with a built-in, the org template takes precedence.</p>
 <hr>
 <h2 id="versioning-org-templates"><a class="header" href="#versioning-org-templates">Versioning org templates</a></h2>
-<p>Tag releases and pin the version in your team’s install instructions:</p>
-<pre><code class="language-bash"># Install a specific version
-uv tool install "acme-dex==1.2.0" --index https://pypi.internal.acme.com/
-
-# Upgrade
-uv tool upgrade acme-dex --index https://pypi.internal.acme.com/
+<p>Pin a specific commit or tag in your team’s setup instructions:</p>
+<pre><code class="language-bash">git clone --branch v1.2.0 https://github.com/acme/acme-dex-templates ~/acme-dex-templates
 </code></pre>
+<p>Or check out the templates directory as a git submodule in your project repos.</p>
 <h2 id="monorepo-pattern"><a class="header" href="#monorepo-pattern">Monorepo pattern</a></h2>
-<p>If your templates live in a monorepo alongside other tooling, point <code>templates_dir</code> at the right subdirectory:</p>
-<pre><code class="language-python">_TEMPLATES_DIR = Path(__file__).parent.parent / "platform" / "dex-templates"
-
-cli = create_cli(name="acme-dex", templates_dir=_TEMPLATES_DIR)
+<p>If templates live in a monorepo alongside other tooling:</p>
+<pre><code class="language-toml"># ~/.config/dex/config.toml
+[templates]
+paths = ["~/acme-platform/dex-templates"]
 </code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../templates/authoring.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../templates/org-templates-guide.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
@@ -295,7 +273,7 @@ cli = create_cli(name="acme-dex", templates_dir=_TEMPLATES_DIR)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../templates/authoring.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../templates/org-templates-guide.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 

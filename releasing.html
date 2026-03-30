@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8d10a28d.js"></script>
+        <script src="toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -210,7 +210,7 @@ git push -u origin chore/release-v0.x.y
 </code></pre>
 <p><code>make bump-patch</code> will:</p>
 <ol>
-<li>Update the version in <code>Cargo.toml</code> and both <code>Cargo.toml</code> files</li>
+<li>Update the version in <code>Cargo.toml</code> files</li>
 <li>Commit the changes with message <code>chore: bump version to vX.Y.Z</code></li>
 </ol>
 <p>Open a PR for the branch, get it merged.</p>
@@ -222,23 +222,30 @@ git push -u origin chore/release-v0.x.y
 <pre><code class="language-bash">git checkout main &amp;&amp; git pull
 make tag-release
 </code></pre>
-<p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>Cargo.toml</code> and pushes the tag to GitHub. It also guards against running on the wrong branch.</p>
+<p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>Cargo.toml</code> and pushes the tag to GitHub.</p>
 <h3 id="4-watch-the-release-workflow"><a class="header" href="#4-watch-the-release-workflow">4. Watch the release workflow</a></h3>
 <p>Go to <strong>Actions → Release</strong> on GitHub. The workflow:</p>
 <ol>
 <li>Validates the tag format (<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>)</li>
 <li>Verifies <code>Cargo.toml</code> version matches the tag</li>
 <li>Generates a changelog from conventional commits (git-cliff)</li>
-<li>Builds wheels for Linux x86_64, macOS Apple Silicon, macOS Intel</li>
-<li>Builds an sdist</li>
-<li>Creates a GitHub Release with all artifacts attached</li>
+<li>Builds native binaries for all target platforms:
+<ul>
+<li>Linux x86_64</li>
+<li>Linux aarch64</li>
+<li>macOS Apple Silicon</li>
+<li>macOS Intel</li>
+<li>Windows x86_64</li>
+</ul>
+</li>
+<li>Creates a GitHub Release with all binaries attached</li>
 </ol>
 <h3 id="5-verify-the-release"><a class="header" href="#5-verify-the-release">5. Verify the release</a></h3>
 <ul>
 <li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
-<li>Confirm wheels are attached for all platforms</li>
+<li>Confirm binaries are attached for all platforms</li>
 <li>Confirm the changelog looks correct</li>
-<li>The docs site will auto-deploy the new versioned docs (e.g. <code>0.2</code>) via the <code>docs.yml</code> workflow</li>
+<li>The docs site will auto-deploy the new versioned docs via the <code>docs.yml</code> workflow</li>
 </ul>
 <hr>
 <h2 id="commit-conventions-and-changelog"><a class="header" href="#commit-conventions-and-changelog">Commit conventions and changelog</a></h2>
@@ -274,13 +281,12 @@ git push -u origin chore/release-vX.Y.Z
 git checkout main &amp;&amp; git pull
 make tag-release
 </code></pre>
-<p>There is no separate hotfix branch — all releases go through main.</p>
 <hr>
 <h2 id="if-the-release-workflow-fails"><a class="header" href="#if-the-release-workflow-fails">If the release workflow fails</a></h2>
 <p>The most common causes:</p>
 <ul>
 <li><strong>Tag/version mismatch</strong> — <code>Cargo.toml</code> version doesn’t match the tag. Delete the tag, fix the version, re-tag.</li>
-<li><strong>Build failure</strong> — a Rust compilation error in the wheel build. Fix the code, delete the tag, re-tag.</li>
+<li><strong>Build failure</strong> — a Rust compilation error. Fix the code, delete the tag, re-tag.</li>
 </ul>
 <p>To delete a tag and re-release:</p>
 <pre><code class="language-bash">git tag -d v0.1.1

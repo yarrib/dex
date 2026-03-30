@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8d10a28d.js"></script>
+        <script src="toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,78 +181,72 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="installation"><a class="header" href="#installation">Installation</a></h1>
-<p>dex is distributed as pre-built wheels on <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a>.
-No PyPI, no crates.io, no Rust toolchain required.</p>
-<h2 id="install-with-uv-recommended"><a class="header" href="#install-with-uv-recommended">Install with uv (recommended)</a></h2>
-<p>The fastest way to install dex is with the installer script, which uses <a href="https://docs.astral.sh/uv/">uv</a>
-to download and install the right wheel for your platform:</p>
+<p>dex is distributed as a pre-built native binary on <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a>.
+No Python, no runtime, no toolchain required to run it.</p>
+<h2 id="install-script-recommended"><a class="header" href="#install-script-recommended">Install script (recommended)</a></h2>
+<p>The fastest way to install dex is with the installer script, which downloads the right binary for your platform:</p>
 <pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 </code></pre>
 <p>The script will:</p>
 <ol>
 <li>Detect your OS and CPU architecture</li>
 <li>Fetch the latest release from GitHub</li>
-<li>Install <a href="https://docs.astral.sh/uv/">uv</a> if it is not already present</li>
-<li>Run <code>uv tool install</code> with the correct wheel</li>
+<li>Download the correct binary</li>
+<li>Place it in <code>~/.local/bin</code> (or the platform default)</li>
 </ol>
 <p>After install, <code>dex</code> is available globally:</p>
 <pre><code class="language-bash">dex --help
 </code></pre>
 <blockquote>
-<p><strong>Note:</strong> The install script does not support Windows. Use the manual install path below.</p>
+<p><strong>Note:</strong> The install script supports Linux and macOS. For Windows, use the manual install path below.</p>
 </blockquote>
-<h2 id="manual-install-with-uv"><a class="header" href="#manual-install-with-uv">Manual install with uv</a></h2>
-<p>If you already have <a href="https://docs.astral.sh/uv/">uv</a> and prefer not to pipe into <code>sh</code>:</p>
+<h2 id="manual-install"><a class="header" href="#manual-install">Manual install</a></h2>
 <ol>
 <li>Go to the <a href="https://github.com/yarrib/dex/releases/latest">latest release</a></li>
-<li>Copy the wheel URL for your platform</li>
+<li>Download the binary for your platform:</li>
 </ol>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Platform</th><th>Filename pattern</th></tr>
+<tr><th>Platform</th><th>Filename</th></tr>
 </thead>
 <tbody>
-<tr><td>Linux x86_64</td><td><code>*-manylinux_2_17_x86_64.whl</code></td></tr>
-<tr><td>macOS Apple Silicon</td><td><code>*-macosx_11_0_arm64.whl</code></td></tr>
-<tr><td>macOS Intel</td><td><code>*-macosx_10_12_x86_64.whl</code></td></tr>
-<tr><td>Windows x86_64</td><td><code>*-win_amd64.whl</code></td></tr>
+<tr><td>Linux x86_64</td><td><code>dex-linux-x86_64</code></td></tr>
+<tr><td>Linux aarch64</td><td><code>dex-linux-aarch64</code></td></tr>
+<tr><td>macOS Apple Silicon</td><td><code>dex-macos-aarch64</code></td></tr>
+<tr><td>macOS Intel</td><td><code>dex-macos-x86_64</code></td></tr>
+<tr><td>Windows x86_64</td><td><code>dex-windows-x86_64.exe</code></td></tr>
 </tbody>
 </table>
 </div>
 <ol start="3">
-<li>Install:</li>
+<li>Make it executable and move it onto your <code>PATH</code>:</li>
 </ol>
-<pre><code class="language-bash">uv tool install "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/&lt;wheel-filename&gt;"
+<pre><code class="language-bash">chmod +x dex-linux-x86_64
+mv dex-linux-x86_64 ~/.local/bin/dex
 </code></pre>
 <h2 id="upgrade"><a class="header" href="#upgrade">Upgrade</a></h2>
-<pre><code class="language-bash">uv tool upgrade dex
+<p>Re-run the install script to upgrade to the latest release:</p>
+<pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 </code></pre>
-<p>Or reinstall from a specific release:</p>
-<pre><code class="language-bash">uv tool install --force "dex @ https://github.com/yarrib/dex/releases/download/vX.Y.Z/&lt;wheel-filename&gt;"
-</code></pre>
+<p>Or download the new binary manually from <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a>.</p>
 <h2 id="uninstall"><a class="header" href="#uninstall">Uninstall</a></h2>
-<pre><code class="language-bash">uv tool uninstall dex
+<p>Remove the binary from wherever you placed it:</p>
+<pre><code class="language-bash">rm ~/.local/bin/dex
 </code></pre>
 <h2 id="build-from-source"><a class="header" href="#build-from-source">Build from source</a></h2>
-<p>Requires <a href="https://rustup.rs/">Rust</a> and <a href="https://docs.astral.sh/uv/">uv</a>.</p>
+<p>Requires <a href="https://rustup.rs/">Rust</a> (stable).</p>
 <pre><code class="language-bash">git clone https://github.com/yarrib/dex
 cd dex
-make dev
+cargo build --release
+# Binary at: target/release/dex
 </code></pre>
-<p><code>make dev</code> runs <code>uv sync</code> followed by <code>maturin develop</code>, which compiles the Rust extension
-and installs everything into the local virtual environment.</p>
-<p>After that, <code>dex</code> is available in the venv:</p>
-<pre><code class="language-bash">dex --help
+<p>Install directly:</p>
+<pre><code class="language-bash">cargo install --path crates/dex-cli
 </code></pre>
 <h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
-<ul>
-<li>Python 3.11+</li>
-<li><a href="https://docs.astral.sh/uv/">uv</a> — for <code>uv tool install</code></li>
-<li>For building from source: Rust stable (<code>rustup update stable</code>)</li>
-</ul>
-<h2 id="pypi"><a class="header" href="#pypi">PyPI</a></h2>
-<p>Coming soon. Track progress in <a href="https://github.com/yarrib/dex/issues">GitHub Issues</a>.</p>
+<p>No runtime dependencies. The <code>dex</code> binary is fully self-contained.</p>
+<p>For building from source: Rust stable toolchain (<code>rustup update stable</code>).</p>
 
                     </main>
 

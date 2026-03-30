@@ -35,10 +35,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-8d10a28d.js"></script>
+        <script src="toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -182,10 +182,10 @@
                     <main>
                         <h1 id="contributing"><a class="header" href="#contributing">Contributing</a></h1>
 <h2 id="dev-setup"><a class="header" href="#dev-setup">Dev setup</a></h2>
-<p>Requires <a href="https://rustup.rs/">Rust</a> and <a href="https://docs.astral.sh/uv/">uv</a>.</p>
+<p>Requires <a href="https://rustup.rs/">Rust</a> (stable).</p>
 <pre><code class="language-bash">git clone https://github.com/yarrib/dex
 cd dex
-make dev
+cargo build
 </code></pre>
 <h2 id="make-targets"><a class="header" href="#make-targets">Make targets</a></h2>
 <div class="table-wrapper">
@@ -194,28 +194,26 @@ make dev
 <tr><th>Target</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>make dev</code></td><td><code>uv sync</code> + <code>maturin develop</code></td></tr>
-<tr><td><code>make build</code></td><td><code>cargo build</code> + <code>maturin develop</code></td></tr>
-<tr><td><code>make test</code></td><td><code>cargo test</code> + <code>uv run pytest</code></td></tr>
-<tr><td><code>make lint</code></td><td><code>cargo clippy -D warnings</code> + <code>uv run ruff check python/</code></td></tr>
-<tr><td><code>make fmt</code></td><td><code>cargo fmt</code> + <code>uv run ruff format python/</code></td></tr>
+<tr><td><code>make build</code></td><td><code>cargo build</code></td></tr>
+<tr><td><code>make test</code></td><td><code>cargo test</code></td></tr>
+<tr><td><code>make lint</code></td><td><code>cargo clippy -- -D warnings</code></td></tr>
+<tr><td><code>make fmt</code></td><td><code>cargo fmt</code></td></tr>
 <tr><td><code>make fmt-check</code></td><td>Format check only (no writes)</td></tr>
 <tr><td><code>make clean</code></td><td>Remove build artifacts</td></tr>
-<tr><td><code>make docs</code></td><td>Build docs site (strict mode)</td></tr>
-<tr><td><code>make docs-serve</code></td><td>Serve docs site at localhost:8000</td></tr>
+<tr><td><code>make docs</code></td><td>Build docs site</td></tr>
+<tr><td><code>make docs-serve</code></td><td>Serve docs site at localhost:3000</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
 <pre><code>crates/dex-core/    Rust library — all business logic, no UI
-crates/dex-py/      PyO3 bindings — thin FFI layer, type conversion only
-python/dex/         Python package — click CLI, rich output, pass-throughs
+crates/dex-cli/     Rust binary — clap CLI, dialoguer prompts, console output
 templates/          Built-in Jinja2 templates, embedded at compile time
 </code></pre>
 <p><strong>Rules:</strong></p>
 <ul>
-<li><code>dex-core</code> has no terminal output. It returns data; Python renders it.</li>
-<li><code>dex-py</code> is a thin bridge. Business logic belongs in <code>dex-core</code>.</li>
+<li><code>dex-core</code> has no terminal output. It returns data; <code>dex-cli</code> renders it.</li>
+<li><code>dex-cli</code> owns all user interaction: prompts, formatting, error display.</li>
 <li>Config is TOML. No YAML, no JSON for config.</li>
 <li>Template files use <code>.j2</code> extension (Jinja2/minijinja syntax).</li>
 <li>No <code>unwrap()</code> or <code>expect()</code> in library code — propagate with <code>?</code>.</li>
@@ -227,23 +225,20 @@ templates/          Built-in Jinja2 templates, embedded at compile time
 <li>Run <code>make build</code> to embed the template in the binary</li>
 <li>Test with <code>dex init --template &lt;name&gt;</code></li>
 </ol>
-<h2 id="docs-versioning"><a class="header" href="#docs-versioning">Docs versioning</a></h2>
-<p>The docs site uses <a href="https://github.com/jimporter/mike">mike</a> for versioned deployments to GitHub Pages.</p>
-<p><strong>How it works:</strong></p>
-<ul>
-<li>Push to <code>main</code> → deploys the <code>latest</code> alias (unversioned dev docs)</li>
-<li>Push a <code>v*</code> tag → deploys a minor-version alias (e.g. <code>0.1</code>) and updates <code>latest</code></li>
-<li>All versions live on the <code>gh-pages</code> branch; mike manages the index</li>
-</ul>
-<p><strong>Version selector</strong> is shown in the top-right corner of the site (provided by mkdocs-material + mike).</p>
-<p><strong>One-time setup</strong> (already done): the GitHub Pages source must be set to “Deploy from branch: <code>gh-pages</code>” in the repo Settings → Pages. Do not use the “GitHub Actions” artifact mode — mike writes directly to the branch.</p>
+<h2 id="adding-a-subcommand"><a class="header" href="#adding-a-subcommand">Adding a subcommand</a></h2>
+<ol>
+<li>Add core logic to <code>crates/dex-core/src/</code> (new module or extend existing)</li>
+<li>Expose via <code>dex-core</code>’s public API in <code>lib.rs</code></li>
+<li>Add clap command in <code>crates/dex-cli/src/commands/</code></li>
+<li>Register in <code>crates/dex-cli/src/main.rs</code></li>
+<li>Add tests at each layer</li>
+<li>Update <code>docs/SPEC.md</code> with the command’s interface</li>
+</ol>
+<h2 id="docs"><a class="header" href="#docs">Docs</a></h2>
+<p>The docs site uses <a href="https://rust-lang.github.io/mdBook/">mdBook</a> and is served via GitHub Pages.</p>
 <p><strong>Local preview:</strong></p>
-<pre><code class="language-bash">uv run mike serve           # browse versioned docs locally
-uv run mkdocs serve         # browse unversioned docs (faster for writing)
-</code></pre>
-<p><strong>Manually deploy a version</strong> (maintainers only):</p>
-<pre><code class="language-bash">uv run mike deploy --push --update-aliases 0.2 latest
-uv run mike set-default --push latest
+<pre><code class="language-bash">make docs-install   # install mdbook (once)
+make docs-serve     # browse docs at localhost:3000
 </code></pre>
 <h2 id="commit-conventions"><a class="header" href="#commit-conventions">Commit conventions</a></h2>
 <pre><code>feat:      new feature

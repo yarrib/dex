@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-d4722d47.js";
+            window.path_to_searchindex_js = "../searchindex-71fef4a8.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-8d10a28d.js"></script>
+        <script src="../toc-515f8ab0.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,18 +195,24 @@
 <tr><td><code>--template</code>, <code>-t</code></td><td><code>default</code></td><td>Template to scaffold from</td></tr>
 <tr><td><code>--dir</code>, <code>-d</code></td><td><code>.</code></td><td>Target directory</td></tr>
 <tr><td><code>--no-prompt</code></td><td>—</td><td>Use all defaults, skip interactive prompts</td></tr>
+<tr><td><code>--preset</code></td><td>—</td><td>Pre-fill variables from a named preset profile</td></tr>
+<tr><td><code>--presets-file</code></td><td>—</td><td>Path to a presets TOML file</td></tr>
+<tr><td><code>--standards</code></td><td>—</td><td>Path to a standards TOML file for variable pre-fills</td></tr>
 </tbody>
 </table>
 </div>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<pre><code class="language-bash"># Scaffold into current directory, prompting for all variables
-dex init --template dabs-package
-
-# Scaffold into a new directory
+<pre><code class="language-bash"># Scaffold into a new directory, prompting for all variables
 dex init --template dabs-package --dir my_project
 
 # Non-interactive: use all defaults
 dex init --template dabs-package --no-prompt --dir my_project
+
+# Pre-fill variables from a preset profile
+dex init --template dabs-package --preset ml-project --dir my_project
+
+# Use a team standards file
+dex init --template default --standards ./org-standards.toml --dir my_package
 </code></pre>
 <h2 id="interactive-prompts"><a class="header" href="#interactive-prompts">Interactive prompts</a></h2>
 <p>When you run <code>dex init</code> without <code>--no-prompt</code>, it asks for each variable defined in the template’s manifest. For example, <code>dabs-package</code> asks:</p>
@@ -219,11 +225,7 @@ Use serverless compute? [y/N]:
 <h2 id="listing-available-templates"><a class="header" href="#listing-available-templates">Listing available templates</a></h2>
 <pre><code class="language-bash">dex init --help
 </code></pre>
-<p>Use the MCP server or <code>dex</code> source to see all built-in templates, or run:</p>
-<pre><code class="language-python">from dex._core import list_embedded_templates
-for t in list_embedded_templates():
-    print(t.name, "-", t.description)
-</code></pre>
+<p>Lists all built-in templates with names and descriptions.</p>
 
                     </main>
 
