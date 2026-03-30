@@ -244,4 +244,51 @@ version = "0.1.0"
             "missing 'default' template"
         );
     }
+
+    #[test]
+    fn load_embedded_dabs_package_has_all_variables() {
+        let template = load_embedded_template("dabs-package").unwrap();
+        let names: Vec<&str> = template.variables.iter().map(|v| v.name.as_str()).collect();
+        assert!(
+            names.contains(&"project_name"),
+            "missing project_name variable"
+        );
+        assert!(
+            names.contains(&"python_version"),
+            "missing python_version variable"
+        );
+        assert!(
+            names.contains(&"include_notebook"),
+            "missing include_notebook variable"
+        );
+        assert!(
+            names.contains(&"include_job"),
+            "missing include_job variable"
+        );
+        assert!(
+            names.contains(&"use_serverless"),
+            "missing use_serverless variable"
+        );
+        assert_eq!(
+            template.variables.len(),
+            5,
+            "expected 5 variables, got: {names:?}"
+        );
+    }
+
+    #[test]
+    fn load_embedded_dabs_package_has_files() {
+        let template = load_embedded_template("dabs-package").unwrap();
+        assert!(
+            !template.files.is_empty(),
+            "dabs-package embedded template has no files"
+        );
+        assert!(
+            template
+                .files
+                .keys()
+                .any(|p| p.to_string_lossy().contains("pyproject.toml")),
+            "missing pyproject.toml in embedded dabs-package files"
+        );
+    }
 }
