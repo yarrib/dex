@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-71fef4a8.js";
+            window.path_to_searchindex_js = "searchindex-1664929b.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-515f8ab0.js"></script>
@@ -521,23 +521,33 @@ databricks bundle deploy --target prod
 <pre><code>dex mcp serve
 </code></pre>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>The MCP (Model Context Protocol) server lets AI tools like Claude Desktop call dex operations directly — scaffolding projects, listing templates, and creating agents — without leaving the chat interface.</p>
+<p>The MCP (Model Context Protocol) server lets AI tools like Claude Desktop and Claude Code call dex
+operations directly — scaffolding projects and listing templates — without leaving the chat
+interface.</p>
 <h2 id="available-tools"><a class="header" href="#available-tools">Available tools</a></h2>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Tool</th><th>Status</th><th>Description</th></tr>
+<tr><th>Tool</th><th>Description</th></tr>
 </thead>
 <tbody>
-<tr><td><code>list_templates</code></td><td>Implemented</td><td>Returns all built-in templates with names and descriptions</td></tr>
-<tr><td><code>scaffold_project</code></td><td>Stub</td><td>Scaffold a project from a template</td></tr>
-<tr><td><code>scaffold_agent</code></td><td>Stub</td><td>Run the <code>dex agent new</code> Q&amp;A flow</td></tr>
-<tr><td><code>get_template_variables</code></td><td>Stub</td><td>Return variable specs for a template</td></tr>
+<tr><td><code>list_templates</code></td><td>Returns all built-in templates with names and descriptions</td></tr>
+<tr><td><code>get_template_variables</code></td><td>Returns variable specs for a named template</td></tr>
+<tr><td><code>scaffold_project</code></td><td>Scaffolds a project from a template into a directory</td></tr>
 </tbody>
 </table>
 </div>
+<h2 id="installation-1"><a class="header" href="#installation-1">Installation</a></h2>
+<p>Install the <code>dex</code> binary first — the MCP server is built in, no separate install needed.</p>
+<p><strong>Install script (Linux/macOS):</strong></p>
+<pre><code class="language-bash">curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
+</code></pre>
+<p><strong>Build from source:</strong></p>
+<pre><code class="language-bash">cargo install --path crates/dex-cli
+</code></pre>
+<p>See <a href="#installation">Installation</a> for full details.</p>
 <h2 id="wiring-into-claude-desktop"><a class="header" href="#wiring-into-claude-desktop">Wiring into Claude Desktop</a></h2>
-<p>Add the server to your <code>claude_desktop_config.json</code>:</p>
+<p>Add to <code>claude_desktop_config.json</code>:</p>
 <pre><code class="language-json">{
   "mcpServers": {
     "dex": {
@@ -549,19 +559,33 @@ databricks bundle deploy --target prod
 </code></pre>
 <p>Restart Claude Desktop. The dex tools will appear in the tool picker.</p>
 <h2 id="wiring-into-claude-code"><a class="header" href="#wiring-into-claude-code">Wiring into Claude Code</a></h2>
-<p>Add to your project’s <code>CLAUDE.md</code> or run from the terminal:</p>
-<pre><code class="language-bash">dex mcp serve
+<p>Create <code>.mcp.json</code> at your project root (or <code>~/.claude/mcp.json</code> for global config):</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "dex": {
+      "command": "dex",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
 </code></pre>
-<p>Claude Code will auto-detect the running MCP server on stdio.</p>
-<h2 id="example-list-templates-via-claude"><a class="header" href="#example-list-templates-via-claude">Example: list templates via Claude</a></h2>
-<p>Once connected, you can prompt Claude:</p>
-<pre><code>What templates does dex have?
+<p>Claude Code will start the server automatically when you open the project.</p>
+<h2 id="usage-examples"><a class="header" href="#usage-examples">Usage examples</a></h2>
+<p>Once connected, you can prompt Claude naturally:</p>
+<p><strong>List templates:</strong></p>
+<pre><code>What dex templates are available?
 </code></pre>
-<p>Claude will call <code>list_templates</code> and return the current built-in list.</p>
+<p><strong>Inspect a template:</strong></p>
+<pre><code>What variables does the dabs-package template need?
+</code></pre>
+<p><strong>Scaffold a project:</strong></p>
+<pre><code>Scaffold a new dabs-package project called my_pipeline in ~/projects/my_pipeline
+</code></pre>
+<p>Claude will call the appropriate tool and report the created files.</p>
 <h2 id="see-also"><a class="header" href="#see-also">See also</a></h2>
 <ul>
-<li><a href="https://github.com/yarrib/dex/blob/main/AGENTS.md">AGENTS.md</a> — full AI integration guide</li>
-<li><a href="#dex-agent-new">dex agent new</a> — scaffold an agent project first</li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#dex-init">dex init</a> — scaffold directly from the CLI</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="built-in-templates"><a class="header" href="#built-in-templates">Built-in Templates</a></h1>
@@ -1502,6 +1526,10 @@ make tag-release
 <li><strong>templates</strong>: Inline variables format, order field, and standards pre-fill (#20) (<a href="https://github.com/yarrib/dex/commit/77195797fa78b5242d945be4c1a1b0f36feb437c"><code>7719579</code></a>)</li>
 <li>Port dex to pure Rust single binary (#21) (<a href="https://github.com/yarrib/dex/commit/30690b9633c05da429f7e01eb1ec5dcb0a2b28ef"><code>30690b9</code></a>)</li>
 </ul>
+<h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
+<ul>
+<li><strong>core</strong>: Add regression tests for embedded template variable and file loading (#27) (<a href="https://github.com/yarrib/dex/commit/bf5f8b53942e498e7555a273491ed43fd2201a17"><code>bf5f8b5</code></a>)</li>
+</ul>
 <h2 id="010--2026-03-10"><a class="header" href="#010--2026-03-10">[0.1.0] — 2026-03-10</a></h2>
 <h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
 <ul>
@@ -1552,7 +1580,7 @@ make tag-release
 <ul>
 <li><strong>dabs-aiagent</strong>: Lighten AI agent template — no LangChain, dbutils notebooks, DABs deploy job (<a href="https://github.com/yarrib/dex/commit/1ad4db2ac29eb491f07515b6eeff0405108095f9"><code>1ad4db2</code></a>)</li>
 </ul>
-<h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
+<h3 id="testing-1"><a class="header" href="#testing-1">Testing</a></h3>
 <ul>
 <li>Add CLI smoke tests to fix pytest exit code 5 (<a href="https://github.com/yarrib/dex/commit/0ecad9f9b7c504dd9c136bdea487055ac24e2419"><code>0ecad9f</code></a>)</li>
 </ul>
