@@ -10,20 +10,39 @@ dex mcp serve
 
 ## Overview
 
-The MCP (Model Context Protocol) server lets AI tools like Claude Desktop call dex operations directly — scaffolding projects, listing templates, and creating agents — without leaving the chat interface.
+The MCP (Model Context Protocol) server lets AI tools like Claude Desktop and Claude Code call dex
+operations directly — scaffolding projects and listing templates — without leaving the chat
+interface.
 
 ## Available tools
 
-| Tool | Status | Description |
-|---|---|---|
-| `list_templates` | Implemented | Returns all built-in templates with names and descriptions |
-| `scaffold_project` | Stub | Scaffold a project from a template |
-| `scaffold_agent` | Stub | Run the `dex agent new` Q&A flow |
-| `get_template_variables` | Stub | Return variable specs for a template |
+| Tool | Description |
+|---|---|
+| `list_templates` | Returns all built-in templates with names and descriptions |
+| `get_template_variables` | Returns variable specs for a named template |
+| `scaffold_project` | Scaffolds a project from a template into a directory |
+
+## Installation
+
+Install the `dex` binary first — the MCP server is built in, no separate install needed.
+
+**Install script (Linux/macOS):**
+
+```bash
+curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
+```
+
+**Build from source:**
+
+```bash
+cargo install --path crates/dex-cli
+```
+
+See [Installation](../installation.md) for full details.
 
 ## Wiring into Claude Desktop
 
-Add the server to your `claude_desktop_config.json`:
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -40,25 +59,43 @@ Restart Claude Desktop. The dex tools will appear in the tool picker.
 
 ## Wiring into Claude Code
 
-Add to your project's `CLAUDE.md` or run from the terminal:
+Create `.mcp.json` at your project root (or `~/.claude/mcp.json` for global config):
 
-```bash
-dex mcp serve
+```json
+{
+  "mcpServers": {
+    "dex": {
+      "command": "dex",
+      "args": ["mcp", "serve"]
+    }
+  }
+}
 ```
 
-Claude Code will auto-detect the running MCP server on stdio.
+Claude Code will start the server automatically when you open the project.
 
-## Example: list templates via Claude
+## Usage examples
 
-Once connected, you can prompt Claude:
+Once connected, you can prompt Claude naturally:
 
+**List templates:**
 ```
-What templates does dex have?
+What dex templates are available?
 ```
 
-Claude will call `list_templates` and return the current built-in list.
+**Inspect a template:**
+```
+What variables does the dabs-package template need?
+```
+
+**Scaffold a project:**
+```
+Scaffold a new dabs-package project called my_pipeline in ~/projects/my_pipeline
+```
+
+Claude will call the appropriate tool and report the created files.
 
 ## See also
 
-- [AGENTS.md](https://github.com/yarrib/dex/blob/main/AGENTS.md) — full AI integration guide
-- [dex agent new](agent.md) — scaffold an agent project first
+- [Installation](../installation.md)
+- [dex init](init.md) — scaffold directly from the CLI

@@ -13,6 +13,8 @@ enum Cli {
     Init(commands::init::InitArgs),
     /// Agent project scaffolding for Databricks.
     Agent(commands::agent::AgentArgs),
+    /// MCP server for AI tool integration.
+    Mcp(commands::mcp::McpArgs),
     /// Run a pass-through command defined in dex.toml.
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -24,6 +26,7 @@ fn main() {
     let result = match cli {
         Cli::Init(args) => commands::init::run(args),
         Cli::Agent(args) => commands::agent::run(args),
+        Cli::Mcp(args) => commands::mcp::run(args),
         Cli::External(args) => commands::passthrough::run(args),
     };
 
