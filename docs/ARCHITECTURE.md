@@ -5,8 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   User / Org CLI                        │
-│  (acme-dex, myorg-ops, or just `dex`)                   │
-│  Configured via dex.toml [passthrough] + templates/     │
+│  configured via dex.toml [passthrough] + templates/     │
 ├─────────────────────────────────────────────────────────┤
 │                    dex-cli (Rust)                        │
 │  clap        — argument parsing                         │
