@@ -182,6 +182,7 @@ dependencies = [
  "indicatif",
  "minijinja",
  "regex",
+ "serde_json",
  "tempfile",
  "toml",
 ]
