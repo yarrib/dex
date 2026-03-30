@@ -33,7 +33,10 @@ pub fn run(args: RunArgs) -> Result<(), DexError> {
         let available: Vec<&str> = config.tasks.keys().map(String::as_str).collect();
         return Err(DexError::Config(dex_core::error::ConfigError::Invalid(
             if available.is_empty() {
-                format!("unknown task '{}'. No tasks defined in dex.toml.", args.task)
+                format!(
+                    "unknown task '{}'. No tasks defined in dex.toml.",
+                    args.task
+                )
             } else {
                 format!(
                     "unknown task '{}'. Available: {}",
@@ -49,7 +52,15 @@ pub fn run(args: RunArgs) -> Result<(), DexError> {
 
     for task_name in &order {
         let spec = &config.tasks[task_name];
-        run_task(task_name, spec, if task_name == &args.task { &args.extra } else { &[] })?;
+        run_task(
+            task_name,
+            spec,
+            if task_name == &args.task {
+                &args.extra
+            } else {
+                &[]
+            },
+        )?;
     }
 
     Ok(())
@@ -128,7 +139,10 @@ fn run_task(name: &str, spec: &TaskSpec, extra: &[String]) -> Result<(), DexErro
         })?;
 
     if !status.success() {
-        output::print_error(&format!("task '{name}' failed (exit {})", status.code().unwrap_or(1)));
+        output::print_error(&format!(
+            "task '{name}' failed (exit {})",
+            status.code().unwrap_or(1)
+        ));
         std::process::exit(status.code().unwrap_or(1));
     }
 
@@ -186,10 +200,7 @@ mod tests {
 
     #[test]
     fn test_cycle_detection() {
-        let config = make_config(vec![
-            ("a", "echo a", vec!["b"]),
-            ("b", "echo b", vec!["a"]),
-        ]);
+        let config = make_config(vec![("a", "echo a", vec!["b"]), ("b", "echo b", vec!["a"])]);
         let result = resolve_order(&config, "a", &mut Default::default(), &mut vec![]);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("cycle"));
