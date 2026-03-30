@@ -202,7 +202,11 @@ fn tool_get_template_variables(args: &Value) -> Result<String, DexError> {
     let name = args
         .get("template")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| DexError::Config(ConfigError::Invalid("missing required argument: template".into())))?;
+        .ok_or_else(|| {
+            DexError::Config(ConfigError::Invalid(
+                "missing required argument: template".into(),
+            ))
+        })?;
 
     let template = load_template(&TemplateSource::Embedded, name)?;
 
@@ -239,12 +243,17 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
     let template_name = args
         .get("template")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| DexError::Config(ConfigError::Invalid("missing required argument: template".into())))?;
+        .ok_or_else(|| {
+            DexError::Config(ConfigError::Invalid(
+                "missing required argument: template".into(),
+            ))
+        })?;
 
-    let dir = args
-        .get("dir")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| DexError::Config(ConfigError::Invalid("missing required argument: dir".into())))?;
+    let dir = args.get("dir").and_then(|v| v.as_str()).ok_or_else(|| {
+        DexError::Config(ConfigError::Invalid(
+            "missing required argument: dir".into(),
+        ))
+    })?;
 
     let target = PathBuf::from(dir);
     if !target.exists() {
