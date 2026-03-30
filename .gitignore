@@ -25,6 +25,12 @@ site/
 # uv
 uv.lock
 
+# Webapp
+webapp/node_modules/
+webapp/dist/
+webapp/dist-server/
+webapp/.env
+
 # Claude Code
 .claude/plans/
 .claude/debug/
