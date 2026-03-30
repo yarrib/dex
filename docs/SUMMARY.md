@@ -16,6 +16,7 @@
 
 - [Built-in Templates](templates/built-in.md)
 - [Authoring](templates/authoring.md)
+- [Building Org Templates](templates/org-templates-guide.md)
 - [Org Template Registries](templates/org-templates.md)
 
 # Reference

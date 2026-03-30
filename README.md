@@ -4,7 +4,7 @@ Extensible CLI framework for data project operations.
 
 > Scaffold Python packages, Databricks workflows, and more — then extend it for your org.
 
-Rust core for performance. Python surface for extensibility. Zero-compromise ergonomics.
+100% Rust. Single binary. No runtime required.
 
 ## Install
 
@@ -12,58 +12,57 @@ Rust core for performance. Python surface for extensibility. Zero-compromise erg
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-Installs via [uv](https://docs.astral.sh/uv/) — auto-detects your platform and fetches the right wheel from GitHub Releases.
+Auto-detects your platform and downloads the right binary from GitHub Releases.
 
 ## Quick Start
 
 ```bash
 # Scaffold a new project
-dex init --template default
+dex init --template dabs-package --dir my_project
 
-# Or build your own org CLI on top
-uv add dex
+# Add pass-throughs and custom templates via dex.toml
+cat dex.toml
 ```
 
-```python
-from dex.cli import create_cli
-from dex.passthrough import PassthroughSpec
+```toml
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
 
-cli = create_cli(
-    name="acme-dex",
-    passthroughs=[
-        PassthroughSpec(name="db", command="databricks", description="Databricks CLI"),
-    ],
-)
-
-@cli.command()
-def deploy():
-    """Custom deploy logic for your org."""
-    ...
+[passthrough.tf]
+command = "terraform"
+description = "Terraform"
 ```
+
+```bash
+dex db clusters list    # → databricks clusters list
+dex tf plan             # → terraform plan
+```
+
+See [Extending dex](docs/extending.md) and [Building Org Templates](docs/templates/org-templates-guide.md) for how to share templates and pass-throughs across your team.
 
 ## Development
 
-Requires Rust stable and [uv](https://github.com/astral-sh/uv).
+Requires [Rust](https://rustup.rs/) stable.
 
 ```bash
 git clone https://github.com/yarrib/dex
 cd dex
-make dev          # uv sync + maturin develop (builds Rust extension into venv)
-make test         # cargo test + uv run pytest
-make lint         # cargo clippy + ruff check
+cargo build
+cargo test
 ```
 
 Common targets:
 
 | Target | What it does |
 |--------|-------------|
-| `make dev` | Install deps and build Rust extension |
-| `make build` | `cargo build` + `maturin develop` |
-| `make test` | Full test suite (Rust + Python) |
-| `make lint` | `clippy -D warnings` + `ruff check` |
-| `make fmt` | Auto-format Rust + Python |
+| `make build` | `cargo build` |
+| `make test` | `cargo test` |
+| `make lint` | `cargo clippy -- -D warnings` |
+| `make fmt` | `cargo fmt` |
 | `make fmt-check` | Format check without writing |
 | `make clean` | Remove build artefacts |
+| `make docs-serve` | Serve docs at localhost:3000 |
 
 See [docs/SPEC.md](docs/SPEC.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for
 full specification and architecture.

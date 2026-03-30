@@ -5,17 +5,12 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   User / Org CLI                        │
-│  (acme-dex, myorg-ops, or just `dex`)                   │
-│  Python · click · pyproject.toml [project.scripts]      │
+│  configured via dex.toml [passthrough] + templates/     │
 ├─────────────────────────────────────────────────────────┤
-│                  dex Python Package                     │
-│  dex.cli      — click Group, create_cli(), passthrough  │
-│  dex.ext      — extension API for templates, hooks      │
-│  dex.config   — config loading / merging (Python-side)  │
-├─────────────────────────────────────────────────────────┤
-│              dex._core  (PyO3 bindings)                 │
-│  Python ↔ Rust FFI boundary                             │
-│  maturin-built cdylib                                   │
+│                    dex-cli (Rust)                        │
+│  clap        — argument parsing                         │
+│  dialoguer   — interactive prompts                       │
+│  console     — terminal output / styling                 │
 ├─────────────────────────────────────────────────────────┤
 │                    dex-core (Rust)                       │
 │  config     — TOML parsing, schema validation           │
@@ -23,12 +18,12 @@
 │  scaffold   — directory creation, file rendering        │
 ├─────────────────────────────────────────────────────────┤
 │                   External CLIs                         │
-│  databricks · az · aws · git · uv                       │
+│  databricks · az · aws · git                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
 Data flows **downward** for operations (CLI → core → filesystem/subprocess).
-Data flows **upward** for results and errors (core → Python → user).
+Data flows **upward** for results and errors (core → CLI → user).
 
 ## 2. Repository Layout
 
@@ -36,10 +31,10 @@ Data flows **upward** for results and errors (core → Python → user).
 dex/
 ├── Cargo.toml                     # workspace root
 ├── Cargo.lock
-├── pyproject.toml                 # maturin config (builds dex-py crate)
 ├── CLAUDE.md                      # development rules
 ├── LICENSE
 ├── README.md
+├── Makefile
 ├── docs/
 │   ├── SPEC.md                    # project specification
 │   └── ARCHITECTURE.md            # this file
@@ -59,36 +54,33 @@ dex/
 │   │       │   └── variables.rs   # variable specs, defaults, validation
 │   │       └── scaffold.rs        # orchestrates template → directory
 │   │
-│   └── dex-py/                    # PyO3 bindings (cdylib)
+│   └── dex-cli/                   # Binary crate — CLI, prompts, output
 │       ├── Cargo.toml
 │       └── src/
-│           └── lib.rs             # #[pymodule] exposing dex-core
-│
-├── python/                        # Python package source
-│   └── dex/
-│       ├── __init__.py            # public API
-│       ├── _core.pyi              # type stubs for the Rust extension
-│       ├── cli.py                 # click CLI: create_cli(), DexGroup
-│       ├── passthrough.py         # pass-through command support
-│       └── ext.py                 # extension API (template registration, hooks)
+│           ├── main.rs            # entry point, command dispatch
+│           └── commands/          # one module per subcommand
+│               ├── init.rs
+│               ├── agent.rs
+│               └── mcp.rs
 │
 └── templates/                     # built-in templates (embedded at compile time)
-    └── default/
-        ├── template.toml
-        └── files/
-            ├── pyproject.toml.j2
-            ├── README.md.j2
-            └── ...
+    ├── default/
+    │   ├── template.toml
+    │   └── files/
+    ├── dabs-package/
+    │   ├── template.toml
+    │   └── files/
+    └── ...
 ```
 
 ## 3. Crate Responsibilities
 
 ### 3.1. dex-core
 
-The library crate. **All business logic. No UI. No Python dependencies.**
+The library crate. **All business logic. No UI. No terminal output.**
 
-This crate is the foundation. It can be used independently of Python for testing,
-benchmarking, or a future standalone Rust binary.
+This crate is the foundation. It can be used independently for testing, benchmarking,
+or embedded in other Rust programs.
 
 **Dependencies:**
 - `serde` + `toml` — config parsing
@@ -119,52 +111,24 @@ pub fn scaffold(
 pub fn render_string(template_str: &str, context: &Context) -> Result<String>;
 ```
 
-### 3.2. dex-py
+### 3.2. dex-cli
 
-The FFI bridge. **Thin as possible.** Translates between Python types and Rust types,
-converts errors to Python exceptions, and delegates all logic to dex-core.
+The binary crate. **All user interaction lives here.**
+
+Handles argument parsing (clap), interactive prompts (dialoguer), terminal styling
+(console), progress indicators (indicatif), and error display. Delegates all business
+logic to dex-core.
 
 **Dependencies:**
-- `pyo3` (with `extension-module` feature)
+- `clap` (with derive macros) — argument parsing
+- `dialoguer` — interactive prompts
+- `console` — terminal styling
+- `indicatif` — progress spinners
 - `dex-core` (workspace dependency)
-
-**Exposes to Python as `dex._core`:**
-
-```python
-# Template rendering
-def render_template(template_str: str, variables: dict[str, Any]) -> str: ...
-
-# Full scaffold operation
-def scaffold_project(
-    template_path: str,
-    target_dir: str,
-    variables: dict[str, Any],
-) -> ScaffoldResult: ...
-
-# Config parsing
-def parse_template_manifest(path: str) -> TemplateManifest: ...
-def load_project_config(path: str) -> ProjectConfig: ...
-
-# Template listing
-def list_embedded_templates() -> list[TemplateMeta]: ...
-```
-
-### 3.3. Python Package (`python/dex/`)
-
-The user-facing layer. **All CLI, UX, and extensibility logic lives here.**
-
-This is where click commands are defined, pass-throughs are configured, and the
-extension API is exposed. The Python layer handles:
-
-- Interactive prompts (via click or rich)
-- Terminal output formatting
-- Plugin/entry-point discovery
-- Pass-through subprocess delegation
-- CLI composition (`create_cli()`)
 
 ## 4. Key Abstractions
 
-### 4.1. Rust Side (dex-core)
+### 4.1. Rust (dex-core)
 
 ```rust
 /// Where templates come from
@@ -226,213 +190,71 @@ pub struct ScaffoldResult {
 pub struct ProjectConfig {
     pub project: ProjectMeta,
     pub tasks: HashMap<String, TaskSpec>,
-    pub profiles: HashMap<String, ProfileSpec>,
     pub passthroughs: HashMap<String, PassthroughSpec>,
 }
 ```
 
-### 4.2. Python Side
-
-```python
-# dex/cli.py — the extensible CLI framework
-
-class DexGroup(click.Group):
-    """click Group subclass that supports pass-throughs and plugin discovery."""
-
-    def __init__(self, passthroughs=None, **kwargs):
-        super().__init__(**kwargs)
-        self._passthroughs = passthroughs or {}
-
-    def get_command(self, ctx, cmd_name):
-        # 1. Built-in commands
-        rv = super().get_command(ctx, cmd_name)
-        if rv is not None:
-            return rv
-        # 2. Pass-through commands
-        if cmd_name in self._passthroughs:
-            return self._make_passthrough(cmd_name)
-        # 3. Entry-point plugins
-        return self._discover_plugin(cmd_name)
-
-    def list_commands(self, ctx):
-        builtins = super().list_commands(ctx)
-        passthroughs = sorted(self._passthroughs.keys())
-        plugins = self._discover_all_plugins()
-        return builtins + passthroughs + plugins
-
-
-def create_cli(
-    name="dex",
-    templates_dir=None,
-    config_defaults=None,
-    passthroughs=None,
-) -> DexGroup:
-    """Factory for creating a dex CLI instance.
-
-    Teams call this to build their org-specific CLI:
-
-        cli = create_cli(name="acme-dex", passthroughs=[...])
-
-        @cli.command()
-        def my_custom_command():
-            ...
-    """
-    ...
-```
-
-```python
-# dex/passthrough.py — pass-through command support
-
-class PassthroughCommand(click.BaseCommand):
-    """A click command that delegates to an external CLI."""
-
-    def __init__(self, name, target_command, description=None, **kwargs):
-        super().__init__(name, **kwargs)
-        self.target_command = target_command
-        self.help = description or f"Pass-through to `{target_command}`"
-
-    def invoke(self, ctx):
-        args = ctx.args  # everything after the command name
-        result = subprocess.run(
-            [self.target_command] + args,
-            # inherit stdin/stdout/stderr for full interactivity
-        )
-        ctx.exit(result.returncode)
-
-
-def passthrough(name, command, description=None):
-    """Create a pass-through command spec."""
-    return PassthroughSpec(name=name, command=command, description=description)
-```
-
 ## 5. Data Flow
 
-### 5.1. `dex init` Flow — Standalone Template
+### 5.1. `dex init` Flow
 
 ```
 User runs: dex init --template default
                 │
                 ▼
-    ┌── Click CLI (Python) ──┐
-    │  parse args             │
-    │  resolve template name  │
-    └────────┬────────────────┘
+    ┌── dex-cli (clap) ─────────┐
+    │  parse args                │
+    │  resolve template name     │
+    └────────┬───────────────────┘
              │
              ▼
-    ┌── dex._core (PyO3) ───┐
-    │  parse_template_manifest│
-    │  → TemplateManifest     │
-    │  (no [template.dabs])   │
-    └────────┬────────────────┘
+    ┌── dex-core ───────────────┐
+    │  load_template()           │
+    │  → Template + VariableSpec │
+    └────────┬───────────────────┘
              │
              ▼
-    ┌── Click CLI (Python) ──┐
-    │  for each variable:     │
-    │    prompt user (click)  │
-    │  collect variables dict │
-    └────────┬────────────────┘
+    ┌── dex-cli (dialoguer) ────┐
+    │  for each variable:        │
+    │    prompt user             │
+    │  collect variables HashMap │
+    └────────┬───────────────────┘
              │
              ▼
-    ┌── dex._core (PyO3) ───┐
-    │  scaffold_project(      │
-    │    template, dir, vars) │
-    │  → ScaffoldResult       │
-    └────────┬────────────────┘
+    ┌── dex-core ───────────────┐
+    │  scaffold(                 │
+    │    template, dir, vars)    │
+    │  → ScaffoldResult          │
+    └────────┬───────────────────┘
              │
              ▼
-    ┌── Click CLI (Python) ──┐
-    │  display result         │
-    │  run post-scaffold hook │
-    └─────────────────────────┘
+    ┌── dex-cli (console) ──────┐
+    │  display result            │
+    └────────────────────────────┘
 ```
 
-### 5.2. `dex init` Flow — DABs-Composite Template
-
-When the template manifest includes `[template.dabs]`, there are two phases.
-Phase 1 delegates to `databricks bundle init`. Phase 2 layers dex files on top.
-
-```
-User runs: dex init --template ml-pipeline
-                │
-                ▼
-    ┌── Click CLI (Python) ──┐
-    │  parse args             │
-    │  resolve template name  │
-    └────────┬────────────────┘
-             │
-             ▼
-    ┌── dex._core (PyO3) ───┐
-    │  parse_template_manifest│
-    │  → TemplateManifest     │
-    │  (has [template.dabs])  │
-    └────────┬────────────────┘
-             │
-             ▼
-    ┌── Click CLI (Python) ──┐
-    │  for each variable:     │
-    │    prompt user (click)  │
-    │  collect variables dict │
-    └────────┬────────────────┘
-             │
-             ▼  Phase 1: DABs scaffold (Python orchestrates)
-    ┌── Click CLI (Python) ──────────────────────────┐
-    │  map dex vars → DABs vars via variable_map      │
-    │  write temp config JSON                         │
-    │  subprocess.run([                               │
-    │    "databricks", "bundle", "init", <source>,    │
-    │    "--output-dir", <target>,                     │
-    │    "--config-file", <tmp.json>                   │
-    │  ])                                             │
-    │  → DABs Go templates render → databricks.yml,   │
-    │    notebooks, src/, etc.                        │
-    └────────┬────────────────────────────────────────┘
-             │
-             ▼  Phase 2: dex layer on top
-    ┌── dex._core (PyO3) ───┐
-    │  scaffold_project(      │
-    │    template, dir, vars) │
-    │  renders dex files/     │
-    │  → dex.toml, CI, tasks  │
-    │  (skips existing files  │
-    │   unless overwrite=true)│
-    └────────┬────────────────┘
-             │
-             ▼
-    ┌── Click CLI (Python) ──┐
-    │  display combined result│
-    │  run post-scaffold hook │
-    └─────────────────────────┘
-```
-
-Key points:
-
-- Phase 1 is pure Python (subprocess to `databricks` CLI). No Rust involved.
-- Phase 2 is pure Rust (file rendering via dex-core). No subprocess.
-- The Python layer orchestrates both phases and owns all user interaction.
-- DABs variables are mapped from dex variables via `[template.dabs.variable_map]`,
-  so the user only answers prompts once.
-- If `databricks` is not installed, dex raises a clear error before Phase 1.
-
-### 5.3. Pass-through Flow
+### 5.2. Pass-through Flow
 
 ```
 User runs: dex db clusters list --output json
                 │
                 ▼
-    ┌── Click CLI (Python) ──────┐
-    │  DexGroup.get_command("db") │
-    │  → PassthroughCommand       │
-    │  delegate to subprocess:    │
-    │  databricks clusters list   │
-    │            --output json    │
-    └─────────────────────────────┘
+    ┌── dex-cli ────────────────────────┐
+    │  load dex.toml                     │
+    │  resolve passthrough "db"          │
+    │  std::process::Command::new(       │
+    │    "databricks")                   │
+    │    .args(["clusters", "list",      │
+    │           "--output", "json"])     │
+    │  inherit stdin/stdout/stderr       │
+    └────────────────────────────────────┘
 ```
 
-Pass-throughs never touch Rust. They are pure Python subprocess delegation.
+Pass-throughs never touch dex-core. They are pure subprocess delegation.
 
 ## 6. Error Handling
 
-### 6.1. Rust (dex-core)
+### 6.1. dex-core
 
 All errors use `thiserror` with structured variants:
 
@@ -454,73 +276,35 @@ pub enum DexError {
         source: std::io::Error,
     },
 }
-
-#[derive(Debug, thiserror::Error)]
-pub enum ConfigError {
-    #[error("config file not found: {0}")]
-    NotFound(PathBuf),
-
-    #[error("invalid config: {0}")]
-    Invalid(String),
-
-    #[error("parse error: {0}")]
-    Parse(#[from] toml::de::Error),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum TemplateError {
-    #[error("template not found: {0}")]
-    NotFound(String),
-
-    #[error("invalid template manifest: {0}")]
-    InvalidManifest(String),
-
-    #[error("missing required variable: {0}")]
-    MissingVariable(String),
-
-    #[error("variable validation failed: {name}: {message}")]
-    ValidationFailed { name: String, message: String },
-}
 ```
 
-### 6.2. PyO3 Boundary (dex-py)
+No `unwrap()` or `expect()` in library code. Errors propagate with `?`.
 
-Rust errors are converted to Python exceptions:
+### 6.2. dex-cli
+
+The CLI catches errors and renders them with formatting:
 
 ```rust
-use pyo3::exceptions::PyValueError;
+fn run() -> Result<(), DexError> {
+    let args = Cli::parse();
+    match args.command {
+        Command::Init(opts) => commands::init::run(opts)?,
+        // ...
+    }
+    Ok(())
+}
 
-impl From<DexError> for PyErr {
-    fn from(err: DexError) -> PyErr {
-        match err {
-            DexError::Config(e) => PyValueError::new_err(e.to_string()),
-            DexError::Template(e) => PyValueError::new_err(e.to_string()),
-            // ...
-        }
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("error: {e}");
+        std::process::exit(1);
     }
 }
 ```
 
-Custom exception classes can be added later if needed.
-
-### 6.3. Python (CLI layer)
-
-The click CLI catches exceptions and renders them with formatting:
-
-```python
-@cli.command()
-def init(template, directory, no_prompt):
-    try:
-        manifest = _core.parse_template_manifest(template_path)
-        ...
-    except ValueError as e:
-        click.secho(f"Error: {e}", fg="red", err=True)
-        raise SystemExit(1)
-```
-
 ## 7. Testing Strategy
 
-### 7.1. Rust Tests (dex-core)
+### 7.1. dex-core
 
 - **Unit tests** in each module (`#[cfg(test)] mod tests`)
   - Config parsing: valid/invalid TOML, edge cases
@@ -532,54 +316,47 @@ def init(template, directory, no_prompt):
   - End-to-end scaffold: template directory → rendered output
   - Snapshot tests using `insta` crate: assert rendered output matches expected
 
-### 7.2. Python Tests
+### 7.2. dex-cli
 
-- **Unit tests** for CLI commands, pass-through logic, config merging
-- **Integration tests**: invoke CLI via `click.testing.CliRunner`
+- **Integration tests**: invoke CLI via `assert_cmd` or similar
 - **Snapshot tests**: compare scaffolded output against expected directories
-
-### 7.3. Cross-boundary Tests
-
-- PyO3 roundtrip tests: Python → Rust → Python, verify types and errors
-- These live in `tests/` at the repo root
 
 ## 8. Build & Distribution
 
 ### 8.1. Development
 
 ```bash
-# Build Rust crates
+# Build
 cargo build
 
-# Build Python package (includes Rust compilation)
-maturin develop
-
-# Run Rust tests
+# Run tests
 cargo test
 
-# Run Python tests
-pytest
+# Lint
+cargo clippy -- -D warnings
 
-# Run all
-cargo test && maturin develop && pytest
+# Format check
+cargo fmt --check
 ```
 
 ### 8.2. Release
 
-```bash
-# Build wheels for distribution
-maturin build --release
+The CI builds native binaries for each target platform on tag push:
 
-# Attach to a GitHub Release (CI handles this automatically on tag push)
-# gh release upload vX.Y.Z dist/*.whl
-```
+- Linux x86\_64
+- Linux aarch64
+- macOS Apple Silicon (arm64)
+- macOS Intel (x86\_64)
+- Windows x86\_64
+
+Binaries are attached to the GitHub Release.
 
 ### 8.3. CI
 
-- Rust: `cargo clippy`, `cargo fmt --check`, `cargo test`
-- Python: `ruff check`, `ruff format --check`, `pytest`
-- Cross: `maturin develop && pytest`
-- Matrix: Linux x86_64, macOS ARM64, Windows x86_64
+- `cargo clippy -- -D warnings`
+- `cargo fmt --check`
+- `cargo test`
+- Matrix: Linux x86\_64, macOS ARM64, Windows x86\_64
 
 ## 9. Dependency Policy
 
@@ -594,13 +371,9 @@ maturin build --release
 | `walkdir`     | Directory traversal        | Recursive file discovery                |
 | `include_dir` | Embed templates            | Zero-cost built-in templates            |
 | `regex`       | Validation patterns        | Variable validation                     |
-| `pyo3`        | Python bindings            | FFI to Python (dex-py crate only)       |
-
-### Python
-
-| Package       | Purpose                    | Justification                           |
-|---------------|----------------------------|-----------------------------------------|
-| `click`       | CLI framework              | Extensible, composable, mature          |
-| `rich`        | Terminal formatting        | Beautiful output, tables, spinners      |
+| `clap`        | Argument parsing           | Derive macros, excellent UX             |
+| `dialoguer`   | Interactive prompts        | Terminal prompts, select, confirm       |
+| `console`     | Terminal styling           | Colors, bold, styled output             |
+| `indicatif`   | Progress indicators        | Spinners, progress bars                 |
 
 Minimal dependencies. Each must justify its presence.

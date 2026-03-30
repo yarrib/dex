@@ -103,13 +103,14 @@ get MCP tool access automatically.
 }
 ```
 
-For org CLIs built on dex (e.g., `acme-dex`), replace `dex` with the org CLI name:
+For org setups, the command is always `dex` — pass-throughs and custom templates
+are configured via `dex.toml`, not a separate binary:
 
 ```json
 {
   "mcpServers": {
-    "acme-dex": {
-      "command": "acme-dex",
+    "dex": {
+      "command": "dex",
       "args": ["mcp", "serve"]
     }
   }
@@ -130,14 +131,14 @@ For org CLIs built on dex (e.g., `acme-dex`), replace `dex` with the org CLI nam
 
 ### v0.2 — Full scaffold tools
 
-- [ ] `scaffold_project`: call `scaffold_project()` from `dex._core`
-- [ ] `get_template_variables`: call `parse_template_manifest()` from `dex._core`
-- [ ] Error handling: return structured errors, not raw exceptions
+- [ ] `scaffold_project`: call `dex_core::scaffold()` from the MCP handler
+- [ ] `get_template_variables`: call `dex_core::load_template()` and return variable specs
+- [ ] Error handling: return structured errors, not raw panics
 - [ ] Integration test: Claude Code can scaffold a default project end-to-end
 
 ### v0.3 — Agent scaffolding
 
-- [ ] `scaffold_agent`: call `scaffold_agent()` from `dex._core`
+- [ ] `scaffold_agent`: call `dex_core::scaffold_agent()` from the MCP handler
 - [ ] Option to generate system prompt via Claude API within the MCP call
 - [ ] Return `system_prompt` and `claude_md` in the response
 - [ ] Integration test: Claude Code can scaffold an AI agent end-to-end
@@ -156,8 +157,9 @@ For org CLIs built on dex (e.g., `acme-dex`), replace `dex` with the org CLI nam
 3. **Streaming**: Should `scaffold_project` stream file creation events, or return
    a single response when done? MCP supports streaming — use for large projects.
 
-4. **org CLI MCP support**: Should `create_cli()` automatically register an `mcp serve`
-   subcommand, or do org CLI authors opt in? Current plan: automatic (same as `agent`).
+4. **org CLI MCP support**: Should dex expose `mcp serve` when invoked under a custom
+   binary name (via rename/symlink), or do org CLI authors build their own binary?
+   Current plan: `dex mcp serve` always works; org CLIs point to the same binary.
 
 5. **Template source in MCP**: Can an MCP caller specify a custom template directory,
    or only embedded templates? v0.2 scope: embedded only. v0.3: support `templates_dir`.
@@ -168,7 +170,7 @@ For org CLIs built on dex (e.g., `acme-dex`), replace `dex` with the org CLI nam
 
 | Risk | Mitigation |
 |------|-----------|
-| `mcp` Python package API changes | Pin `mcp>=1.0,<2.0` once stable |
+| MCP protocol API changes | Track spec version; pin in Cargo.toml |
 | Path traversal in `directory` param | Validate in MCP handler before calling core |
 | AI agent generates wrong variable values | Return variable spec before scaffold; agents should call `get_template_variables` first |
 | DABs composite mode in MCP | Block `scaffold_project` for composite templates until Phase 1 (`_run_dabs_init`) is fixed |

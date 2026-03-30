@@ -8,9 +8,7 @@ Install dex and scaffold your first project in under a minute.
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 ```
 
-Or manually with uv (see [Installation](installation.md) for platform-specific wheel URLs).
-
-See [Installation](installation.md) for platform-specific wheels and Windows instructions.
+See [Installation](installation.md) for platform-specific binaries and Windows instructions.
 
 ## 2. Scaffold a project
 
@@ -57,6 +55,7 @@ my_project/
 │   └── test_my_project.py
 ├── databricks.yml
 ├── pyproject.toml
+├── dex.toml
 ├── README.md
 └── .gitignore
 ```

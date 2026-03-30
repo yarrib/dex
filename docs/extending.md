@@ -1,152 +1,97 @@
-# Extending dex — Org CLIs
+# Extending dex
 
-dex is designed to be wrapped by teams into their own internal CLI. You get all the built-in dex commands (`init`, `agent new`, `mcp serve`) plus the ability to add custom commands, custom templates, and pass-throughs to other tools — all under your own CLI name.
-
-## Quick example
-
-```python
-# acme_dex/cli.py
-from dex.ext import create_cli, passthrough
-
-cli = create_cli(
-    name="acme-dex",
-    passthroughs=[
-        passthrough("db", "databricks", "Databricks CLI"),
-        passthrough("tf", "terraform", "Terraform"),
-    ],
-)
-
-@cli.command()
-def deploy():
-    """Deploy the current bundle to dev."""
-    import subprocess
-    subprocess.run(["databricks", "bundle", "deploy"], check=True)
-```
-
-```toml
-# pyproject.toml
-[project.scripts]
-acme-dex = "acme_dex.cli:cli"
-```
-
-Your users now have:
-
-```bash
-acme-dex init --template dabs-package   # built-in
-acme-dex deploy                         # your custom command
-acme-dex db clusters list               # pass-through to databricks
-acme-dex tf plan                        # pass-through to terraform
-```
-
-## `create_cli()`
-
-The factory that wires everything together.
-
-```python
-from dex.ext import create_cli
-
-cli = create_cli(
-    name="acme-dex",           # CLI name shown in --help
-    templates_dir="./templates",  # path to your org's custom templates (optional)
-    passthroughs=[...],        # list of PassthroughSpec (optional)
-)
-```
-
-| Parameter | Type | Description |
-|---|---|---|
-| `name` | `str` | CLI name. Defaults to `"dex"`. |
-| `templates_dir` | `str \| Path \| None` | Directory of custom templates to add alongside built-ins. |
-| `passthroughs` | `list[PassthroughSpec]` | External CLIs to expose as subcommands. |
-
-`create_cli()` returns a `DexGroup` (a `click.Group` subclass). Add commands to it exactly as you would with click.
+dex is designed to be extended by teams through configuration and custom templates.
+No code is required — everything is driven by `dex.toml` and a templates directory.
 
 ## Pass-through commands
 
-Pass-throughs proxy a subcommand directly to an external CLI, forwarding all arguments and inheriting stdin/stdout/stderr for full interactivity.
+The most common extension: expose an external CLI as a `dex` subcommand, forwarding
+all arguments and inheriting stdin/stdout/stderr for full interactivity.
 
-```python
-from dex.ext import create_cli, passthrough
+Add pass-throughs to `dex.toml` at your project root:
 
-cli = create_cli(
-    name="acme-dex",
-    passthroughs=[
-        passthrough("db", "databricks", "Databricks CLI"),
-    ],
-)
+```toml
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+
+[passthrough.tf]
+command = "terraform"
+description = "Terraform"
+
+[passthrough.az]
+command = "az"
+description = "Azure CLI"
 ```
 
-`passthrough(name, command, description)`:
+Your team now has:
 
-| Parameter | Description |
-|---|---|
-| `name` | Subcommand name in your CLI (`acme-dex db ...`) |
-| `command` | Executable to invoke (`databricks`) |
-| `description` | Help text shown in `--help` |
-
-You can also construct `PassthroughSpec` directly:
-
-```python
-from dex.ext import PassthroughSpec
-
-spec = PassthroughSpec(name="db", command="databricks", description="Databricks CLI")
+```bash
+dex db clusters list               # → databricks clusters list
+dex tf plan                        # → terraform plan
+dex az account show                # → az account show
 ```
 
-## Custom commands
-
-After calling `create_cli()`, decorate commands onto the returned group:
-
-```python
-cli = create_cli(name="acme-dex")
-
-@cli.command()
-@click.option("--target", default="dev")
-def deploy(target: str):
-    """Deploy the current bundle."""
-    import subprocess
-    subprocess.run(["databricks", "bundle", "deploy", "--target", target], check=True)
-```
-
-Commands can also be added programmatically:
-
-```python
-cli.add_command(my_command_func, name="my-command")
-```
+Pass-throughs appear in `dex --help` and forward `--help` to the target command.
 
 ## Custom templates
 
-Point `templates_dir` at a directory of templates following the [authoring guide](templates/authoring.md). Users can then use them with `dex init --template <name>`:
+Add custom templates to a directory and tell dex where to find them.
 
-```python
-cli = create_cli(
-    name="acme-dex",
-    templates_dir=Path(__file__).parent / "templates",
-)
+### Per-user (global)
+
+In `~/.config/dex/config.toml`:
+
+```toml
+[templates]
+paths = ["~/acme-dex-templates"]
 ```
 
-Your org templates live alongside the dex built-ins. If a name conflicts, your template wins.
+### Per-project
 
-## Distributing your org CLI
+Place templates in a `templates/` directory at the project root. dex discovers
+them automatically alongside built-in templates.
 
-Package it as a standard Python package and distribute via your internal PyPI, Artifactory, or direct install:
+```
+my-project/
+├── dex.toml
+└── templates/
+    └── acme-etl/
+        ├── template.toml
+        └── files/
+```
+
+Then use them like any built-in template:
 
 ```bash
-# Install from internal PyPI
-uv tool install acme-dex --index https://pypi.internal.acme.com/
-
-# Or from a Git repo
-uv tool install "acme-dex @ git+https://github.com/acme/acme-dex"
+dex init --template acme-etl --dir my_pipeline
 ```
 
-Your users run `acme-dex` directly — they never need to know about dex.
+See the [Template Authoring Guide](templates/authoring.md) for the full template format,
+and [Org Template Registries](templates/org-templates.md) for how to share templates
+across a team.
 
-## `DexGroup`
+## Org-wide dex.toml
 
-`DexGroup` is the `click.Group` subclass returned by `create_cli()`. It handles pass-through resolution and can be used directly if you need lower-level control:
+For teams, check a `dex.toml` into your project repos with shared pass-throughs
+and task definitions:
 
-```python
-from dex.ext import DexGroup
+```toml
+[project]
+name = "my-project"
 
-@click.group(cls=DexGroup, passthroughs={"db": db_spec})
-def cli():
-    """Acme internal tooling."""
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+
+[tasks.deploy-dev]
+command = "databricks bundle deploy --target dev"
+description = "Deploy to dev"
+
+[tasks.deploy-prod]
+command = "databricks bundle deploy --target prod"
+description = "Deploy to prod"
 ```
+
+All engineers on the project get the same commands — no individual setup required
+beyond having `databricks` on their `PATH`.
