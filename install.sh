@@ -43,8 +43,8 @@ fi
 case "${EFFECTIVE_OS}" in
   linux)
     case "${ARCH}" in
-      x86_64)        TARGET="x86_64-unknown-linux-gnu" ;;
-      aarch64|arm64) TARGET="aarch64-unknown-linux-gnu" ;;
+      x86_64)        TARGET="linux-x86_64" ;;
+      aarch64|arm64) TARGET="linux-aarch64" ;;
       *)
         echo "Unsupported Linux architecture: ${ARCH}"
         echo "Download manually from https://github.com/${REPO}/releases"
@@ -54,8 +54,8 @@ case "${EFFECTIVE_OS}" in
     ;;
   macos)
     case "${ARCH}" in
-      arm64)  TARGET="aarch64-apple-darwin" ;;
-      x86_64) TARGET="x86_64-apple-darwin" ;;
+      arm64)  TARGET="macos-aarch64" ;;
+      x86_64) TARGET="macos-x86_64" ;;
       *)
         echo "Unsupported macOS architecture: ${ARCH}"
         echo "Download manually from https://github.com/${REPO}/releases"
