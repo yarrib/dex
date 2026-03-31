@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-4d3c6eeb.js";
+            window.path_to_searchindex_js = "searchindex-93c1353d.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-515f8ab0.js"></script>
+        <script src="toc-d1c2384c.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1255,6 +1255,83 @@ dex init --template acme-ml       # org template
 paths = ["~/acme-platform/dex-templates"]
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
+<h1 id="why-dex"><a class="header" href="#why-dex">Why dex?</a></h1>
+<p>dex competes in a space with existing scaffolding tools. Here’s why it exists and when to use it.</p>
+<hr>
+<h2 id="vs-cookiecutter"><a class="header" href="#vs-cookiecutter">vs Cookiecutter</a></h2>
+<p><a href="https://cookiecutter.readthedocs.io">Cookiecutter</a> is the most common Python project scaffolding tool. It works, but it has a few rough edges for data engineering teams.</p>
+<h3 id="no-runtime-required"><a class="header" href="#no-runtime-required">No runtime required</a></h3>
+<p>Cookiecutter requires Python and <code>pip install cookiecutter</code>. On a new machine, in a CI job,
+or on a team with mixed Python/non-Python backgrounds, this is friction. dex is a single
+static binary — <code>curl | sh</code> and you’re done.</p>
+<h3 id="org-wide-variable-pre-fill"><a class="header" href="#org-wide-variable-pre-fill">Org-wide variable pre-fill</a></h3>
+<p>Cookiecutter prompts for every variable, every time. dex has two mechanisms to skip prompts
+for values your org already knows:</p>
+<ul>
+<li><strong>Standards</strong> (<code>~/.config/dex/standards.toml</code>): flat key-value file that auto-fills any
+matching variable (e.g. <code>author</code>, <code>python_version</code>). Set once, never prompted again.</li>
+<li><strong>Presets</strong> (<code>~/.config/dex/presets.toml</code>): named profiles for different project contexts
+(ML workloads vs ETL pipelines, dev workspace vs staging workspace).</li>
+</ul>
+<p>For platform teams standardizing tooling across an org, this matters. You want to distribute
+opinionated defaults without making every developer answer the same five questions every time.</p>
+<h3 id="beyond-scaffolding"><a class="header" href="#beyond-scaffolding">Beyond scaffolding</a></h3>
+<p>Cookiecutter stops at file generation. dex continues into the project lifecycle:</p>
+<ul>
+<li><code>dex run &lt;task&gt;</code> — run tasks defined in <code>dex.toml</code> (tests, linting, deploy scripts)</li>
+<li><code>dex db</code>, <code>dex az</code> — pass-through commands that proxy to external CLIs, configured in <code>dex.toml</code></li>
+<li><code>dex agent new</code> — scaffolds AI agent projects</li>
+<li><code>dex mcp serve</code> — exposes dex tools to Claude and other MCP clients</li>
+</ul>
+<p>One binary, one config file, from <code>init</code> through daily development.</p>
+<h3 id="no-template-hosting-required"><a class="header" href="#no-template-hosting-required">No template hosting required</a></h3>
+<p>Cookiecutter templates are typically GitHub repos that users clone. dex supports the same
+pattern, but also embeds its built-in templates directly in the binary (zero network calls)
+and allows teams to point at a local directory or a remote git repo via config — no separate
+template registry service needed.</p>
+<hr>
+<h2 id="vs-databricks-asset-bundle-dabs-templates"><a class="header" href="#vs-databricks-asset-bundle-dabs-templates">vs Databricks Asset Bundle (DABs) Templates</a></h2>
+<p>Databricks Asset Bundles ship their own <code>databricks bundle init</code> scaffolding. It’s Databricks’
+own tool for their own format. It works well for pure Databricks projects, but it has a narrower
+scope than dex by design.</p>
+<h3 id="generic-not-databricks-specific"><a class="header" href="#generic-not-databricks-specific">Generic, not Databricks-specific</a></h3>
+<p>DABs templates are built for one platform. Most data teams also maintain:</p>
+<ul>
+<li>Plain Python packages (shared utilities, libraries)</li>
+<li>AI agent projects (Claude, OpenAI, custom)</li>
+<li>Custom internal tools that don’t fit the Databricks mold</li>
+</ul>
+<p>dex uses the same template system, same prompt flow, and same config format for all of these.
+One mental model for your entire project portfolio.</p>
+<h3 id="standards-and-presets-dont-exist-in-dabs-init"><a class="header" href="#standards-and-presets-dont-exist-in-dabs-init">Standards and presets don’t exist in DABs init</a></h3>
+<p><code>databricks bundle init</code> prompts you for values. dex’s standards and presets layer lets you
+pre-fill those values org-wide — including for Databricks-specific variables like
+<code>workspace_url</code>, <code>cluster_id</code>, and <code>python_version</code>. Teams can ship a <code>standards.toml</code> with
+their dex onboarding guide and skip the majority of prompts entirely.</p>
+<h3 id="org-templates-without-forking-databricks-tooling"><a class="header" href="#org-templates-without-forking-databricks-tooling">Org templates without forking Databricks tooling</a></h3>
+<p>DABs templates live inside the Databricks CLI codebase. If your org wants a custom template
+that deviates from Databricks’ defaults, you’re maintaining a fork or working around it.
+dex’s org template model is first-class: point to a directory or a git repo in
+<code>~/.config/dex/config.toml</code>, and <code>dex init</code> picks it up alongside built-in templates. No fork,
+no separate tool, no special distribution mechanism.</p>
+<hr>
+<h2 id="why-generic-is-the-right-default"><a class="header" href="#why-generic-is-the-right-default">Why “generic” is the right default</a></h2>
+<p>It’s tempting to build a narrowly scoped tool that does one thing perfectly. But for a
+platform team, the cost of having five different scaffolding tools (one per project type)
+is real: different conventions, different learning curves, different ways to extend.</p>
+<p>dex’s template model is intentionally generic:</p>
+<ul>
+<li><code>template.toml</code> variables are just names and types — no Databricks-specific schema</li>
+<li>File rules are path patterns — works for any directory layout</li>
+<li>Standards and presets are flat key-value maps — applies to any variable in any template</li>
+<li>Pass-throughs are just subprocess delegation — wraps any CLI, not just Databricks</li>
+</ul>
+<p>The built-in templates happen to target Databricks workflows because that’s the primary user.
+But an org running AWS Glue or dbt can write their own templates and dex becomes their tool too,
+with no changes to the binary.</p>
+<p><strong>The goal is a single, well-understood scaffolding and project operations convention — not
+one that locks you into a specific platform’s mental model.</strong></p>
+<div style="break-before: page; page-break-before: always;"></div>
 <h1 id="extending-dex"><a class="header" href="#extending-dex">Extending dex</a></h1>
 <p>dex is designed to be extended by teams through configuration and custom templates.
 No code is required — everything is driven by <code>dex.toml</code> and a templates directory.</p>
@@ -1526,6 +1603,7 @@ make tag-release
 <li><strong>templates</strong>: Inline variables format, order field, and standards pre-fill (#20) (<a href="https://github.com/yarrib/dex/commit/77195797fa78b5242d945be4c1a1b0f36feb437c"><code>7719579</code></a>)</li>
 <li>Port dex to pure Rust single binary (#21) (<a href="https://github.com/yarrib/dex/commit/30690b9633c05da429f7e01eb1ec5dcb0a2b28ef"><code>30690b9</code></a>)</li>
 <li>Add web-based project scaffolding app (#26) (<a href="https://github.com/yarrib/dex/commit/a6ab3a605669d72d46436be5b841991f04f32154"><code>a6ab3a6</code></a>)</li>
+<li><strong>cli</strong>: Add dex run <task> command (#28) (<a href="https://github.com/yarrib/dex/commit/bacd088bffd2102325b33e2944b87a8ff6ecb050"><code>bacd088</code></a>)</task></li>
 </ul>
 <h3 id="testing"><a class="header" href="#testing">Testing</a></h3>
 <ul>
