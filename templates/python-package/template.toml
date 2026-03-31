@@ -1,0 +1,27 @@
+[template]
+name = "python-package"
+description = "Pure Python package with src layout, hatchling, uv, and ruff"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11", "3.13"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "author"
+prompt = "Author name"
+type = "string"
+required = false
+default = ""

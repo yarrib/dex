@@ -1,0 +1,34 @@
+# {{ project_name }}
+
+A Python package scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/    # Package source
+├── tests/                     # Tests
+└── pyproject.toml             # Project config
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+
+# Build wheel
+uv build
+```
