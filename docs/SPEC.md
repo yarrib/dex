@@ -58,11 +58,12 @@ dex agent new
 dex mcp serve
     Start the MCP server for AI agent integration.
 
+dex run <task> [-- <extra-args>]
+    Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
+    Extra args after -- are appended to the task command.
+
 dex add <component> [--dry-run]                              # future
     Bolt a component onto an existing project.
-
-dex run <task> [-- <extra-args>]                             # future
-    Run a task defined in dex.toml.
 
 dex config [get|set|list]                                    # future
     Manage dex configuration.
@@ -343,7 +344,6 @@ my-agent/
 
 ### What's Out (Future)
 
-- `dex add`, `dex run`, `dex switch`, `dex deploy`
-- User config (`~/.config/dex/config.toml`)
+- `dex add`, `dex switch`, `dex deploy`
 - Hooks
 - `dex self update`

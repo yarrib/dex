@@ -21,6 +21,7 @@
 
 # Reference
 
+- [Why dex?](why-dex.md)
 - [Extending dex](extending.md)
 - [Contributing](contributing.md)
 - [Releasing](releasing.md)
