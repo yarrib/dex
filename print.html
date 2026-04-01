@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-d35826c3.js";
+            window.path_to_searchindex_js = "searchindex-0b66c2be.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d1c2384c.js"></script>
@@ -1587,8 +1587,13 @@ make tag-release
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <p>All notable changes to dex are documented here.</p>
-<h2 id="011--2026-04-01"><a class="header" href="#011--2026-04-01">[0.1.1] — 2026-04-01</a></h2>
+<h2 id="unreleased"><a class="header" href="#unreleased">[Unreleased]</a></h2>
 <h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<ul>
+<li><strong>release</strong>: Use cross for Linux musl targets (<a href="https://github.com/yarrib/dex/commit/bb227029828d164b138a89b1e1f7b4924af6373e"><code>bb22702</code></a>)</li>
+</ul>
+<h2 id="011--2026-04-01"><a class="header" href="#011--2026-04-01">[0.1.1] — 2026-04-01</a></h2>
+<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
 <ul>
 <li><strong>release</strong>: Align install.sh artifact names with release.yml and add linux aarch64 target (#30) (<a href="https://github.com/yarrib/dex/commit/a378387df248fe7c905e5be001ad617b457854e0"><code>a378387</code></a>)</li>
 <li><strong>release</strong>: Support workflow_dispatch and fix first-release changelog (#31) (<a href="https://github.com/yarrib/dex/commit/5da5907f1ba574bb3906d91ca4f3b1902553520d"><code>5da5907</code></a>)</li>
@@ -1617,7 +1622,7 @@ make tag-release
 <li><strong>core</strong>: Add regression tests for embedded template variable and file loading (#27) (<a href="https://github.com/yarrib/dex/commit/bf5f8b53942e498e7555a273491ed43fd2201a17"><code>bf5f8b5</code></a>)</li>
 </ul>
 <h2 id="010--2026-03-10"><a class="header" href="#010--2026-03-10">[0.1.0] — 2026-03-10</a></h2>
-<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
+<h3 id="bug-fixes-2"><a class="header" href="#bug-fixes-2">Bug Fixes</a></h3>
 <ul>
 <li>Tag-only versioning to work with branch protection rules (<a href="https://github.com/yarrib/dex/commit/22f9f8085ebaca22d64a86d33f5c6446abb984e6"><code>22f9f80</code></a>)</li>
 <li>Slugify hyphens to underscores, expose system_prompt and claude_md in PyO3 binding (<a href="https://github.com/yarrib/dex/commit/c57622776889e2a3b3a61a1024af25aca7f44e47"><code>c576227</code></a>)</li>
