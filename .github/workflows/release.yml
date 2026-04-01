@@ -5,20 +5,46 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.1.1 — must match Cargo.toml)'
+        required: true
 
 permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Resolve tag and version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Resolve tag
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            VERSION="${VERSION#v}"
+            TAG="v${VERSION}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
   validate:
     name: Validate tag and version
     runs-on: ubuntu-latest
+    needs: prepare
     steps:
       - uses: actions/checkout@v4
 
       - name: Check tag format
         run: |
-          TAG="${GITHUB_REF_NAME}"
+          TAG="${{ needs.prepare.outputs.tag }}"
           if ! echo "${TAG}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
             echo "Error: tag '${TAG}' does not match v<major>.<minor>.<patch>"
             exit 1
@@ -26,7 +52,7 @@ jobs:
 
       - name: Verify Cargo.toml version matches tag
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${{ needs.prepare.outputs.version }}"
           CARGO_VERSION="$(grep '^version = ' crates/dex-cli/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
           if [ "${TAG_VERSION}" != "${CARGO_VERSION}" ]; then
             echo "Error: tag version '${TAG_VERSION}' does not match crates/dex-cli/Cargo.toml version '${CARGO_VERSION}'"
@@ -37,7 +63,7 @@ jobs:
   changelog:
     name: Generate changelog
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [prepare, validate]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,7 +75,7 @@ jobs:
           tool: git-cliff
 
       - name: Generate changelog with git-cliff
-        run: git-cliff --latest --strip header --output CHANGELOG_RELEASE.md
+        run: git-cliff --unreleased --tag ${{ needs.prepare.outputs.tag }} --strip header --output CHANGELOG_RELEASE.md
         env:
           GITHUB_REPO: ${{ github.repository }}
 
@@ -61,7 +87,7 @@ jobs:
   build-binaries:
     name: Build binary (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    needs: validate
+    needs: [prepare, validate]
     strategy:
       matrix:
         include:
@@ -123,7 +149,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [changelog, build-binaries]
+    needs: [prepare, changelog, build-binaries]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -140,5 +166,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
           files: dist/*
           body_path: CHANGELOG_RELEASE.md
