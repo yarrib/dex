@@ -9,8 +9,8 @@
 ## Overview
 
 Five first-party templates covering the core Databricks MLOps project types.
-Each template is either standalone (dex renders all files) or DABs-composite
-(dex delegates Phase 1 to `databricks bundle init`, then overlays Phase 2 files).
+All templates are standalone — dex renders all files via minijinja. No external
+CLI delegation.
 
 ---
 
@@ -89,8 +89,7 @@ deployed as DABs artifacts (e.g., shared pipelines package).
 
 **Purpose:** DABs project with a DLT pipeline or job for ETL workloads.
 
-**DABs mode:** composite — `databricks bundle init default-python` for Phase 1,
-dex overlay for Phase 2.
+**Rendering mode:** standalone
 
 **Variable spec:**
 
@@ -102,28 +101,25 @@ dex overlay for Phase 2.
 | `catalog` | string | `main` | no | — |
 | `schema` | string | `default` | no | — |
 
-**Variable map (dex → DABs):**
-```toml
-[template.dabs]
-source = "default-python"
-variable_map = { project_name = "project_name" }
-```
-
-**Generated file tree (Phase 2 overlay):**
+**Generated file tree:**
 ```
 <project_name>/
-├── .dex/                       # dex metadata
-│   └── template.lock
+├── databricks.yml
+├── pyproject.toml
+├── README.md
+├── .gitignore
 ├── src/<project_name>/
+│   ├── __init__.py
 │   └── pipeline.py             # DLT pipeline stub (if include_dlt)
+├── resources/
+│   └── pipeline_job.yml        # job definition
 └── tests/
     └── test_pipeline.py
 ```
 
 **Design decisions:**
-- Phase 1 (`databricks bundle init`) handles the standard DABs boilerplate.
-- Phase 2 overlay adds opinionated test structure and DLT stub.
-- `include_dlt` controls whether a DLT pipeline or plain job is the entry point.
+- dex renders all files including `databricks.yml` — no dependency on the Databricks CLI at scaffold time.
+- `include_dlt` controls whether a DLT pipeline or plain job entry point is generated.
 
 ---
 
@@ -131,7 +127,7 @@ variable_map = { project_name = "project_name" }
 
 **Purpose:** DABs project for ML training, evaluation, and model registration workflows.
 
-**DABs mode:** composite — `databricks bundle init mlops-stacks` for Phase 1.
+**Rendering mode:** standalone
 
 **Variable spec:**
 
@@ -142,29 +138,32 @@ variable_map = { project_name = "project_name" }
 | `model_framework` | choice | `sklearn` | no | `sklearn\|pytorch\|xgboost` |
 | `catalog` | string | `main` | no | — |
 | `experiment_name` | string | `/<project_name>` | no | — |
+| `include_serving` | bool | `true` | no | — |
 
-**Variable map (dex → DABs mlops-stacks):**
-```toml
-[template.dabs]
-source = "mlops-stacks"
-variable_map = { project_name = "project_name", catalog = "default_catalog" }
-```
-
-**Generated file tree (Phase 2 overlay):**
+**Generated file tree:**
 ```
 <project_name>/
+├── databricks.yml
+├── pyproject.toml
+├── README.md
+├── .gitignore
 ├── notebooks/
 │   └── exploration.py          # scratch notebook stub
 ├── src/<project_name>/
+│   ├── __init__.py
 │   ├── train.py                # training entry point
 │   └── evaluate.py             # evaluation entry point
+├── resources/
+│   └── ml_job.yml
+├── serving/                    # present if include_serving = true
+│   └── endpoint.yml
 └── tests/
     └── test_train.py
 ```
 
 **Design decisions:**
-- MLflow tracking assumed (DABs mlops-stacks includes it).
-- `model_framework` controls which training stub is generated.
+- dex renders all files including `databricks.yml` and MLflow config — no dependency on `mlops-stacks`.
+- `model_framework` controls which training stub and dependency is generated.
 - `experiment_name` defaults to `/<project_name>` — matches MLflow convention.
 
 ---
@@ -173,8 +172,7 @@ variable_map = { project_name = "project_name", catalog = "default_catalog" }
 
 **Purpose:** DABs project for deploying a Claude-based AI agent as a Databricks job.
 
-**DABs mode:** composite — `databricks bundle init default-python` for Phase 1,
-heavy dex overlay for Phase 2 (agent files, CLAUDE.md, system prompt).
+**Rendering mode:** standalone
 
 **Variable spec:**
 
@@ -187,19 +185,28 @@ heavy dex overlay for Phase 2 (agent files, CLAUDE.md, system prompt).
 | `generate_system_prompt` | bool | `true` | no | — |
 | `catalog` | string | `main` | no | — |
 
-**Generated file tree (Phase 2 overlay):**
+**Generated file tree:**
 ```
 <project_name>/
-├── CLAUDE.md                   # agent-specific Claude Code instructions
-├── agent.py                    # agent entry point with run()
-├── system_prompt.md            # generated or placeholder system prompt
 ├── databricks.yml              # DABs bundle with job config
-├── requirements.txt
+├── pyproject.toml
+├── README.md
+├── .gitignore
+├── CLAUDE.md                   # agent-specific Claude Code instructions
+├── src/<project_name>/
+│   ├── __init__.py
+│   ├── agent.py                # agent entry point with run()
+│   └── tools/                  # present if include_vector_search = true
+│       └── retriever.py
+├── resources/
+│   └── agent_job.yml
+├── system_prompt.md            # generated or placeholder system prompt
 └── tests/
     └── test_agent.py
 ```
 
 **Design decisions:**
+- dex renders all files including `databricks.yml` — no dependency on the Databricks CLI at scaffold time.
 - `generate_system_prompt` triggers LLM call (same path as `dex agent new`).
 - `CLAUDE.md` is agent-specific — different from the repo CLAUDE.md.
 - Job config in `databricks.yml` targets a Python task (not notebook).
@@ -208,9 +215,7 @@ heavy dex overlay for Phase 2 (agent files, CLAUDE.md, system prompt).
 
 ## Open Questions
 
-1. Should composite mode be triggered by `template.toml` `[template.dabs]` presence,
-   or by an explicit `--mode` flag? (Current plan: `template.toml` controls this.)
-2. How do we handle DABs template version pinning? (e.g., `default-python@1.0.0`)
-3. Should `dabs-aiagent` be a separate template or an overlay flag on `dabs-package`?
-4. Phase 2 overlay: do we allow overwriting Phase 1 files? (Current: `FileRule.overwrite`
-   exists but is not checked — bug in `scaffold.rs`.)
+1. Should `dabs-aiagent` be a separate template or an overlay flag on `dabs-package`?
+2. `FileRule.overwrite` exists and is checked in `scaffold.rs` — should re-init flows
+   (e.g. `dex init --force`) use this to selectively overwrite config files while
+   preserving source files?
