@@ -19,6 +19,8 @@ enum Cli {
     Skills(commands::skills::SkillsArgs),
     /// MCP server for AI tool integration.
     Mcp(commands::mcp::McpArgs),
+    /// List and inspect available templates.
+    Templates(commands::templates::TemplatesArgs),
     /// Run a task defined in dex.toml.
     Run(commands::run::RunArgs),
     /// Run a pass-through command defined in dex.toml.
@@ -35,6 +37,7 @@ fn main() {
         Cli::Agent(args) => commands::agent::run(args),
         Cli::Skills(args) => commands::skills::run(args),
         Cli::Mcp(args) => commands::mcp::run(args),
+        Cli::Templates(args) => commands::templates::run(args),
         Cli::Run(args) => commands::run::run(args),
         Cli::External(args) => commands::passthrough::run(args),
     };
