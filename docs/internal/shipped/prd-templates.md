@@ -1,6 +1,6 @@
 # PRD: dex Templates
 
-**Status:** Planning
+**Status:** Shipped
 **Target:** v0.2
 **Owner:** TBD
 

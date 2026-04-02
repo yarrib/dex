@@ -1,6 +1,6 @@
 # PRD: Templating Strategy
 
-**Status:** Decided
+**Status:** Shipped
 **Target:** v0.2
 **Owner:** TBD
 
