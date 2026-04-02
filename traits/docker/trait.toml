@@ -1,0 +1,32 @@
+[trait]
+name = "docker"
+description = "Add Docker support (Dockerfile + .dockerignore) to an existing dex project"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "base_image"
+prompt = "Base Docker image"
+type = "string"
+default = "python:3.12-slim"
+
+[[files]]
+src = "Dockerfile"
+conflict = "error"
+
+[[files]]
+src = ".dockerignore"
+conflict = "skip"
+
+[[patches]]
+target = "dex.toml"
+append = """
+[tasks.docker-build]
+command = "docker build -t {{ project_name }} ."
+description = "Build Docker image"
+
+[tasks.docker-run]
+command = "docker run --rm {{ project_name }}"
+description = "Run Docker container"
+depends_on = ["docker-build"]
+"""

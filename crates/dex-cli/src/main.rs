@@ -11,6 +11,8 @@ use clap::Parser;
 enum Cli {
     /// Scaffold a new project from a template.
     Init(commands::init::InitArgs),
+    /// Add a composable trait to an existing project.
+    Add(commands::add::AddArgs),
     /// Agent project scaffolding for Databricks.
     Agent(commands::agent::AgentArgs),
     /// MCP server for AI tool integration.
@@ -27,6 +29,7 @@ fn main() {
 
     let result = match cli {
         Cli::Init(args) => commands::init::run(args),
+        Cli::Add(args) => commands::add::run(args),
         Cli::Agent(args) => commands::agent::run(args),
         Cli::Mcp(args) => commands::mcp::run(args),
         Cli::Run(args) => commands::run::run(args),

@@ -174,6 +174,7 @@ mod tests {
                 name: "test".into(),
                 description: None,
                 template: None,
+                traits: vec![],
             },
             tasks: map,
             profiles: HashMap::new(),

@@ -4,19 +4,23 @@
 //! dependencies. It returns structured data; the calling layer renders it.
 
 pub mod agent;
+pub mod apply_trait;
 pub mod config;
 pub mod error;
 pub mod scaffold;
 pub mod template;
+pub mod traits;
 
 pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
+pub use apply_trait::{TraitResult, apply_trait};
 pub use config::{
     DexConfig, PassthroughSpec, ProjectConfig, RemoteSource, load_dex_config, load_preset,
-    load_project_config, load_standards, presets_path, resolve_remote,
+    load_project_config, load_standards, presets_path, record_trait, resolve_remote,
 };
 pub use error::DexError;
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use template::{Template, TemplateMeta, TemplateSource};
+pub use traits::{Trait, TraitMeta, list_traits, load_trait};
 
 /// Result type alias for dex operations.
 pub type Result<T> = std::result::Result<T, DexError>;
