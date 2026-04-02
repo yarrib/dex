@@ -192,6 +192,42 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
 
     output::print_files_created(&result.files_created);
 
+    // Write dex.toml so subsequent commands (dex add, dex skills sync, etc.) work.
+    let dex_toml_path = target.join("dex.toml");
+    if !dex_toml_path.exists() {
+        let project_name = variables
+            .get("project_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&args.template)
+            .to_string();
+
+        let mut dex_toml = format!(
+            "[project]\nname = \"{project_name}\"\ntemplate = \"{}\"\n",
+            args.template
+        );
+
+        if !template.suggested_skills.is_empty() {
+            let packs = template
+                .suggested_skills
+                .iter()
+                .map(|s| format!("\"{s}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
+            dex_toml.push_str(&format!("\n[skills]\npacks = [{packs}]\n"));
+        }
+
+        std::fs::write(&dex_toml_path, dex_toml).map_err(|source| DexError::Io {
+            path: dex_toml_path.clone(),
+            source,
+        })?;
+
+        println!(
+            "  {} Wrote {}\n",
+            console::style("created:").green(),
+            console::style("dex.toml").cyan()
+        );
+    }
+
     // If the template suggests skill packs, print a hint.
     if !template.suggested_skills.is_empty() {
         println!(
