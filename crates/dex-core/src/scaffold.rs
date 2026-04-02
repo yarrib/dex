@@ -153,6 +153,7 @@ mod tests {
             variables: vec![],
             file_rules,
             files,
+            suggested_skills: vec![],
         }
     }
 

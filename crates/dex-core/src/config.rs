@@ -23,6 +23,20 @@ pub struct ProjectConfig {
 
     #[serde(default)]
     pub passthrough: HashMap<String, PassthroughSpec>,
+
+    #[serde(default)]
+    pub skills: Option<ProjectSkillsConfig>,
+}
+
+/// Skill configuration from `[skills]` in `dex.toml`.
+#[derive(Debug, Deserialize, Default)]
+pub struct ProjectSkillsConfig {
+    /// Skill pack names to install (e.g. `["default", "databricks"]`).
+    #[serde(default)]
+    pub packs: Vec<String>,
+    /// Install targets (e.g. `["claude", "cursor"]`).
+    #[serde(default)]
+    pub targets: Vec<String>,
 }
 
 /// Project metadata from `[project]` section.
@@ -101,6 +115,10 @@ pub struct RemoteSource {
 pub struct DexConfig {
     pub templates_dir: Option<PathBuf>,
     pub remotes: Vec<RemoteSource>,
+    /// Local directory containing skill packs.
+    pub skills_dir: Option<PathBuf>,
+    /// Remote git repositories containing skill packs.
+    pub skill_remotes: Vec<RemoteSource>,
 }
 
 /// Well-known paths.
@@ -130,6 +148,33 @@ pub fn remote_cache_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("~/.cache"))
         .join("dex")
         .join("templates")
+}
+
+/// Cache directory for remote skill pack repositories.
+pub fn skills_cache_dir() -> PathBuf {
+    dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("~/.cache"))
+        .join("dex")
+        .join("skills")
+}
+
+/// Clone or update a remote skill repository, returning the local cache path.
+pub fn resolve_skill_remote(remote: &RemoteSource, update: bool) -> Result<PathBuf, DexError> {
+    let dest = skills_cache_dir().join(&remote.name);
+
+    if dest.exists() {
+        if update {
+            git_pull(&dest, remote.git_ref.as_deref());
+        }
+    } else {
+        std::fs::create_dir_all(dest.parent().unwrap_or(&dest)).map_err(|source| DexError::Io {
+            path: dest.clone(),
+            source,
+        })?;
+        git_clone(&remote.url, &dest, remote.git_ref.as_deref())?;
+    }
+
+    Ok(dest)
 }
 
 /// Load variable pre-fills from a standards TOML file.
@@ -264,22 +309,32 @@ fn parse_config_file(path: &Path) -> DexConfig {
     let remotes = templates
         .get("remotes")
         .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|item| {
-                    let t = item.as_table()?;
-                    let name = t.get("name")?.as_str()?.to_string();
-                    let url = t.get("url")?.as_str()?.to_string();
-                    let git_ref = t.get("ref").and_then(|v| v.as_str()).map(String::from);
-                    Some(RemoteSource { name, url, git_ref })
-                })
-                .collect()
-        })
+        .map(|arr| parse_remote_sources(arr))
+        .unwrap_or_default();
+
+    // Parse [skills] section.
+    let skills = data
+        .get("skills")
+        .and_then(|v| v.as_table())
+        .cloned()
+        .unwrap_or_default();
+
+    let skills_dir = skills.get("dir").and_then(|v| v.as_str()).map(|s| {
+        let expanded = shellexpand::tilde(s);
+        PathBuf::from(expanded.as_ref())
+    });
+
+    let skill_remotes = skills
+        .get("remotes")
+        .and_then(|v| v.as_array())
+        .map(|arr| parse_remote_sources(arr))
         .unwrap_or_default();
 
     DexConfig {
         templates_dir,
         remotes,
+        skills_dir,
+        skill_remotes,
     }
 }
 
@@ -293,10 +348,36 @@ fn merge_configs(user: DexConfig, project: DexConfig) -> DexConfig {
             .filter(|r| !project_names.contains(&r.name)),
     );
 
+    let skill_project_names: std::collections::HashSet<_> = project
+        .skill_remotes
+        .iter()
+        .map(|r| r.name.clone())
+        .collect();
+    let mut merged_skill_remotes = project.skill_remotes;
+    merged_skill_remotes.extend(
+        user.skill_remotes
+            .into_iter()
+            .filter(|r| !skill_project_names.contains(&r.name)),
+    );
+
     DexConfig {
         templates_dir: project.templates_dir.or(user.templates_dir),
         remotes: merged_remotes,
+        skills_dir: project.skills_dir.or(user.skills_dir),
+        skill_remotes: merged_skill_remotes,
     }
+}
+
+fn parse_remote_sources(arr: &[toml::Value]) -> Vec<RemoteSource> {
+    arr.iter()
+        .filter_map(|item| {
+            let t = item.as_table()?;
+            let name = t.get("name")?.as_str()?.to_string();
+            let url = t.get("url")?.as_str()?.to_string();
+            let git_ref = t.get("ref").and_then(|v| v.as_str()).map(String::from);
+            Some(RemoteSource { name, url, git_ref })
+        })
+        .collect()
 }
 
 /// Clone or update a remote template repository, returning the local cache path.
@@ -472,10 +553,14 @@ mod tests {
                 url: "https://example.com/shared".into(),
                 git_ref: None,
             }],
+            skills_dir: None,
+            skill_remotes: vec![],
         };
         let project = DexConfig {
             templates_dir: Some(PathBuf::from("/project/templates")),
             remotes: vec![],
+            skills_dir: None,
+            skill_remotes: vec![],
         };
         let merged = merge_configs(user, project);
         assert_eq!(

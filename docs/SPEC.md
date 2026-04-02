@@ -327,7 +327,123 @@ my-agent/
 └── README.md                   # setup and usage
 ```
 
-## 9. v0.1 Scope
+## 9. Skills System (`dex skills`)
+
+### 9.1. Overview
+
+`dex skills` manages AI agent skill packs — collections of AI agent skills (slash
+commands and agent personas) for tools like Claude Code, Cursor, and GitHub Copilot.
+
+Skills are plain markdown files (source-of-truth) installed into tool-specific
+locations. Packs are versioned and distributed via git repositories.
+
+```
+dex skills init                 # interactive: pick packs + targets, install
+dex skills list                 # list available packs
+dex skills list --verbose       # show individual skills within each pack
+dex skills add <url>            # register a remote skill pack repository
+dex skills sync                 # re-install per dex.toml [skills] config
+dex skills sync --update        # fetch latest from remotes first
+```
+
+### 9.2. Skill Pack Format
+
+A skill pack is a directory containing a `skills.toml` manifest and markdown files:
+
+```
+my-pack/
+  skills.toml
+  commands/          ← slash commands (one .md per skill)
+    deploy.md
+  agents/            ← agent personas (one .md per skill)
+    data-engineer.md
+```
+
+Manifest format (`skills.toml`):
+
+```toml
+[pack]
+name        = "my-pack"
+description = "Description shown in dex skills list"
+version     = "1.0.0"
+
+[[skills]]
+name        = "deploy"
+type        = "command"   # "command" | "agent"
+file        = "commands/deploy.md"
+description = "Deploy to production"
+```
+
+### 9.3. Install Targets
+
+Skills are installed into tool-specific directories:
+
+| Target    | Command location                | Agent location                  |
+|-----------|---------------------------------|---------------------------------|
+| `claude`  | `.claude/commands/<name>.md`    | `.claude/agents/<name>.md`      |
+| `cursor`  | `.cursor/rules/<name>.mdc`      | `.cursor/rules/<name>.mdc`      |
+| `copilot` | `.github/copilot-instructions.md` (appended)  | same          |
+| `generic` | `.ai-skills/commands/<name>.md` | `.ai-skills/agents/<name>.md`   |
+
+### 9.4. Configuration
+
+User config (`~/.config/dex/config.toml`):
+
+```toml
+[skills]
+dir = "~/my-org-skills"          # local pack directory
+
+[[skills.remotes]]
+name = "my-org"
+url  = "https://github.com/my-org/dex-skills.git"
+ref  = "main"
+```
+
+Project config (`dex.toml`):
+
+```toml
+[skills]
+packs   = ["default", "my-org"]
+targets = ["claude", "cursor"]
+```
+
+Template integration (`template.toml`):
+
+```toml
+[skills]
+packs = ["my-org"]   # suggested packs — shown as hint after dex init
+```
+
+### 9.5. Built-in Packs
+
+dex ships two built-in skill packs embedded in the binary:
+
+**`default`** — General-purpose development skills:
+- Commands: `build`, `test`, `lint`, `review-pr`, `commit`
+- Agents: `architect`, `code-reviewer`, `common-sense`
+
+**`databricks`** — Databricks workflow skills:
+- Commands: `deploy-bundle`, `run-job`
+- Agents: `data-engineer`, `platform-engineer`
+
+### 9.6. Authoring Custom Packs
+
+See [docs/skills-authoring.md](skills-authoring.md) for the complete authoring guide.
+
+Organizations distribute skill packs via git repos:
+
+```bash
+# Register a remote pack
+dex skills add https://github.com/my-org/dex-skills.git --name my-org
+
+# Install interactively
+dex skills init
+
+# Reproducible install via dex.toml
+dex skills sync
+```
+
+## 10. v0.1 Scope
 
 **Ship: `dex init` with built-in templates.**
 

@@ -1,0 +1,28 @@
+[pack]
+name        = "databricks"
+description = "Databricks workflow skills for data and ML projects"
+version     = "0.1.0"
+
+[[skills]]
+name        = "deploy-bundle"
+type        = "command"
+file        = "commands/deploy-bundle.md"
+description = "Deploy a Databricks Asset Bundle"
+
+[[skills]]
+name        = "run-job"
+type        = "command"
+file        = "commands/run-job.md"
+description = "Run a Databricks job or workflow"
+
+[[skills]]
+name        = "data-engineer"
+type        = "agent"
+file        = "agents/data-engineer.md"
+description = "Databricks data engineer — pipelines, Delta, Unity Catalog"
+
+[[skills]]
+name        = "platform-engineer"
+type        = "agent"
+file        = "agents/platform-engineer.md"
+description = "Databricks platform engineer — clusters, permissions, governance"

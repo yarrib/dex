@@ -18,6 +18,17 @@ pub struct TemplateManifest {
     pub files: Vec<FileRule>,
     #[serde(default)]
     pub hooks: Option<HooksSpec>,
+    /// Skill packs suggested for projects scaffolded from this template.
+    #[serde(default)]
+    pub skills: Option<TemplateSkillsSpec>,
+}
+
+/// Skill packs suggested by a template from the `[skills]` section of `template.toml`.
+#[derive(Debug, Deserialize, Default)]
+pub struct TemplateSkillsSpec {
+    /// Names of skill packs to suggest after scaffolding (e.g. `["default", "databricks"]`).
+    #[serde(default)]
+    pub packs: Vec<String>,
 }
 
 /// Supports both `[[variables]]` array format and `[variables]` inline table format.

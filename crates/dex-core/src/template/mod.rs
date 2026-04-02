@@ -6,7 +6,7 @@ pub mod registry;
 pub mod variables;
 
 pub use engine::TemplateEngine;
-pub use manifest::{FileRule, TemplateManifest};
+pub use manifest::{FileRule, TemplateManifest, TemplateSkillsSpec};
 pub use registry::TemplateSource;
 pub use variables::{VariableSpec, VariableType};
 
@@ -30,4 +30,6 @@ pub struct Template {
     pub file_rules: Vec<FileRule>,
     /// Map from relative path to template content.
     pub files: HashMap<PathBuf, String>,
+    /// Skill packs suggested by this template (from `[skills]` in `template.toml`).
+    pub suggested_skills: Vec<String>,
 }
