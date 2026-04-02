@@ -192,6 +192,16 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
 
     output::print_files_created(&result.files_created);
 
+    // If the template suggests skill packs, print a hint.
+    if !template.suggested_skills.is_empty() {
+        println!(
+            "  {} Suggested skill packs: {}\n  Run {} to install them.\n",
+            console::style("tip:").yellow().bold(),
+            console::style(template.suggested_skills.join(", ")).cyan(),
+            console::style("dex skills init").cyan()
+        );
+    }
+
     Ok(())
 }
 

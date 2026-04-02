@@ -179,6 +179,7 @@ mod tests {
             tasks: map,
             profiles: HashMap::new(),
             passthrough: HashMap::new(),
+            skills: None,
         }
     }
 

@@ -84,6 +84,6 @@ Full rules: see `CLAUDE.md`.
 - `AgentScaffoldResultPy` drops `system_prompt` and `claude_md` fields
 - `agent_new` name/description logic has a no-op guard
 - Slugifier produces hyphenated package names (invalid Python imports)
-- `_run_dabs_init` is defined but never called (DABs composite templates not yet wired up)
+- DABs composite mode removed — all templates are standalone (minijinja only)
 
 Do not attempt to fix these inline — they are scoped to a dedicated bug-fix branch.

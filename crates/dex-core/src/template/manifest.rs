@@ -18,6 +18,17 @@ pub struct TemplateManifest {
     pub files: Vec<FileRule>,
     #[serde(default)]
     pub hooks: Option<HooksSpec>,
+    /// Skill packs suggested for projects scaffolded from this template.
+    #[serde(default)]
+    pub skills: Option<TemplateSkillsSpec>,
+}
+
+/// Skill packs suggested by a template from the `[skills]` section of `template.toml`.
+#[derive(Debug, Deserialize, Default)]
+pub struct TemplateSkillsSpec {
+    /// Names of skill packs to suggest after scaffolding (e.g. `["default", "databricks"]`).
+    #[serde(default)]
+    pub packs: Vec<String>,
 }
 
 /// Supports both `[[variables]]` array format and `[variables]` inline table format.
@@ -47,65 +58,6 @@ pub struct TemplateMetaRaw {
     pub version: String,
     #[serde(default)]
     pub min_dex_version: Option<String>,
-    /// Optional DABs template base. When present, `dex init` delegates to
-    /// `databricks bundle init <source>` before rendering dex's own files.
-    #[serde(default)]
-    pub dabs: Option<DabsBaseSpec>,
-}
-
-/// DABs template base configuration from `[template.dabs]`.
-///
-/// Specifies a Databricks Asset Bundle template to use as the foundation
-/// for scaffolding. The source can be any valid `databricks bundle init` target:
-/// a Git URL, a local path, or a built-in DABs template name.
-#[derive(Debug, Deserialize)]
-pub struct DabsBaseSpec {
-    /// Source for `databricks bundle init` — URL, local path, or built-in name.
-    pub source: String,
-
-    /// How DABs variables are collected. One of:
-    /// - `"passthrough"` (default) — let `databricks bundle init` prompt interactively
-    /// - `"unified"` — dex reads databricks_template_schema.json, merges prompts
-    /// - `"mapped"` — pre-fill via variable_map, DABs prompts for unmapped vars
-    #[serde(default)]
-    pub prompt: DabsPromptMode,
-
-    /// Maps dex variable names to DABs template variable names.
-    /// Used in "mapped" mode to write a config JSON for partial pre-fill.
-    #[serde(default)]
-    pub variable_map: std::collections::HashMap<String, String>,
-
-    /// Overrides for DABs schema variables (unified mode).
-    /// Keys are DABs variable names. Values override default, choices, etc.
-    #[serde(default)]
-    pub overrides: std::collections::HashMap<String, DabsVariableOverride>,
-}
-
-/// How DABs template variables are prompted during `dex init`.
-#[derive(Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum DabsPromptMode {
-    /// Let `databricks bundle init` handle prompts interactively.
-    #[default]
-    Passthrough,
-    /// dex reads the DABs schema, merges with dex variables, single prompt flow.
-    Unified,
-    /// Pre-fill mapped variables, DABs prompts for the rest.
-    Mapped,
-}
-
-/// Override for a specific DABs schema variable (unified mode).
-#[derive(Debug, Deserialize)]
-pub struct DabsVariableOverride {
-    #[serde(default)]
-    pub default: Option<String>,
-    #[serde(default)]
-    pub description: Option<String>,
-    #[serde(default)]
-    pub choices: Option<Vec<String>>,
-    /// If true, skip this variable (don't prompt, use default).
-    #[serde(default)]
-    pub skip: bool,
 }
 
 /// Conditional file inclusion / path remapping rule.
@@ -117,8 +69,6 @@ pub struct FileRule {
     #[serde(default)]
     pub condition: Option<String>,
     /// When true, overwrite files that already exist in the target directory.
-    /// Relevant for DABs-composite templates where the DABs scaffold may have
-    /// created files that the dex layer wants to replace.
     #[serde(default)]
     pub overwrite: bool,
 }
@@ -197,58 +147,6 @@ mod tests {
         assert_eq!(manifest.template.name, "default");
         assert!(manifest.variables().is_empty());
         assert!(manifest.files.is_empty());
-    }
-
-    #[test]
-    fn parse_dabs_composite_manifest() {
-        let toml_str = r#"
-            [template]
-            name = "ml-pipeline"
-            description = "ML pipeline with DABs base"
-            version = "0.1.0"
-
-            [template.dabs]
-            source = "https://github.com/databricks/bundle-examples/tree/main/default-python"
-
-            [template.dabs.variable_map]
-            project_name = "project_name"
-
-            [[variables]]
-            name = "project_name"
-            prompt = "Project name"
-            type = "string"
-            required = true
-
-            [[variables]]
-            name = "include_ci"
-            prompt = "Include CI?"
-            type = "bool"
-            default = true
-
-            [[files]]
-            src = ".github/"
-            condition = "include_ci"
-        "#;
-        let manifest = TemplateManifest::parse(toml_str).unwrap();
-        assert_eq!(manifest.variables().len(), 2);
-        let dabs = manifest.template.dabs.unwrap();
-        assert!(dabs.source.contains("bundle-examples"));
-        assert_eq!(
-            dabs.variable_map.get("project_name").unwrap(),
-            "project_name"
-        );
-    }
-
-    #[test]
-    fn parse_standalone_manifest_has_no_dabs() {
-        let toml_str = r#"
-            [template]
-            name = "default"
-            description = "Standalone template"
-            version = "0.1.0"
-        "#;
-        let manifest = TemplateManifest::parse(toml_str).unwrap();
-        assert!(manifest.template.dabs.is_none());
     }
 
     #[test]

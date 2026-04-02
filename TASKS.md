@@ -32,10 +32,10 @@ _(nothing active)_
 - [x] Update mkdocs nav to add Quickstart, Templates section, and Extending page
 
 ### Bugs
-- [x] `_run_dabs_init` is defined but never called — removed; DABs composite flow TBD
+- [x] `_run_dabs_init` removed — DABs composite mode eliminated; all templates are standalone
 - [x] `agent_new` name/description logic has a no-op guard
 - [x] `scaffold.rs` ignores `FileRule.overwrite` flag — already implemented (lines 61-64)
-- [x] `dabs_schema.rs` has no callers — module is valid and tested; will be wired in DABs composite flow
+- [x] `dabs_schema.rs` deleted — composite mode removed entirely
 - [x] `PassthroughCommand` extends deprecated `click.BaseCommand` — migrated to `click.Command`
 
 ### Infrastructure
