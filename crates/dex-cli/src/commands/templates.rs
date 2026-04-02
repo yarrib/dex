@@ -94,7 +94,10 @@ fn run_list(args: ListArgs) -> Result<(), DexError> {
         output::print_dim("No templates found.");
     }
 
-    println!("Run {} to scaffold from a template.\n", style("dex init -t <name>").cyan());
+    println!(
+        "Run {} to scaffold from a template.\n",
+        style("dex init -t <name>").cyan()
+    );
 
     Ok(())
 }
@@ -109,7 +112,11 @@ fn run_show(args: ShowArgs) -> Result<(), DexError> {
                 style("Template:").bold(),
                 style(&tmpl.meta.name).cyan().bold()
             );
-            println!("  {}  {}", style("Description:").dim(), tmpl.meta.description);
+            println!(
+                "  {}  {}",
+                style("Description:").dim(),
+                tmpl.meta.description
+            );
             println!("  {}       {}", style("Version:").dim(), tmpl.meta.version);
 
             if !tmpl.variables.is_empty() {
@@ -138,7 +145,10 @@ fn run_show(args: ShowArgs) -> Result<(), DexError> {
                 );
             }
 
-            println!("\n  Run {} to scaffold.\n", style(format!("dex init -t {}", args.name)).cyan());
+            println!(
+                "\n  Run {} to scaffold.\n",
+                style(format!("dex init -t {}", args.name)).cyan()
+            );
             return Ok(());
         }
     }
@@ -149,14 +159,16 @@ fn run_show(args: ShowArgs) -> Result<(), DexError> {
 }
 
 fn collect_sources() -> Result<Vec<(String, TemplateSource)>, DexError> {
-    let mut sources: Vec<(String, TemplateSource)> = vec![
-        ("built-in".to_string(), TemplateSource::Embedded),
-    ];
+    let mut sources: Vec<(String, TemplateSource)> =
+        vec![("built-in".to_string(), TemplateSource::Embedded)];
 
     let config = load_dex_config();
 
     if let Some(dir) = &config.templates_dir {
-        sources.push((dir.display().to_string(), TemplateSource::Directory(dir.clone())));
+        sources.push((
+            dir.display().to_string(),
+            TemplateSource::Directory(dir.clone()),
+        ));
     }
 
     for remote in &config.remotes {
