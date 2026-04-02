@@ -154,7 +154,10 @@ fn install_copilot(
 
     for skill in &pack.manifest.skills {
         if let Some(content) = pack.files.get(&skill.file) {
-            section.push_str(&format!("### {} ({})\n\n{}\n\n", skill.name, skill.skill_type, content));
+            section.push_str(&format!(
+                "### {} ({})\n\n{}\n\n",
+                skill.name, skill.skill_type, content
+            ));
         }
     }
 
@@ -247,7 +250,10 @@ mod tests {
         };
 
         let mut files = HashMap::new();
-        files.insert("commands/build.md".to_string(), "Run cargo build.".to_string());
+        files.insert(
+            "commands/build.md".to_string(),
+            "Run cargo build.".to_string(),
+        );
 
         let pack = make_pack(vec![skill], files);
         let result = install_skills(&pack, dir.path(), &[InstallTarget::Claude]).unwrap();
@@ -255,7 +261,10 @@ mod tests {
         assert_eq!(result.files_written.len(), 1);
         let expected = dir.path().join(".claude/commands/build.md");
         assert!(expected.exists());
-        assert_eq!(std::fs::read_to_string(&expected).unwrap(), "Run cargo build.");
+        assert_eq!(
+            std::fs::read_to_string(&expected).unwrap(),
+            "Run cargo build."
+        );
     }
 
     #[test]
@@ -270,7 +279,10 @@ mod tests {
         };
 
         let mut files = HashMap::new();
-        files.insert("agents/architect.md".to_string(), "You are an architect.".to_string());
+        files.insert(
+            "agents/architect.md".to_string(),
+            "You are an architect.".to_string(),
+        );
 
         let pack = make_pack(vec![skill], files);
         install_skills(&pack, dir.path(), &[InstallTarget::Cursor]).unwrap();

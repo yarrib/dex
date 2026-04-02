@@ -15,4 +15,6 @@ pub mod registry;
 
 pub use installer::{InstallResult, InstallTarget, install_skills};
 pub use manifest::{PackMeta, SkillPackManifest, SkillSpec, SkillType};
-pub use registry::{SkillPack, SkillPackEntry, SkillSource, list_packs, load_pack, load_pack_with_remote_fetch};
+pub use registry::{
+    SkillPack, SkillPackEntry, SkillSource, list_packs, load_pack, load_pack_with_remote_fetch,
+};

@@ -66,10 +66,7 @@ impl SkillPack {
 ///
 /// Sources are checked in order: embedded → local dir → remote caches.
 /// Later sources with the same pack name override earlier ones.
-pub fn list_packs(
-    extra_dir: Option<&Path>,
-    skill_remotes: &[RemoteSource],
-) -> Vec<SkillPackEntry> {
+pub fn list_packs(extra_dir: Option<&Path>, skill_remotes: &[RemoteSource]) -> Vec<SkillPackEntry> {
     let mut entries: HashMap<String, SkillPackEntry> = HashMap::new();
 
     // 1. Embedded packs (lowest priority).
@@ -124,10 +121,7 @@ pub fn load_pack(
         let cache = skills_cache_dir().join(&remote.name);
         let pack_dir = cache.join(name);
         if pack_dir.is_dir() {
-            return load_directory_pack(
-                &pack_dir,
-                SkillSource::Directory(cache),
-            );
+            return load_directory_pack(&pack_dir, SkillSource::Directory(cache));
         }
     }
 
@@ -284,10 +278,12 @@ fn collect_embedded_files(
 ) {
     for file in dir.files() {
         if file.path().extension().is_some_and(|e| e == "md")
-            && let (Ok(rel), Some(content)) =
-                (file.path().strip_prefix(base), file.contents_utf8())
+            && let (Ok(rel), Some(content)) = (file.path().strip_prefix(base), file.contents_utf8())
         {
-            files.insert(rel.to_string_lossy().replace('\\', "/"), content.to_string());
+            files.insert(
+                rel.to_string_lossy().replace('\\', "/"),
+                content.to_string(),
+            );
         }
     }
     for subdir in dir.dirs() {

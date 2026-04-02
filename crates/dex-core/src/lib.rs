@@ -15,9 +15,9 @@ pub mod traits;
 pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
 pub use apply_trait::{TraitResult, apply_trait};
 pub use config::{
-    DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource,
-    load_dex_config, load_preset, load_project_config, load_standards, presets_path,
-    record_trait, resolve_remote, resolve_skill_remote, skills_cache_dir,
+    DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource, load_dex_config,
+    load_preset, load_project_config, load_standards, presets_path, record_trait, resolve_remote,
+    resolve_skill_remote, skills_cache_dir,
 };
 pub use error::{DexError, SkillError};
 pub use scaffold::{ScaffoldResult, scaffold};

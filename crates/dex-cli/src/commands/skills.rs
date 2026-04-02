@@ -6,11 +6,11 @@ use clap::{Args, Subcommand};
 use console::style;
 use dialoguer::{Confirm, MultiSelect};
 
+use dex_core::DexError;
 use dex_core::config::{
     load_dex_config, load_project_config, resolve_skill_remote, user_config_path,
 };
 use dex_core::skills::{InstallTarget, install_skills, list_packs, load_pack_with_remote_fetch};
-use dex_core::DexError;
 
 use crate::output;
 
@@ -110,10 +110,7 @@ fn run_init(args: InitArgs) -> Result<(), DexError> {
     // Fetch remotes to cache before listing.
     for remote in &config.skill_remotes {
         if let Err(e) = resolve_skill_remote(remote, false) {
-            output::print_warning(&format!(
-                "could not fetch remote '{}': {e}",
-                remote.name
-            ));
+            output::print_warning(&format!("could not fetch remote '{}': {e}", remote.name));
         }
     }
 
@@ -258,9 +255,7 @@ fn run_list(args: ListArgs) -> Result<(), DexError> {
     for entry in &packs {
         let source_label = match &entry.source {
             dex_core::SkillSource::Embedded => style("built-in").dim().to_string(),
-            dex_core::SkillSource::Directory(p) => {
-                style(p.display().to_string()).dim().to_string()
-            }
+            dex_core::SkillSource::Directory(p) => style(p.display().to_string()).dim().to_string(),
         };
 
         println!(
@@ -273,9 +268,12 @@ fn run_list(args: ListArgs) -> Result<(), DexError> {
 
         if args.verbose {
             // Load the pack to show individual skills.
-            if let Ok(pack) =
-                load_pack_with_remote_fetch(&entry.name, config.skills_dir.as_deref(), &config.skill_remotes, false)
-            {
+            if let Ok(pack) = load_pack_with_remote_fetch(
+                &entry.name,
+                config.skills_dir.as_deref(),
+                &config.skill_remotes,
+                false,
+            ) {
                 for skill in &pack.manifest.skills {
                     println!(
                         "    {} [{}] {}",
@@ -292,8 +290,10 @@ fn run_list(args: ListArgs) -> Result<(), DexError> {
 
     println!(
         "{}",
-        style("Install packs with `dex skills init`. Add remote packs with `dex skills add <url>`.")
-            .dim()
+        style(
+            "Install packs with `dex skills init`. Add remote packs with `dex skills add <url>`."
+        )
+        .dim()
     );
     println!();
 
@@ -367,10 +367,7 @@ fn run_add(args: AddArgs) -> Result<(), DexError> {
         name,
         config_path.display()
     );
-    println!(
-        "  {} Fetching pack...",
-        style("→").dim()
-    );
+    println!("  {} Fetching pack...", style("→").dim());
 
     // Immediately fetch to cache.
     let remote = dex_core::config::RemoteSource {
@@ -381,11 +378,7 @@ fn run_add(args: AddArgs) -> Result<(), DexError> {
 
     match resolve_skill_remote(&remote, false) {
         Ok(path) => {
-            println!(
-                "  {} Cached at {}",
-                style("✓").green(),
-                path.display()
-            );
+            println!("  {} Cached at {}", style("✓").green(), path.display());
         }
         Err(e) => {
             output::print_warning(&format!("could not fetch remote: {e}"));
@@ -420,10 +413,7 @@ fn run_sync(args: SyncArgs) -> Result<(), DexError> {
         _ => {
             println!(
                 "{}",
-                style(
-                    "No [skills] section in dex.toml. Run `dex skills init` to configure."
-                )
-                .dim()
+                style("No [skills] section in dex.toml. Run `dex skills init` to configure.").dim()
             );
             return Ok(());
         }
@@ -507,7 +497,10 @@ fn write_skills_to_dex_toml(
     // Remove existing [skills] section if present (naive but safe for TOML).
     let without_skills = remove_toml_section(&existing, "skills");
 
-    let target_strs: Vec<String> = targets.iter().map(|t| format!("\"{}\"", t.as_str())).collect();
+    let target_strs: Vec<String> = targets
+        .iter()
+        .map(|t| format!("\"{}\"", t.as_str()))
+        .collect();
     let pack_strs: Vec<String> = packs.iter().map(|p| format!("\"{}\"", p)).collect();
 
     let skills_section = format!(

@@ -348,8 +348,11 @@ fn merge_configs(user: DexConfig, project: DexConfig) -> DexConfig {
             .filter(|r| !project_names.contains(&r.name)),
     );
 
-    let skill_project_names: std::collections::HashSet<_> =
-        project.skill_remotes.iter().map(|r| r.name.clone()).collect();
+    let skill_project_names: std::collections::HashSet<_> = project
+        .skill_remotes
+        .iter()
+        .map(|r| r.name.clone())
+        .collect();
     let mut merged_skill_remotes = project.skill_remotes;
     merged_skill_remotes.extend(
         user.skill_remotes
