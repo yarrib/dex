@@ -371,14 +371,11 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
 }
 
 fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
-    let name = args
-        .get("name")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            DexError::Config(ConfigError::Invalid(
-                "missing required argument: name".into(),
-            ))
-        })?;
+    let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+        DexError::Config(ConfigError::Invalid(
+            "missing required argument: name".into(),
+        ))
+    })?;
 
     let dir = args.get("dir").and_then(|v| v.as_str()).ok_or_else(|| {
         DexError::Config(ConfigError::Invalid(
