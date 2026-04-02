@@ -1,0 +1,11 @@
+# .devcontainer/config.toml — org-level AI dev kit preset.
+#
+# Commit this to share settings with your team.
+# Delete or comment out [ai] to get an interactive prompt on first devcontainer start.
+#
+# profile:   ai-ml-engineer | data-engineer | analyst | app-developer
+# assistant: claude | cursor | copilot | codex | gemini | all
+
+[ai]
+profile   = "ai-ml-engineer"
+assistant = "claude"
