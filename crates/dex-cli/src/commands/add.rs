@@ -7,12 +7,12 @@ use clap::Args;
 use console::style;
 use dialoguer::{Confirm, Input, Select};
 
+use dex_core::DexError;
 use dex_core::apply_trait;
 use dex_core::config::{load_project_config, record_trait};
 use dex_core::error::ConfigError;
 use dex_core::template::variables::VariableType;
 use dex_core::traits::{list_traits, load_trait};
-use dex_core::DexError;
 
 use crate::output;
 
@@ -55,12 +55,15 @@ pub fn run(args: AddArgs) -> Result<(), DexError> {
 
     // Require an existing dex.toml — `dex add` only works inside a dex project.
     let dex_toml_path = target.join("dex.toml");
-    let project_config = load_project_config(&dex_toml_path).map_err(|_| {
-        DexError::Config(ConfigError::NotFound(dex_toml_path.clone()))
-    })?;
+    let project_config = load_project_config(&dex_toml_path)
+        .map_err(|_| DexError::Config(ConfigError::NotFound(dex_toml_path.clone())))?;
 
     // Check if the trait has already been applied.
-    if project_config.project.traits.contains(&trait_name.to_string()) {
+    if project_config
+        .project
+        .traits
+        .contains(&trait_name.to_string())
+    {
         return Err(DexError::Config(ConfigError::Invalid(format!(
             "trait '{}' is already applied to this project. \
              Remove it from [project].traits in dex.toml if you want to re-apply it.",
@@ -154,9 +157,12 @@ pub fn run(args: AddArgs) -> Result<(), DexError> {
     }
 
     if args.dry_run {
-        println!("{}", style("Dry run — no files will be written.\n").yellow());
+        println!(
+            "{}",
+            style("Dry run — no files will be written.\n").yellow()
+        );
         println!("Files that would be created:");
-        for (rel_path, _) in &t.files {
+        for rel_path in t.files.keys() {
             println!("  {} {}", style("+").green(), rel_path.display());
         }
         if !t.patches.is_empty() {

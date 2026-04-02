@@ -174,15 +174,15 @@ fn should_include_file(
 ) -> bool {
     for rule in file_rules {
         let rule_src = Path::new(&rule.src);
-        if rel_path.starts_with(rule_src) || rel_path == rule_src {
-            if let Some(condition) = &rule.condition {
-                let is_truthy = variables
-                    .get(condition)
-                    .map(|v| v.is_true())
-                    .unwrap_or(false);
-                if !is_truthy {
-                    return false;
-                }
+        if (rel_path.starts_with(rule_src) || rel_path == rule_src)
+            && let Some(condition) = &rule.condition
+        {
+            let is_truthy = variables
+                .get(condition)
+                .map(|v| v.is_true())
+                .unwrap_or(false);
+            if !is_truthy {
+                return false;
             }
         }
     }
@@ -228,7 +228,10 @@ mod tests {
     fn apply_trait_writes_new_files() {
         let dir = tempfile::tempdir().unwrap();
         let mut files = HashMap::new();
-        files.insert(PathBuf::from("Dockerfile.j2"), "FROM python:{{ py }}".to_string());
+        files.insert(
+            PathBuf::from("Dockerfile.j2"),
+            "FROM python:{{ py }}".to_string(),
+        );
 
         let t = make_trait(files, vec![], vec![]);
         let mut vars = HashMap::new();

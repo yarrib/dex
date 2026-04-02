@@ -99,8 +99,7 @@ pub fn scaffold(
 /// Return the effective overwrite flag for a file path based on file rules.
 ///
 /// Returns `true` (overwrite) if no rule matches. When a rule matches, returns
-/// that rule's `overwrite` field. Relevant for DABs-composite templates where
-/// an earlier phase may have already written files that should not be replaced.
+/// that rule's `overwrite` field.
 fn get_overwrite_flag(rel_path: &Path, file_rules: &[crate::template::FileRule]) -> bool {
     for rule in file_rules {
         let rule_src = Path::new(&rule.src);
@@ -121,17 +120,16 @@ fn should_include_file(
         let rule_src = Path::new(&rule.src);
 
         // Check if this rule applies to the file.
-        if rel_path.starts_with(rule_src) {
-            // If there's a condition, check the variable value.
-            if let Some(condition) = &rule.condition {
-                let is_truthy = variables
-                    .get(condition)
-                    .map(|v| v.is_true())
-                    .unwrap_or(false);
+        if rel_path.starts_with(rule_src)
+            && let Some(condition) = &rule.condition
+        {
+            let is_truthy = variables
+                .get(condition)
+                .map(|v| v.is_true())
+                .unwrap_or(false);
 
-                if !is_truthy {
-                    return false;
-                }
+            if !is_truthy {
+                return false;
             }
         }
     }
