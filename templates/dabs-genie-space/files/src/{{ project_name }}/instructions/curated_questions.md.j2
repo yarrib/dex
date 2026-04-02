@@ -1,0 +1,16 @@
+# Curated Questions for {{ project_name | replace('_', ' ') | title }}
+
+## Sample Questions
+
+The following questions are pre-validated for this Genie space.
+
+- How many records are in the dataset?
+- What is the date range of the data?
+- Show me the top 10 records by [metric].
+
+## SQL Hints
+
+```sql
+-- Example: count records
+SELECT COUNT(*) FROM ${var.catalog}.${var.schema}.<table_name>;
+```
