@@ -1,0 +1,9 @@
+resources:
+  dashboards:
+    {{ project_name }}_dashboard:
+      display_name: "${bundle.target} — {{ project_name | replace('_', ' ') | title }}"
+      warehouse_id: {% if warehouse_id %}"{{ warehouse_id }}"{% else %}${var.warehouse_id}{% endif %}
+
+      file_path: ../src/{{ project_name }}/dashboard.lvdash.json
+      embed_credentials: false
+      parent_path: /Shared/dashboards
