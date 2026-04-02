@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand};
 use serde_json::{Value, json};
 
+use dex_core::agent::{AgentAnswers, AgentDeployTarget, AgentTrigger, scaffold_agent};
 use dex_core::error::ConfigError;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
@@ -151,6 +152,70 @@ fn handle_tools_list(id: &Value) -> Value {
                         },
                         "required": ["template", "dir"]
                     }
+                },
+                {
+                    "name": "scaffold_agent",
+                    "description": "Scaffold a new Databricks AI agent project. Creates a full project structure with agent.py, tools, evals, DAB resources, a system prompt, and CLAUDE.md. Call this when the user wants to create a new AI agent for Databricks.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Agent name (e.g. 'table-anomaly-monitor'). Used as the Python package name."
+                            },
+                            "dir": {
+                                "type": "string",
+                                "description": "Parent directory where the agent project folder will be created."
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "One-sentence description of what the agent does."
+                            },
+                            "trigger": {
+                                "type": "string",
+                                "enum": ["user_request", "schedule", "event", "upstream_system"],
+                                "description": "What triggers the agent. Default: user_request."
+                            },
+                            "success_criteria": {
+                                "type": "string",
+                                "description": "What success looks like (e.g. 'Slack alert sent with anomaly details')."
+                            },
+                            "reads": {
+                                "type": "string",
+                                "description": "What data sources the agent reads (e.g. 'Unity Catalog table: main.monitoring.events')."
+                            },
+                            "writes": {
+                                "type": "string",
+                                "description": "What the agent writes or changes (e.g. 'Slack channel #alerts')."
+                            },
+                            "handoff": {
+                                "type": "boolean",
+                                "description": "Whether the agent hands off to a human or another agent. Default: false."
+                            },
+                            "autonomous": {
+                                "type": "boolean",
+                                "description": "Whether the agent acts autonomously without confirmation. Default: true."
+                            },
+                            "example_input": {
+                                "type": "string",
+                                "description": "Example input to the agent."
+                            },
+                            "example_output": {
+                                "type": "string",
+                                "description": "Expected output for the example input."
+                            },
+                            "bad_output": {
+                                "type": "string",
+                                "description": "What a bad or dangerous output looks like."
+                            },
+                            "deploy_target": {
+                                "type": "string",
+                                "enum": ["job", "serving_endpoint", "interactive"],
+                                "description": "How the agent is deployed on Databricks. Default: job."
+                            }
+                        },
+                        "required": ["name", "dir"]
+                    }
                 }
             ]
         }
@@ -167,6 +232,7 @@ fn handle_tools_call(id: &Value, params: &Value) -> Value {
         "list_templates" => tool_list_templates(),
         "get_template_variables" => tool_get_template_variables(&args),
         "scaffold_project" => tool_scaffold_project(&args),
+        "scaffold_agent" => tool_scaffold_agent(&args),
         _ => return error_response(id, -32602, &format!("Unknown tool: {name}")),
     };
 
@@ -301,6 +367,119 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
     Ok(format!(
         "Scaffolded {} files in '{dir}':\n{file_list}",
         result.files_created.len()
+    ))
+}
+
+fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
+    let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+        DexError::Config(ConfigError::Invalid(
+            "missing required argument: name".into(),
+        ))
+    })?;
+
+    let dir = args.get("dir").and_then(|v| v.as_str()).ok_or_else(|| {
+        DexError::Config(ConfigError::Invalid(
+            "missing required argument: dir".into(),
+        ))
+    })?;
+
+    let description = args
+        .get("description")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    let trigger = match args
+        .get("trigger")
+        .and_then(|v| v.as_str())
+        .unwrap_or("user_request")
+    {
+        "schedule" => AgentTrigger::Schedule,
+        "event" => AgentTrigger::Event,
+        "upstream_system" => AgentTrigger::UpstreamSystem,
+        _ => AgentTrigger::UserRequest,
+    };
+
+    let deploy_target = match args
+        .get("deploy_target")
+        .and_then(|v| v.as_str())
+        .unwrap_or("job")
+    {
+        "serving_endpoint" => AgentDeployTarget::ServingEndpoint,
+        "interactive" => AgentDeployTarget::Interactive,
+        _ => AgentDeployTarget::Job,
+    };
+
+    let answers = AgentAnswers {
+        name: name.to_string(),
+        description,
+        trigger,
+        success_criteria: args
+            .get("success_criteria")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        reads: args
+            .get("reads")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        writes: args
+            .get("writes")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        handoff: args
+            .get("handoff")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false),
+        autonomous: args
+            .get("autonomous")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true),
+        example_input: args
+            .get("example_input")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        example_output: args
+            .get("example_output")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        bad_output: args
+            .get("bad_output")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string(),
+        deploy_target,
+    };
+
+    let target = PathBuf::from(dir);
+    if !target.exists() {
+        std::fs::create_dir_all(&target).map_err(|source| DexError::Io {
+            path: target.clone(),
+            source,
+        })?;
+    }
+
+    let result = scaffold_agent(&answers, &target)?;
+
+    let file_list = result
+        .files_created
+        .iter()
+        .map(|f| format!("  {}", f.display()))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    Ok(format!(
+        "Scaffolded agent '{}' ({} files) in '{}':\n{}\n\n---\n## System Prompt\n\n{}\n\n---\n## CLAUDE.md\n\n{}",
+        name,
+        result.files_created.len(),
+        result.project_dir.display(),
+        file_list,
+        result.system_prompt,
+        result.claude_md,
     ))
 }
 
