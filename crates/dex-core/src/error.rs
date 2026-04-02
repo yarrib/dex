@@ -11,6 +11,9 @@ pub enum DexError {
     #[error(transparent)]
     Template(#[from] TemplateError),
 
+    #[error(transparent)]
+    Skill(#[from] SkillError),
+
     #[error("render error: {0}")]
     Render(#[from] minijinja::Error),
 
@@ -32,6 +35,19 @@ pub enum ConfigError {
 
     #[error("config parse error: {0}")]
     Parse(#[from] toml::de::Error),
+}
+
+/// Errors related to skill pack operations.
+#[derive(Debug, thiserror::Error)]
+pub enum SkillError {
+    #[error("skill pack not found: '{0}'")]
+    PackNotFound(String),
+
+    #[error("skills.toml parse error: {0}")]
+    ManifestParse(String),
+
+    #[error("unknown install target: '{0}'. Valid targets: claude, cursor, copilot, generic")]
+    InvalidTarget(String),
 }
 
 /// Errors related to template operations.

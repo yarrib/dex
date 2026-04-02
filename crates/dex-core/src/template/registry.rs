@@ -44,11 +44,18 @@ fn load_directory_template(template_dir: &Path) -> Result<Template, DexError> {
         HashMap::new()
     };
 
+    let suggested_skills = manifest
+        .skills
+        .as_ref()
+        .map(|s| s.packs.clone())
+        .unwrap_or_default();
+
     Ok(Template {
         meta: manifest.meta(),
         variables: manifest.variables(),
         file_rules: manifest.files,
         files,
+        suggested_skills,
     })
 }
 
@@ -163,11 +170,18 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         collect_files(files_dir, &files_dir_path, &mut files);
     }
 
+    let suggested_skills = manifest
+        .skills
+        .as_ref()
+        .map(|s| s.packs.clone())
+        .unwrap_or_default();
+
     Ok(Template {
         meta: manifest.meta(),
         variables: manifest.variables(),
         file_rules: manifest.files,
         files,
+        suggested_skills,
     })
 }
 

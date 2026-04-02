@@ -1,0 +1,52 @@
+[pack]
+name        = "default"
+description = "General-purpose AI development skills for any project"
+version     = "0.1.0"
+
+[[skills]]
+name        = "build"
+type        = "command"
+file        = "commands/build.md"
+description = "Build the project"
+
+[[skills]]
+name        = "test"
+type        = "command"
+file        = "commands/test.md"
+description = "Run the test suite"
+
+[[skills]]
+name        = "lint"
+type        = "command"
+file        = "commands/lint.md"
+description = "Run linters and formatters"
+
+[[skills]]
+name        = "review-pr"
+type        = "command"
+file        = "commands/review-pr.md"
+description = "Review a pull request"
+
+[[skills]]
+name        = "commit"
+type        = "command"
+file        = "commands/commit.md"
+description = "Create a well-formed git commit"
+
+[[skills]]
+name        = "architect"
+type        = "agent"
+file        = "agents/architect.md"
+description = "Software architect — design and structure review"
+
+[[skills]]
+name        = "code-reviewer"
+type        = "agent"
+file        = "agents/code-reviewer.md"
+description = "Peer code reviewer — direct, actionable feedback"
+
+[[skills]]
+name        = "common-sense"
+type        = "agent"
+file        = "agents/common-sense.md"
+description = "Common sense reviewer — challenge over-engineering"
