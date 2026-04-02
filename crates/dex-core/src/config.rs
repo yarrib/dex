@@ -33,6 +33,9 @@ pub struct ProjectMeta {
     pub description: Option<String>,
     #[serde(default)]
     pub template: Option<String>,
+    /// Traits applied to this project via `dex add`.
+    #[serde(default)]
+    pub traits: Vec<String>,
 }
 
 /// Task definition from `[tasks.*]` section.
@@ -353,6 +356,52 @@ fn git_pull(dest: &Path, git_ref: Option<&str>) {
     }
 }
 
+/// Record an applied trait in `dex.toml` by appending its name to
+/// `[project].traits`. Idempotent: re-applying a trait that is already
+/// listed is a no-op.
+///
+/// Uses `toml::Value` for round-trip editing. Note: TOML comments in
+/// `dex.toml` are not preserved by this operation.
+pub fn record_trait(project_dir: &Path, trait_name: &str) -> Result<(), DexError> {
+    let path = project_dir.join("dex.toml");
+    let content = std::fs::read_to_string(&path).map_err(|source| DexError::Io {
+        path: path.clone(),
+        source,
+    })?;
+
+    let mut doc: toml::Value = toml::from_str(&content).map_err(ConfigError::Parse)?;
+
+    if let Some(project) = doc.get_mut("project") {
+        match project.get_mut("traits") {
+            Some(toml::Value::Array(arr)) => {
+                let name_val = toml::Value::String(trait_name.to_string());
+                if !arr.contains(&name_val) {
+                    arr.push(name_val);
+                }
+            }
+            Some(_) => {} // malformed traits field — leave it alone
+            None => {
+                if let toml::Value::Table(t) = project {
+                    t.insert(
+                        "traits".to_string(),
+                        toml::Value::Array(vec![toml::Value::String(trait_name.to_string())]),
+                    );
+                }
+            }
+        }
+    }
+
+    let new_content = toml::to_string_pretty(&doc)
+        .map_err(|e| DexError::Config(ConfigError::Invalid(e.to_string())))?;
+
+    std::fs::write(&path, new_content).map_err(|source| DexError::Io {
+        path: path.clone(),
+        source,
+    })?;
+
+    Ok(())
+}
+
 fn toml_value_to_string(v: &toml::Value) -> String {
     match v {
         toml::Value::String(s) => s.clone(),
@@ -536,5 +585,54 @@ workspace_url = "https://etl.cloud.databricks.com"
         let standards = load_standards(Some(&path)).unwrap();
         assert_eq!(standards.get("author").unwrap(), "yarrib");
         assert_eq!(standards.get("python_version").unwrap(), "3.12");
+    }
+
+    #[test]
+    fn record_trait_adds_to_dex_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let dex_toml = dir.path().join("dex.toml");
+        std::fs::write(
+            &dex_toml,
+            "[project]\nname = \"my-project\"\ntemplate = \"default\"\n",
+        )
+        .unwrap();
+
+        record_trait(dir.path(), "docker").unwrap();
+
+        let config = load_project_config(&dex_toml).unwrap();
+        assert_eq!(config.project.traits, vec!["docker"]);
+    }
+
+    #[test]
+    fn record_trait_is_idempotent() {
+        let dir = tempfile::tempdir().unwrap();
+        let dex_toml = dir.path().join("dex.toml");
+        std::fs::write(
+            &dex_toml,
+            "[project]\nname = \"my-project\"\ntraits = [\"docker\"]\n",
+        )
+        .unwrap();
+
+        record_trait(dir.path(), "docker").unwrap();
+
+        let config = load_project_config(&dex_toml).unwrap();
+        assert_eq!(config.project.traits, vec!["docker"]);
+    }
+
+    #[test]
+    fn record_trait_appends_new_trait() {
+        let dir = tempfile::tempdir().unwrap();
+        let dex_toml = dir.path().join("dex.toml");
+        std::fs::write(
+            &dex_toml,
+            "[project]\nname = \"my-project\"\ntraits = [\"docker\"]\n",
+        )
+        .unwrap();
+
+        record_trait(dir.path(), "ci-github").unwrap();
+
+        let config = load_project_config(&dex_toml).unwrap();
+        assert!(config.project.traits.contains(&"docker".to_string()));
+        assert!(config.project.traits.contains(&"ci-github".to_string()));
     }
 }

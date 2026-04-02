@@ -1,0 +1,11 @@
+FROM {{ base_image }}
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching.
+COPY pyproject.toml .
+RUN pip install --no-cache-dir ".[dev]" || pip install --no-cache-dir .
+
+COPY src/ ./src/
+
+CMD ["python", "-m", "{{ project_name }}"]

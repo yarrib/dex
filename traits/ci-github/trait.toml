@@ -1,0 +1,15 @@
+[trait]
+name = "ci-github"
+description = "Add GitHub Actions CI workflow to an existing dex project"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "default_branch"
+prompt = "Default branch name"
+type = "string"
+default = "main"
+
+[[files]]
+src = ".github/"
+conflict = "error"
