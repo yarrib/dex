@@ -1,0 +1,86 @@
+[template]
+name = "agent-anthropic"
+description = "AI agent — Anthropic SDK, MLflow tracing, Databricks Asset Bundle deployment"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "description"
+prompt = "What does this agent do? (one sentence)"
+type = "string"
+required = true
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "trigger"
+prompt = "What triggers the agent?"
+type = "choice"
+choices = ["user_request", "schedule", "event", "upstream_system"]
+default = "user_request"
+required = false
+
+[[variables]]
+name = "success_criteria"
+prompt = "What does success look like?"
+type = "string"
+required = false
+
+[[variables]]
+name = "reads"
+prompt = "What does it need to read? (tables, APIs, files)"
+type = "string"
+required = false
+
+[[variables]]
+name = "writes"
+prompt = "What does it need to write or change?"
+type = "string"
+required = false
+
+[[variables]]
+name = "autonomous"
+prompt = "Act autonomously (vs confirm before acting)?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "example_input"
+prompt = "Example input"
+type = "string"
+required = false
+
+[[variables]]
+name = "example_output"
+prompt = "Expected behavior for the example input"
+type = "string"
+required = false
+
+[[variables]]
+name = "bad_output"
+prompt = "What would a bad or dangerous output look like?"
+type = "string"
+required = false
+
+[[variables]]
+name = "deploy_target"
+prompt = "Deployment target"
+type = "choice"
+choices = ["job", "serving_endpoint"]
+default = "job"
+required = false
+

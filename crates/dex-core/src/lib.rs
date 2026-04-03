@@ -3,7 +3,6 @@
 //! This crate contains all business logic. No UI, no terminal output, no Python
 //! dependencies. It returns structured data; the calling layer renders it.
 
-pub mod agent;
 pub mod apply_trait;
 pub mod config;
 pub mod error;
@@ -12,7 +11,6 @@ pub mod skills;
 pub mod template;
 pub mod traits;
 
-pub use agent::{AgentAnswers, AgentDeployTarget, AgentTrigger};
 pub use apply_trait::{TraitResult, apply_trait};
 pub use config::{
     DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource, load_dex_config,
