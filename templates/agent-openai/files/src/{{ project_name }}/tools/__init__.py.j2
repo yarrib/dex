@@ -1,0 +1,35 @@
+"""Tool discovery and registration."""
+
+import importlib
+import pkgutil
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class ToolResult:
+    """Standard return type for all tools."""
+
+    success: bool
+    data: Any
+    error: str | None = None
+
+
+def discover_tools() -> dict[str, Callable]:
+    """Auto-discover tools from the tools/ directory."""
+    tools = {}
+    package = importlib.import_module(__package__)
+
+    for _, module_name, _ in pkgutil.iter_modules(package.__path__):
+        if module_name.startswith("_"):
+            continue
+        module = importlib.import_module(f"{__package__}.{module_name}")
+        for attr_name in dir(module):
+            if attr_name.startswith("_"):
+                continue
+            attr = getattr(module, attr_name)
+            if callable(attr) and getattr(attr, "__doc__", None):
+                tools[attr_name] = attr
+
+    return tools

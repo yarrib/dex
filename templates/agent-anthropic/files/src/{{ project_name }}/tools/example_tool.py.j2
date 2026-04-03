@@ -1,0 +1,15 @@
+"""Example tool — replace with real tools for this agent.
+
+Reads: {{ reads if reads else "TODO" }}
+Writes: {{ writes if writes else "TODO" }}
+"""
+
+from {{ project_name }}.tools import ToolResult
+
+
+def example_tool(param: str) -> ToolResult:
+    """Example tool demonstrating the tool interface.
+
+    Replace this with tools that implement what the agent actually needs.
+    """
+    return ToolResult(success=True, data=f"processed: {param}")

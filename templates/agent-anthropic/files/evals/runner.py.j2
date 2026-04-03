@@ -1,0 +1,49 @@
+"""Eval harness — loads cases, runs the agent, logs results to MLflow."""
+
+import json
+import logging
+from pathlib import Path
+
+import mlflow
+
+from {{ project_name }}.agent import run
+
+logger = logging.getLogger(__name__)
+
+
+def load_cases(cases_dir: Path | None = None) -> list[dict]:
+    """Load eval cases from JSON files."""
+    if cases_dir is None:
+        cases_dir = Path(__file__).parent / "cases"
+    return [json.loads(p.read_text()) for p in sorted(cases_dir.glob("*.json"))]
+
+
+def run_evals(cases_dir: Path | None = None) -> dict:
+    """Run all eval cases and log results to MLflow."""
+    cases = load_cases(cases_dir)
+    results = {"total": len(cases), "passed": 0, "failed": 0}
+
+    with mlflow.start_run(run_name="eval"):
+        for case in cases:
+            case_id = case.get("id", "unknown")
+            try:
+                run(case.get("input"))
+                results["passed"] += 1
+                mlflow.log_metric(f"case_{case_id}_pass", 1)
+            except Exception as e:
+                results["failed"] += 1
+                mlflow.log_metric(f"case_{case_id}_pass", 0)
+                logger.error("Case %s failed: %s", case_id, e)
+
+        mlflow.log_metrics({
+            "eval_total": results["total"],
+            "eval_passed": results["passed"],
+            "eval_failed": results["failed"],
+        })
+
+    return results
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    print(json.dumps(run_evals(), indent=2))

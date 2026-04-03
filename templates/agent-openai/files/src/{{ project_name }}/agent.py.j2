@@ -1,0 +1,55 @@
+"""{{ project_name }} — {{ description }}"""
+
+import logging
+from pathlib import Path
+
+import mlflow
+import openai
+
+from {{ project_name }}.tools import discover_tools
+
+logger = logging.getLogger(__name__)
+
+SYSTEM_PROMPT = (Path(__file__).parent / "prompts" / "system.md").read_text()
+
+_client = openai.OpenAI()
+
+
+def run(input_data: str | None = None) -> str:
+    """Run the agent.
+
+    Args:
+        input_data: Input to the agent. None for scheduled/event-triggered agents.
+
+    Returns:
+        Agent output or status message.
+    """
+    mlflow.set_experiment("{{ project_name }}")
+
+    tools = discover_tools()
+    logger.info("agent_start", extra={"input": input_data, "tools": list(tools.keys())})
+
+    messages: list[dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if input_data:
+        messages.append({"role": "user", "content": input_data})
+
+    response = _client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+    )
+
+    result = response.choices[0].message.content or ""
+    logger.info("agent_complete", extra={"result": result})
+    return result
+
+
+def main() -> None:
+    """CLI entry point for local development."""
+    import json
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    result = run()
+    print(json.dumps({"result": result}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

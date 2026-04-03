@@ -1,0 +1,91 @@
+# {{ project_name }}
+
+A Databricks Genie Space project scaffolded by [dex](https://github.com/yarrib/dex).
+
+Genie Spaces are conversational AI/BI interfaces that let users ask natural language questions
+about your data. This bundle provisions a Genie space backed by Unity Catalog tables and
+{% if include_sample_instructions %}pre-loaded with curated SQL instructions{% else %}ready for your SQL instructions{% endif %}.
+
+## Setup
+
+```bash
+uv sync
+```
+
+Configure your Databricks CLI profile:
+
+```bash
+databricks configure
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Deploy to staging
+databricks bundle deploy --target staging
+
+# Deploy to prod
+databricks bundle deploy --target prod
+```
+
+After deploying, open the Databricks workspace and navigate to **AI/BI > Genie** to find your
+space.
+
+## Customize
+
+### Adding tables
+
+Edit `resources/{{ project_name }}_genie_space.yml` and add entries under `tables:`:
+
+```yaml
+tables:
+  - catalog_name: ${var.catalog}
+    schema_name: ${var.schema}
+    table_name: my_table
+```
+
+### Adding SQL instructions
+{% if include_sample_instructions %}
+Edit `src/{{ project_name }}/instructions/curated_questions.md` to add pre-validated questions
+and SQL hints. Genie uses these to answer natural language questions more accurately.
+{% else %}
+Create a Markdown file with curated questions and SQL hints, then reference it with
+`instructions_file_path` in the Genie space resource YAML.
+{% endif %}
+
+### Setting the warehouse
+
+Set `warehouse_id` in your bundle variables or update the resource YAML directly:
+
+```bash
+databricks bundle deploy --var="warehouse_id=<your-warehouse-id>"
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/
+{% if include_sample_instructions %}│   └── instructions/
+│       └── curated_questions.md   # Pre-validated questions and SQL hints
+{% endif %}├── resources/                     # Genie space resource definition
+├── tests/                         # Tests
+├── databricks.yml                 # Databricks Asset Bundle config
+└── pyproject.toml                 # Project config
+```
