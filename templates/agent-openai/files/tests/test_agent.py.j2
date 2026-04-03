@@ -1,0 +1,26 @@
+"""Tests for {{ project_name }}."""
+
+from unittest.mock import MagicMock, patch
+
+from {{ project_name }}.tools import discover_tools
+
+
+def test_tools_discovered():
+    """Tools are discoverable from the tools/ directory."""
+    tools = discover_tools()
+    assert isinstance(tools, dict)
+
+
+def test_agent_runs():
+    """Smoke test — agent runs without error (mocked OpenAI client)."""
+    mock_choice = MagicMock()
+    mock_choice.message.content = "test output"
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+
+    with patch("{{ project_name }}.agent._client") as mock_client:
+        mock_client.chat.completions.create.return_value = mock_response
+        from {{ project_name }}.agent import run
+        result = run("test input")
+
+    assert result == "test output"

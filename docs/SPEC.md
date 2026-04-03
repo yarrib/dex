@@ -52,8 +52,12 @@ dex init [--template <name>] [--dir <path>] [--no-prompt]
     unless --no-prompt is set (uses defaults). --preset loads a named profile
     from the presets file; --standards loads flat key-value pre-fills.
 
-dex agent new
-    Scaffold an AI agent project via an interactive Q&A flow.
+dex init --template agent-anthropic
+dex init --template agent-openai
+dex init --template agent-baml
+    Scaffold an AI agent project using a framework-specific template.
+    Agent templates include: prompts, tools, evals, DAB deployment config.
+    Choose the template matching your LLM SDK.
 
 dex mcp serve
     Start the MCP server for AI agent integration.
@@ -292,40 +296,64 @@ dex init --template-dir ./templates --template my-template --dir my_project
 
 See [Template Authoring](templates/authoring.md) and [Org Templates](templates/org-templates.md).
 
-## 8. Agent Scaffolding (`dex agent`)
+## 8. Agent Scaffolding (templates)
 
 ### 8.1. Overview
 
-`dex agent new` scaffolds AI agent projects via an interactive Q&A flow. It generates a
-working, deployable agent skeleton integrated with Databricks Asset Bundles.
+AI agent projects are scaffolded via `dex init` using framework-specific templates.
+Choose the template that matches your LLM SDK. All agent templates share the same
+variable set (description, trigger, reads/writes, etc.) and produce a deployable
+skeleton integrated with Databricks Asset Bundles.
 
 ```
-dex agent new              # scaffold a new agent project
-dex mcp serve              # expose dex tools to Claude via MCP
+dex init --template agent-anthropic   # Anthropic SDK (claude-*)
+dex init --template agent-openai      # OpenAI SDK (gpt-*)
+dex init --template agent-baml        # BAML typed functions (any provider)
 ```
 
-### 8.2. Q&A Flow
+### 8.2. Shared Template Variables
 
-1. **What does this agent do in one sentence?**
-2. **What triggers it?** (user request / schedule / event / upstream system)
-3. **What does success look like?**
-4. **What does it need to read?** (tables, APIs, files)
-5. **What does it need to write or change?**
-6. **Does it hand off to a human or another agent?**
-7. **Autonomous or confirm before acting?**
-8. **Example input and correct output?**
-9. **What would a bad or dangerous output look like?**
-10. **Job, serving endpoint, or interactive?**
+All agent templates prompt for the same variables:
+
+| Variable | Type | Description |
+|---|---|---|
+| `project_name` | string | Python-valid package name |
+| `description` | string | One-sentence agent description |
+| `trigger` | choice | `user_request` / `schedule` / `event` / `upstream_system` |
+| `success_criteria` | string | What success looks like |
+| `reads` | string | Data sources the agent reads |
+| `writes` | string | Systems the agent writes to |
+| `autonomous` | bool | Act without confirmation |
+| `example_input` | string | Seeded into eval case |
+| `example_output` | string | Seeded into eval case |
+| `bad_output` | string | Seeded into system prompt constraints |
+| `deploy_target` | choice | `job` / `serving_endpoint` |
 
 ### 8.3. Generated Structure
 
 ```
 my-agent/
-├── CLAUDE.md                   # project instructions for Claude Code
-├── system_prompt.md            # system prompt template
-├── main.py                     # entry point skeleton
-└── README.md                   # setup and usage
+├── baml_src/               # (agent-baml only) BAML function definitions
+├── src/my_agent/
+│   ├── agent.py            # Entry point
+│   ├── tools/              # Tool implementations (anthropic/openai only)
+│   └── prompts/system.md   # System prompt
+├── evals/                  # Eval runner + example cases
+├── resources/              # DAB job and serving endpoint definitions
+├── tests/
+├── CLAUDE.md               # Project instructions for Claude Code
+├── databricks.yml          # DAB root config
+└── pyproject.toml
 ```
+
+### 8.4. Framework Differences
+
+| | `agent-anthropic` | `agent-openai` | `agent-baml` |
+|---|---|---|---|
+| SDK | `anthropic` | `openai` | `baml-py` |
+| Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` |
+| Output schema | untyped string | untyped string | typed via BAML class |
+| Tool pattern | `tools/` autodiscovery | `tools/` autodiscovery | BAML function args |
 
 ## 9. Skills System (`dex skills`)
 

@@ -1,0 +1,10 @@
+resources:
+  model_serving_endpoints:
+    {{ project_name }}:
+      name: {{ project_name }}
+      config:
+        served_entities:
+          - entity_name: {{ project_name }}
+            entity_version: "1"
+            workload_size: Small
+            scale_to_zero_enabled: true

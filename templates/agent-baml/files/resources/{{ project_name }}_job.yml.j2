@@ -1,0 +1,16 @@
+resources:
+  jobs:
+    {{ project_name }}:
+      name: {{ project_name }}
+{% if trigger == "schedule" %}
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: UTC
+{% endif %}
+      tasks:
+        - task_key: run_agent
+          python_wheel_task:
+            package_name: {{ project_name }}
+            entry_point: agent
+          libraries:
+            - whl: ../dist/*.whl

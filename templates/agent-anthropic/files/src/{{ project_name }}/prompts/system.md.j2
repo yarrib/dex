@@ -1,0 +1,27 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Behavior
+
+- **Trigger:** {{ trigger }}
+{% if success_criteria %}- **Success:** {{ success_criteria }}{% endif %}
+{% if autonomous %}- **Mode:** Autonomous — act without confirmation{% else %}- **Mode:** Confirm before taking actions{% endif %}
+
+## Data Access
+
+{% if reads %}- **Reads:** {{ reads }}{% endif %}
+{% if writes %}- **Writes:** {{ writes }}{% endif %}
+
+## Constraints
+
+{% if bad_output %}- Never produce output that looks like: {{ bad_output }}{% endif %}
+- Always trace operations via MLflow
+- Return structured responses, not free-form text
+
+{% if example_input %}
+## Example
+
+**Input:** {{ example_input }}
+{% if example_output %}**Expected behavior:** {{ example_output }}{% endif %}
+{% endif %}
