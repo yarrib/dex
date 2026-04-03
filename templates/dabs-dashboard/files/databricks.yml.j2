@@ -1,0 +1,42 @@
+bundle:
+  name: {{ project_name }}
+
+workspace:
+  host: ${var.workspace_url}
+
+variables:
+  workspace_url:
+    description: Databricks workspace URL
+  catalog:
+    default: dev
+  schema:
+    default: {{ project_name }}
+{% if not warehouse_id %}
+  warehouse_id:
+    description: SQL warehouse ID for the dashboard
+{% endif %}
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      workspace_url: ""
+      catalog: dev
+      schema: {{ project_name }}_dev
+
+  staging:
+    mode: development
+    variables:
+      workspace_url: ""
+      catalog: staging
+      schema: {{ project_name }}_staging
+
+  prod:
+    variables:
+      workspace_url: ""
+      catalog: main
+      schema: {{ project_name }}

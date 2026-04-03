@@ -1,0 +1,31 @@
+"""{{ project_name | replace('_', ' ') | title }} — Databricks App."""
+
+import os
+
+import streamlit as st
+from databricks.sdk import WorkspaceClient
+
+{% if include_auth %}
+from auth import require_auth
+{% endif %}
+
+st.set_page_config(
+    page_title="{{ project_name | replace('_', ' ') | title }}",
+    layout="wide",
+)
+
+{% if include_auth %}
+user = require_auth()
+st.sidebar.write(f"Signed in as **{user}**")
+{% endif %}
+
+st.title("{{ project_name | replace('_', ' ') | title }}")
+st.write("Edit `app/app.py` to build your Databricks App.")
+
+# Databricks SDK is pre-authenticated inside Databricks Apps
+w = WorkspaceClient()
+
+catalog = os.environ.get("CATALOG", "dev")
+schema = os.environ.get("SCHEMA", "{{ project_name }}_dev")
+
+st.info(f"Connected to `{catalog}.{schema}`")
