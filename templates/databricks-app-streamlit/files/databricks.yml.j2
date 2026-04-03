@@ -1,0 +1,56 @@
+bundle:
+  name: {{ project_name }}
+
+workspace:
+  host: ${var.workspace_url}
+
+variables:
+  workspace_url:
+    description: Databricks workspace URL
+  catalog:
+    default: dev
+  schema:
+    default: {{ project_name }}
+  {% if not warehouse_id %}
+  warehouse_id:
+    description: SQL warehouse ID for data queries
+  {% endif %}
+
+resources:
+  apps:
+    {{ project_name }}_app:
+      name: "${bundle.target}-{{ project_name }}"
+      description: "{{ project_name | replace('_', ' ') | title }} — Streamlit app on Databricks"
+      source_code_path: ./app
+      config:
+        command: ["python", "-m", "streamlit", "run", "app.py", "--server.port", "8080"]
+        env:
+          - name: CATALOG
+            value: ${var.catalog}
+          - name: SCHEMA
+            value: ${var.schema}
+          {% if warehouse_id %}
+          - name: WAREHOUSE_ID
+            value: "{{ warehouse_id }}"
+          {% else %}
+          - name: WAREHOUSE_ID
+            value: ${var.warehouse_id}
+          {% endif %}
+
+targets:
+  dev:
+    default: true
+    mode: development
+    variables:
+      catalog: dev
+      schema: {{ project_name }}_dev
+
+  staging:
+    variables:
+      catalog: staging
+      schema: {{ project_name }}_staging
+
+  prod:
+    variables:
+      catalog: prod
+      schema: {{ project_name }}

@@ -1,0 +1,13 @@
+"""Databricks OAuth helper for Streamlit apps."""
+
+import streamlit as st
+
+
+def require_auth() -> str:
+    """Return the authenticated username, redirecting to login if needed."""
+    ctx = st.context
+    user = getattr(ctx, "headers", {}).get("X-Forwarded-User", "")
+    if not user:
+        st.error("Authentication required. Please access this app via Databricks.")
+        st.stop()
+    return user
