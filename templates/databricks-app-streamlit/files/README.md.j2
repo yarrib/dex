@@ -1,0 +1,79 @@
+# {{ project_name | replace('_', ' ') | title }}
+
+A Streamlit app running on [Databricks Apps](https://docs.databricks.com/en/dev-tools/databricks-apps/index.html), scaffolded by [dex](https://github.com/yarrib/dex).
+
+Databricks Apps are hosted web applications that run within your Databricks workspace. They have native access to Unity Catalog, SQL warehouses, and the Databricks SDK — no extra authentication needed.
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── app/
+│   ├── app.py              # Streamlit entry point
+│   ├── auth.py             # Databricks OAuth helper
+│   └── requirements.txt    # App runtime dependencies (used by Databricks Apps)
+├── tests/                  # Tests
+├── databricks.yml          # Databricks Asset Bundle config
+└── pyproject.toml          # Local dev dependencies
+```
+
+## Local Development
+
+Run the app locally (requires Databricks CLI auth configured):
+
+```bash
+streamlit run app/app.py
+```
+
+Run tests:
+
+```bash
+uv run pytest
+```
+
+Lint and format:
+
+```bash
+uv run ruff check .
+uv run ruff format .
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Deploy to staging
+databricks bundle deploy --target staging
+
+# Deploy to prod
+databricks bundle deploy --target prod
+
+# Run (open the app URL)
+databricks bundle run {{ project_name }}_app
+```
+
+## Configuration
+
+The bundle uses the following variables (set via `--var` or `databricks.yml` overrides):
+
+| Variable | Description | Default |
+|---|---|---|
+| `workspace_url` | Databricks workspace URL | _(required)_ |
+| `catalog` | Unity Catalog catalog name | `dev` / `staging` / `prod` |
+| `schema` | Unity Catalog schema name | `{{ project_name }}_dev` |
+{% if not warehouse_id %}| `warehouse_id` | SQL warehouse ID for data queries | _(required)_ |
+{% endif %}
+
+Set workspace URL before deploying:
+
+```bash
+databricks bundle deploy --var workspace_url=https://<your-workspace>.azuredatabricks.net
+```
