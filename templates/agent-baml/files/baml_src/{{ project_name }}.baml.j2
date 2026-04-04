@@ -1,0 +1,31 @@
+// {{ project_name }} — BAML function definitions
+// Run `baml generate` after editing to regenerate baml_client/.
+//
+// Agent: {{ description }}
+// Trigger: {{ trigger }}
+{% if success_criteria %}// Success: {{ success_criteria }}{% endif %}
+
+// Output schema — extend with fields your agent actually produces.
+class AgentOutput {
+  result string @description("{{ success_criteria if success_criteria else 'The agent response' }}")
+  success bool  @description("Whether the agent completed successfully")
+}
+
+// Main agent function.
+function RunAgent(input: string) -> AgentOutput {
+  client "anthropic/claude-opus-4-5"
+  prompt #"
+    {{ ctx.output_format }}
+
+    {% if reads %}You have access to: {{ reads }}.{% endif %}
+    {% if writes %}You can modify: {{ writes }}.{% endif %}
+    {% if not autonomous %}Always confirm with the user before taking actions.{% endif %}
+
+    {% if example_input %}
+    Example input: {{ example_input }}
+    Expected behavior: {{ example_output if example_output else "TODO" }}
+    {% endif %}
+
+    Input: {{ "{{" }}input{{ "}}" }}
+  "#
+}

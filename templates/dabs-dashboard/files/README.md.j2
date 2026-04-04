@@ -1,0 +1,53 @@
+# {{ project_name }}
+
+A Databricks Lakeview dashboard project scaffolded by [dex](https://github.com/yarrib/dex).
+
+## Setup
+
+```bash
+uv sync
+```
+
+## Deploy
+
+```bash
+# Deploy to dev (default target)
+databricks bundle deploy
+
+# Deploy to staging
+databricks bundle deploy --target staging
+
+# Deploy to prod
+databricks bundle deploy --target prod
+```
+
+## Development
+
+```bash
+# Run tests
+uv run pytest
+
+# Lint
+uv run ruff check .
+
+# Format
+uv run ruff format .
+```
+{% if include_notebook %}
+## Exploration
+
+Open `notebooks/exploration.py` in Databricks to interactively explore your data and prototype
+dashboard queries.
+{% endif %}
+
+## Project Structure
+
+```
+{{ project_name }}/
+├── src/{{ project_name }}/        # Dashboard source (lvdash.json)
+{% if include_notebook %}├── notebooks/                     # Databricks notebooks
+{% endif %}├── resources/                     # Dashboard resource definitions
+├── tests/                         # Tests
+├── databricks.yml                 # Databricks Asset Bundle config
+└── pyproject.toml                 # Project config
+```

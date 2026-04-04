@@ -1,0 +1,16 @@
+"""Tests for {{ project_name }}."""
+
+from unittest.mock import MagicMock, patch
+
+
+def test_agent_runs():
+    """Smoke test — agent runs without error (mocked BAML client)."""
+    mock_output = MagicMock()
+    mock_output.result = "test output"
+
+    with patch("{{ project_name }}.agent.b") as mock_b:
+        mock_b.RunAgent.return_value = mock_output
+        from {{ project_name }}.agent import run
+        result = run("test input")
+
+    assert result == "test output"
