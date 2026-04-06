@@ -1,0 +1,31 @@
+# {{ app_title if app_title else project_name }}
+
+A Next.js app deployed on [Databricks Apps](https://docs.databricks.com/en/dev-tools/databricks-apps/index.html).
+
+## Local development
+
+```bash
+npm install
+dex run dev     # starts Next.js dev server at http://localhost:3000
+```
+
+## Deploy to Databricks
+
+Set your workspace URL in `databricks.yml`, then:
+
+```bash
+dex run deploy  # builds and deploys via: databricks bundle deploy
+```
+
+## Project structure
+
+```
+src/
+  app/
+    layout.tsx   Root layout
+    page.tsx     Home page — edit this
+databricks.yml   Databricks Asset Bundle config
+dex.toml         dex project config and tasks
+package.json     npm dependencies and scripts
+next.config.ts   Next.js config
+```

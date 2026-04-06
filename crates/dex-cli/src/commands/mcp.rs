@@ -18,6 +18,7 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand};
 use serde_json::{Value, json};
 
+use dex_core::context_map::write_context_map;
 use dex_core::error::ConfigError;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
@@ -294,6 +295,9 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
 
     let result = scaffold(&template, &target, &variables)?;
 
+    // Write .context-map.json (best-effort).
+    let _ = write_context_map(&result, &template, &target, &variables);
+
     let file_list = result
         .files_created
         .iter()
@@ -302,7 +306,7 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
         .join("\n");
 
     Ok(format!(
-        "Scaffolded {} files in '{dir}':\n{file_list}",
+        "Scaffolded {} files in '{dir}':\n{file_list}\n\nA .context-map.json was written to the project root.",
         result.files_created.len()
     ))
 }

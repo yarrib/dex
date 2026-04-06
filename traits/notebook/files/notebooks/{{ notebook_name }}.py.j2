@@ -1,0 +1,27 @@
+# Databricks notebook source
+# Format: percent
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC # {{ notebook_name | replace('_', ' ') | title }}
+# MAGIC
+# MAGIC Edit this notebook to implement your analysis or pipeline.
+
+# COMMAND ----------
+
+catalog = "{{ catalog }}"
+schema = "{{ schema }}"
+
+spark.sql(f"USE CATALOG {catalog}")
+spark.sql(f"USE SCHEMA {schema}")
+
+print(f"Working in {catalog}.{schema}")
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## Query example
+
+# COMMAND ----------
+
+df = spark.sql(f"SHOW TABLES IN {catalog}.{schema}")
+display(df)

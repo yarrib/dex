@@ -1,0 +1,35 @@
+[trait]
+name = "notebook"
+description = "Add a starter Databricks notebook (percent format) to an existing dex project"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "notebook_name"
+prompt = "Notebook name (snake_case, no extension)"
+type = "string"
+default = "analysis"
+
+[[variables]]
+name = "catalog"
+prompt = "Unity Catalog name"
+type = "string"
+default = "main"
+
+[[variables]]
+name = "schema"
+prompt = "Schema name"
+type = "string"
+default = "default"
+
+[[files]]
+src = "notebooks/"
+conflict = "error"
+
+[[patches]]
+target = "dex.toml"
+append = """
+[tasks.run-notebook]
+command = "databricks workspace import notebooks/{{ notebook_name }}.py --format AUTO --overwrite && databricks jobs run-now --job-name {{ notebook_name }}"
+description = "Upload and run {{ notebook_name }} notebook"
+"""

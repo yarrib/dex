@@ -8,21 +8,15 @@ _(nothing active)_
 
 ### Features
 
-- [ ] Add `dabs-dashboard` template — Databricks Lakeview dashboard (`resources/<name>_dashboard.yml`, YAML schema, deploy instructions)
-- [ ] Add `dabs-genie-space` template — Genie space definition (`resources/<name>_genie_space.yml`, curated SQL, space config)
-- [ ] Add `databricks-app-streamlit` template — Databricks Apps + Streamlit (`app.py`, `app.yaml`, deploy via `databricks apps deploy`)
-- [ ] Add `databricks-app-react` template — Databricks Apps + React (`package.json`, Vite config, `src/App.tsx`, `app.yaml`, build + deploy)
-- [ ] MCP tool stubs — `scaffold_project`, `scaffold_agent`, `get_template_variables` not yet implemented in `crates/dex-cli/src/commands/mcp.rs`
 - [ ] Remote trait sources — `[traits.remotes]` in `dex.toml`/user config (prerequisite for `dex.lock`)
-
-### Bugs
-
-_(none known)_
+- [ ] `dex.lock` — reproducible trait & skill resolution (see `docs/internal/prd-dex-lock.md`)
+- [ ] WASM Compatibility — compile `dex-core` to `wasm32-unknown-unknown` (see `docs/internal/prd-ai-ready-scaffolding.md`)
+- [ ] Context-Map: populate `tasks` from scaffolded `dex.toml` at write time
+- [ ] MCP: `apply_trait` tool (expose `dex add` via MCP)
 
 ### Infrastructure
 
-- [ ] CI: update to Rust-only (remove Python CI steps now that Python layer is deprecated)
-- [ ] Docs: update to reflect native binary distribution (remove PyO3/maturin references)
+- [ ] Docs: update to reflect native binary distribution (remove any remaining PyO3/maturin references)
 
 ## Done
 
@@ -34,9 +28,13 @@ _(none known)_
 - [x] `dex templates list/show` — discover built-in and remote templates
 - [x] Skills system — `dex skills init/list/add/sync`, pack manifests, multi-target install
 - [x] Traits system — `dex add <trait>`, embedded `ci-github` and `docker` traits
-- [x] MCP server — `dex mcp serve`, `.mcp.json` wiring, `scaffold_agent` tool
+- [x] `notebook` built-in trait — `dex add notebook` adds a Databricks notebook (percent format)
+- [x] MCP server — `dex mcp serve`, `.mcp.json` wiring, full `scaffold_project`, `get_template_variables`, `list_templates` tools
 - [x] User config — `~/.config/dex/config.toml` + `dex.toml`, remote template sources, presets, standards
 - [x] Devcontainer + ai-dev-kit integration — profile-based skill setup, `scripts/setup_dev_kit.sh`
 - [x] GitHub Releases — `install.sh`, platform binaries (linux x86_64/aarch64, macos x86_64/aarch64)
 - [x] Docs site — mkdocs-material, versioned with mike, GitHub Pages
 - [x] CI/CD — `ci.yml`, `release.yml` (cross-compiled musl), `docs.yml`
+- [x] `dabs-dashboard`, `dabs-genie-space`, `databricks-app-streamlit` templates
+- [x] `databricks-app-react` template — Databricks Apps + Next.js (TypeScript, App Router)
+- [x] Context-Map Generation — `.context-map.json` written after `dex init` for AI agent consumption

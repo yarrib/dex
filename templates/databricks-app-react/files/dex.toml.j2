@@ -1,0 +1,25 @@
+[project]
+name = "{{ project_name }}"
+description = "{{ app_title if app_title else project_name }}"
+template = "databricks-app-react"
+
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+
+[tasks.install]
+command = "npm install"
+description = "Install npm dependencies"
+
+[tasks.dev]
+command = "npm run dev"
+description = "Start Next.js dev server"
+
+[tasks.build]
+command = "npm run build"
+description = "Build for production"
+
+[tasks.deploy]
+command = "databricks bundle deploy"
+description = "Deploy to Databricks"
+depends_on = ["build"]

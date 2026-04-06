@@ -5,6 +5,7 @@
 
 pub mod apply_trait;
 pub mod config;
+pub mod context_map;
 pub mod error;
 pub mod scaffold;
 pub mod skills;
@@ -18,6 +19,7 @@ pub use config::{
     resolve_skill_remote, skills_cache_dir,
 };
 pub use error::{DexError, SkillError};
+pub use context_map::{ContextMap, write_context_map};
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use skills::{
     InstallResult, InstallTarget, SkillPack, SkillPackEntry, SkillSource, install_skills,

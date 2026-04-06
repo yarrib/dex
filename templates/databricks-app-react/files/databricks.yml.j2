@@ -1,0 +1,33 @@
+bundle:
+  name: {{ project_name }}
+
+workspace:
+  host: ${var.workspace_url}
+
+variables:
+  workspace_url:
+    description: Databricks workspace URL
+
+resources:
+  apps:
+    {{ project_name }}_app:
+      name: "${bundle.target}-{{ project_name }}"
+      description: "{{ app_title if app_title else project_name }} — Next.js app on Databricks"
+      source_code_path: .
+      config:
+        command: ["npm", "run", "start"]
+
+targets:
+  dev:
+    default: true
+    mode: development
+    variables:
+      workspace_url: ""
+
+  staging:
+    variables:
+      workspace_url: ""
+
+  prod:
+    variables:
+      workspace_url: ""

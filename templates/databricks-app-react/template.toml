@@ -1,0 +1,19 @@
+[template]
+name = "databricks-app-react"
+description = "Databricks Apps + Next.js — hosted web app with TypeScript, App Router, and Databricks SDK"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "app_title"
+prompt = "App title (shown in browser tab and heading)"
+type = "string"
+default = ""
+required = false
