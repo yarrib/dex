@@ -200,6 +200,8 @@ mod tests {
             dest: None,
             condition: None,
             overwrite: false,
+            context_role: None,
+            context_description: None,
         }];
 
         let template = make_template(files, rules);
@@ -223,6 +225,8 @@ mod tests {
             dest: None,
             condition: Some("include_ci".to_string()),
             overwrite: false,
+            context_role: None,
+            context_description: None,
         }];
 
         let template = make_template(files, rules);

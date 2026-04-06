@@ -8,6 +8,7 @@ use console::style;
 use dialoguer::{Confirm, Input, Select};
 
 use dex_core::config::{load_dex_config, load_preset, load_standards, resolve_remote};
+use dex_core::context_map::write_context_map;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
@@ -191,6 +192,11 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
     let result = scaffold(&template, &target, &variables)?;
 
     output::print_files_created(&result.files_created);
+
+    // Write .context-map.json for AI agent consumption (best-effort; non-fatal).
+    if let Err(e) = write_context_map(&result, &template, &target, &variables) {
+        output::print_warning(&format!("could not write .context-map.json: {e}"));
+    }
 
     // Write dex.toml so subsequent commands (dex add, dex skills sync, etc.) work.
     let dex_toml_path = target.join("dex.toml");

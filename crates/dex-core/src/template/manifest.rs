@@ -71,6 +71,12 @@ pub struct FileRule {
     /// When true, overwrite files that already exist in the target directory.
     #[serde(default)]
     pub overwrite: bool,
+    /// Role label for context-map generation (e.g. `"entry_point"`, `"config"`).
+    #[serde(default)]
+    pub context_role: Option<String>,
+    /// Human-readable description for context-map generation.
+    #[serde(default)]
+    pub context_description: Option<String>,
 }
 
 /// Hook script references.
