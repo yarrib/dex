@@ -1,0 +1,29 @@
+[project]
+name = "{{ project_name }}"
+description = "{{ project_name | replace('_', ' ') | title }} — Streamlit app on Databricks Apps"
+template = "databricks-app-streamlit"
+
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+
+[tasks.dev]
+command = "uv run streamlit run app/app.py"
+description = "Run Streamlit app locally"
+
+[tasks.test]
+command = "uv run pytest"
+description = "Run tests"
+
+[tasks.lint]
+command = "uv run ruff check . && uv run ruff format --check ."
+description = "Lint and format check"
+
+[tasks.deploy]
+command = "databricks bundle deploy"
+description = "Deploy to Databricks"
+
+[tasks.run]
+command = "databricks bundle run {{ project_name }}_app"
+description = "Open the deployed app"
+depends_on = ["deploy"]
