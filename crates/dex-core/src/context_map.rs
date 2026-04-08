@@ -63,7 +63,7 @@ pub fn write_context_map(
 pub fn build_context_map(
     result: &ScaffoldResult,
     template: &Template,
-    _dir: &Path,
+    dir: &Path,
     variables: &HashMap<String, minijinja::Value>,
 ) -> ContextMap {
     let generated_by = format!("dex {}", env!("CARGO_PKG_VERSION"));
@@ -88,9 +88,15 @@ pub fn build_context_map(
         .map(|f| f.path.clone())
         .collect();
 
-    // Read task names from the scaffolded dex.toml if it includes one.
-    // Best-effort; empty list is fine.
-    let tasks: Vec<String> = Vec::new();
+    // Read task names from the scaffolded dex.toml. Best-effort; empty list is fine.
+    let tasks: Vec<String> = match crate::config::load_project_config(&dir.join("dex.toml")) {
+        Ok(cfg) => {
+            let mut names: Vec<String> = cfg.tasks.into_keys().collect();
+            names.sort();
+            names
+        }
+        Err(_) => Vec::new(),
+    };
 
     ContextMap {
         schema_version: "1",
@@ -140,18 +146,23 @@ fn infer_role(path: &Path) -> (&'static str, &'static str) {
         .unwrap_or_default();
 
     match name {
-        "dex.toml" => ("config", "dex project config. Defines tasks and pass-through commands."),
-        "databricks.yml" => (
-            "bundle_config",
-            "Databricks Asset Bundle definition.",
+        "dex.toml" => (
+            "config",
+            "dex project config. Defines tasks and pass-through commands.",
         ),
+        "databricks.yml" => ("bundle_config", "Databricks Asset Bundle definition."),
         "pyproject.toml" => ("config", "Python project metadata and dependencies."),
         "README.md" => ("docs", "Project README."),
         "CLAUDE.md" => ("ai_context", "Project instructions for Claude Code."),
-        _ if is_entry_point(path) => ("entry_point", "Main entry point. Edit this to implement your logic."),
+        _ if is_entry_point(path) => (
+            "entry_point",
+            "Main entry point. Edit this to implement your logic.",
+        ),
         _ if path.starts_with(Path::new("tests")) => ("test", "Test file."),
         _ if path.starts_with(Path::new("evals")) => ("eval", "Evaluation case."),
-        _ if path.starts_with(Path::new("resources")) => ("bundle_resource", "DAB resource definition."),
+        _ if path.starts_with(Path::new("resources")) => {
+            ("bundle_resource", "DAB resource definition.")
+        }
         _ if path.starts_with(Path::new("notebooks")) => ("notebook", "Databricks notebook."),
         _ if path.starts_with(Path::new("src")) => ("source", "Source file."),
         _ => ("other", ""),
@@ -172,7 +183,13 @@ fn is_entry_point(path: &Path) -> bool {
         return true;
     }
     // Next.js: src/app/page.tsx is the root page entry point
-    if name == "page.tsx" && path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()) == Some("app") {
+    if name == "page.tsx"
+        && path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            == Some("app")
+    {
         return true;
     }
     false
@@ -247,6 +264,43 @@ mod tests {
         // 2026-04-06 00:00:00 UTC = 1775433600
         let (y, mo, d, h, m, s) = unix_secs_to_parts(1_775_433_600);
         assert_eq!((y, mo, d, h, m, s), (2026, 4, 6, 0, 0, 0));
+    }
+
+    #[test]
+    fn build_context_map_populates_tasks() {
+        use crate::template::TemplateMeta;
+
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("dex.toml"),
+            "[project]\nname = \"my-app\"\ntemplate = \"databricks-app-streamlit\"\n\
+             [tasks.deploy]\ncommand = \"databricks bundle deploy\"\n\
+             [tasks.dev]\ncommand = \"streamlit run app/app.py\"\n",
+        )
+        .unwrap();
+
+        let result = ScaffoldResult {
+            files_created: vec![std::path::PathBuf::from("dex.toml")],
+            directories_created: Vec::new(),
+        };
+
+        let template = Template {
+            meta: TemplateMeta {
+                name: "databricks-app-streamlit".into(),
+                description: "test".into(),
+                version: "0.1.0".into(),
+                min_dex_version: None,
+            },
+            variables: vec![],
+            file_rules: vec![],
+            files: std::collections::HashMap::new(),
+            suggested_skills: vec![],
+        };
+
+        let vars = HashMap::new();
+        let map = build_context_map(&result, &template, dir.path(), &vars);
+
+        assert_eq!(map.tasks, vec!["deploy", "dev"]); // sorted
     }
 
     #[test]

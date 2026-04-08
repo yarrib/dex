@@ -66,7 +66,39 @@ EOF
   fi
 fi
 
-# 2. Interactive fallback (skip if non-interactive)
+# 2. Infer profile from dex.toml template (covers `dex init`-ed projects)
+if [ -z "${DEVKIT_PROFILE}" ]; then
+  _DEX_TOML="${REPO_ROOT}/dex.toml"
+  if [ -f "${_DEX_TOML}" ] && command -v python3 >/dev/null 2>&1; then
+    _tmpl="$(python3 - "${_DEX_TOML}" <<'EOF'
+import sys
+path = sys.argv[1] if len(sys.argv) > 1 else ""
+try:
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    print(data.get("project", {}).get("template", ""))
+except Exception:
+    print("")
+EOF
+)" || true
+    case "${_tmpl}" in
+      databricks-app-streamlit|databricks-app-react)
+        DEVKIT_PROFILE="app-developer"
+        echo "==> Detected template '${_tmpl}' -> using profile: app-developer"
+        ;;
+      dabs-dashboard|dabs-genie-space)
+        DEVKIT_PROFILE="analyst"
+        echo "==> Detected template '${_tmpl}' -> using profile: analyst"
+        ;;
+    esac
+  fi
+fi
+
+# 3. Interactive fallback (skip if non-interactive)
 if [ -z "${DEVKIT_PROFILE}" ]; then
   if [ -t 0 ]; then
     echo ""

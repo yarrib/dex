@@ -18,8 +18,8 @@ pub use config::{
     load_preset, load_project_config, load_standards, presets_path, record_trait, resolve_remote,
     resolve_skill_remote, skills_cache_dir,
 };
-pub use error::{DexError, SkillError};
 pub use context_map::{ContextMap, write_context_map};
+pub use error::{DexError, SkillError};
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use skills::{
     InstallResult, InstallTarget, SkillPack, SkillPackEntry, SkillSource, install_skills,
