@@ -244,6 +244,93 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         );
     }
 
+    // Post-scaffold activation hook.
+    if let Some(on_success) = &result.on_success {
+        run_on_success(on_success, &target, args.no_prompt)?;
+    }
+
+    Ok(())
+}
+
+/// Execute the `[on_success]` activation hook from the template.
+///
+/// Prints any `message`, then either auto-runs the command (`--no-prompt`) or
+/// asks the user first. Failure is non-fatal: an error is printed and dex exits
+/// successfully so the scaffold output isn't lost.
+fn run_on_success(
+    on_success: &dex_core::OnSuccessSpec,
+    target: &Path,
+    no_prompt: bool,
+) -> Result<(), DexError> {
+    if let Some(msg) = &on_success.message {
+        println!(
+            "  {} {}\n",
+            console::style("next:").cyan().bold(),
+            msg
+        );
+    }
+
+    let Some(cmd) = &on_success.run else {
+        return Ok(());
+    };
+
+    let should_run = if no_prompt {
+        true
+    } else {
+        Confirm::new()
+            .with_prompt(format!("Run `{cmd}` now?"))
+            .default(true)
+            .interact()
+            .map_err(io_error)?
+    };
+
+    if !should_run {
+        println!(
+            "  {} Run {} manually when ready.\n",
+            console::style("tip:").yellow().bold(),
+            console::style(cmd).cyan()
+        );
+        return Ok(());
+    }
+
+    println!(
+        "\n  {} {}\n",
+        console::style("running:").green().bold(),
+        console::style(cmd).cyan()
+    );
+
+    // Split the command into program + args for cross-platform compatibility.
+    let mut parts = cmd.split_whitespace();
+    let program = match parts.next() {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+    let cmd_args: Vec<&str> = parts.collect();
+
+    let status = std::process::Command::new(program)
+        .args(&cmd_args)
+        .current_dir(target)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {
+            println!(
+                "\n  {} Setup complete.\n",
+                console::style("done:").green().bold()
+            );
+        }
+        Ok(s) => {
+            output::print_warning(&format!(
+                "`{cmd}` exited with status {s}. Run it manually if needed."
+            ));
+        }
+        Err(e) => {
+            output::print_warning(&format!(
+                "could not run `{cmd}`: {e}. Run it manually if needed."
+            ));
+        }
+    }
+
     Ok(())
 }
 

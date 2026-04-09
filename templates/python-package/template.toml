@@ -25,3 +25,7 @@ prompt = "Author name"
 type = "string"
 required = false
 default = ""
+
+[on_success]
+run = "uv sync"
+message = "Run `dex run test` to verify your setup."

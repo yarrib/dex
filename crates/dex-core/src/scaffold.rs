@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::DexError;
-use crate::template::Template;
+use crate::template::{OnSuccessSpec, Template};
 use crate::template::engine::TemplateEngine;
 
 /// Result of a successful scaffold operation.
@@ -12,6 +12,8 @@ use crate::template::engine::TemplateEngine;
 pub struct ScaffoldResult {
     pub files_created: Vec<PathBuf>,
     pub directories_created: Vec<PathBuf>,
+    /// Post-scaffold activation config from the template (if any).
+    pub on_success: Option<OnSuccessSpec>,
 }
 
 /// Scaffold a project from a template into a target directory.
@@ -93,6 +95,7 @@ pub fn scaffold(
     Ok(ScaffoldResult {
         files_created,
         directories_created,
+        on_success: template.on_success.clone(),
     })
 }
 
@@ -154,6 +157,7 @@ mod tests {
             file_rules,
             files,
             suggested_skills: vec![],
+            on_success: None,
         }
     }
 

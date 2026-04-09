@@ -282,6 +282,7 @@ mod tests {
         let result = ScaffoldResult {
             files_created: vec![std::path::PathBuf::from("dex.toml")],
             directories_created: Vec::new(),
+            on_success: None,
         };
 
         let template = Template {
@@ -295,6 +296,7 @@ mod tests {
             file_rules: vec![],
             files: std::collections::HashMap::new(),
             suggested_skills: vec![],
+            on_success: None,
         };
 
         let vars = HashMap::new();
@@ -315,6 +317,7 @@ mod tests {
         let result = ScaffoldResult {
             files_created,
             directories_created: Vec::new(),
+            on_success: None,
         };
 
         let template = Template {
@@ -328,6 +331,7 @@ mod tests {
             file_rules: vec![],
             files: std::collections::HashMap::new(),
             suggested_skills: vec![],
+            on_success: None,
         };
 
         let vars = HashMap::new();

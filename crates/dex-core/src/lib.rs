@@ -21,6 +21,7 @@ pub use config::{
 pub use context_map::{ContextMap, write_context_map};
 pub use error::{DexError, SkillError};
 pub use scaffold::{ScaffoldResult, scaffold};
+pub use template::OnSuccessSpec;
 pub use skills::{
     InstallResult, InstallTarget, SkillPack, SkillPackEntry, SkillSource, install_skills,
     list_packs, load_pack, load_pack_with_remote_fetch,
