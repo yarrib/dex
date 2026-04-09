@@ -14,9 +14,9 @@ pub mod traits;
 
 pub use apply_trait::{TraitResult, apply_trait};
 pub use config::{
-    DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource, load_dex_config,
-    load_preset, load_project_config, load_standards, presets_path, record_trait, resolve_remote,
-    resolve_skill_remote, skills_cache_dir,
+    DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource, load_answers,
+    load_dex_config, load_preset, load_project_config, load_standards, presets_path, record_trait,
+    resolve_remote, resolve_skill_remote, save_answers, skills_cache_dir,
 };
 pub use context_map::{ContextMap, write_context_map};
 pub use error::{DexError, SkillError};
@@ -25,6 +25,7 @@ pub use skills::{
     InstallResult, InstallTarget, SkillPack, SkillPackEntry, SkillSource, install_skills,
     list_packs, load_pack, load_pack_with_remote_fetch,
 };
+pub use template::OnSuccessSpec;
 pub use template::{Template, TemplateMeta, TemplateSource};
 pub use traits::{Trait, TraitMeta, list_traits, load_trait};
 

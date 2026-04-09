@@ -47,3 +47,7 @@ condition = "include_notebook"
 [[files]]
 src = "resources/"
 condition = "include_job"
+
+[on_success]
+run = "uv sync"
+message = "Run `dex run deploy` to deploy to Databricks."

@@ -7,7 +7,9 @@ use clap::Args;
 use console::style;
 use dialoguer::{Confirm, Input, Select};
 
-use dex_core::config::{load_dex_config, load_preset, load_standards, resolve_remote};
+use dex_core::config::{
+    load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
+};
 use dex_core::context_map::write_context_map;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
@@ -41,6 +43,15 @@ pub struct InitArgs {
     /// TOML presets file to use instead of the default location.
     #[arg(long)]
     presets_file: Option<PathBuf>,
+
+    /// Load pre-filled variable values from a saved answers file (skips prompts for matched vars).
+    #[arg(long)]
+    answers: Option<PathBuf>,
+
+    /// Save answered variable values to a TOML file after scaffold.
+    /// Omit the path to use the default: ~/.config/dex/answers/<template>.toml
+    #[arg(long, short = 's', num_args = 0..=1, default_missing_value = "")]
+    save_answers: Option<String>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -82,6 +93,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         prefills.insert(k.clone(), v.clone());
     }
 
+    // Load answers file (highest-priority pre-fills; overrides standards and preset).
+    let answers_prefills = if let Some(ref path) = args.answers {
+        load_answers(path)?
+    } else {
+        HashMap::new()
+    };
+
     // Load the template.
     let template = load_template(&entry.source, &args.template)?;
 
@@ -104,6 +122,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
                 .map(toml_value_to_string)
                 .unwrap_or_default()
         };
+
+        // Answers file (highest priority): overrides standards, preset, and defaults.
+        if let Some(toml_val) = answers_prefills.get(&spec.name) {
+            let mj_val = toml_val_to_minijinja(toml_val);
+            variables.insert(spec.name.clone(), mj_val);
+            continue;
+        }
 
         // Pre-fill: preset or standards value skips the prompt entirely.
         if let Some(val) = prefills.get(&spec.name) {
@@ -244,6 +269,133 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         );
     }
 
+    // Save answers for future replay if --save-answers / -s was passed.
+    // An empty string means "auto-name from template" (flag present, no path given).
+    // Auto-named path: .dex/<template>.toml inside the scaffolded project directory.
+    let resolved_save_path: Option<PathBuf> = args.save_answers.as_deref().map(|s| {
+        if s.is_empty() {
+            target.join(".dex").join(format!("{}.toml", args.template))
+        } else {
+            PathBuf::from(s)
+        }
+    });
+
+    if let Some(ref save_path) = resolved_save_path {
+        let typed_values: std::collections::HashMap<String, toml::Value> = template
+            .variables
+            .iter()
+            .filter_map(|spec| {
+                variables.get(&spec.name).map(|v| {
+                    let toml_val = match spec.var_type {
+                        VariableType::Bool => toml::Value::Boolean(v.is_true()),
+                        _ => toml::Value::String(
+                            v.as_str()
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| v.to_string()),
+                        ),
+                    };
+                    (spec.name.clone(), toml_val)
+                })
+            })
+            .collect();
+
+        match save_answers(save_path, &args.template, &typed_values) {
+            Ok(()) => {
+                println!(
+                    "  {} Answers saved to {}\n",
+                    console::style("saved:").green(),
+                    console::style(save_path.display()).cyan()
+                );
+            }
+            Err(e) => {
+                output::print_warning(&format!("could not save answers: {e}"));
+            }
+        }
+    }
+
+    // Post-scaffold activation hook.
+    if let Some(on_success) = &result.on_success {
+        run_on_success(on_success, &target, args.no_prompt)?;
+    }
+
+    Ok(())
+}
+
+/// Execute the `[on_success]` activation hook from the template.
+///
+/// Prints any `message`, then either auto-runs the command (`--no-prompt`) or
+/// asks the user first. Failure is non-fatal: an error is printed and dex exits
+/// successfully so the scaffold output isn't lost.
+fn run_on_success(
+    on_success: &dex_core::OnSuccessSpec,
+    target: &Path,
+    no_prompt: bool,
+) -> Result<(), DexError> {
+    if let Some(msg) = &on_success.message {
+        println!("  {} {}\n", console::style("next:").cyan().bold(), msg);
+    }
+
+    let Some(cmd) = &on_success.run else {
+        return Ok(());
+    };
+
+    let should_run = if no_prompt {
+        true
+    } else {
+        Confirm::new()
+            .with_prompt(format!("Run `{cmd}` now?"))
+            .default(true)
+            .interact()
+            .map_err(io_error)?
+    };
+
+    if !should_run {
+        println!(
+            "  {} Run {} manually when ready.\n",
+            console::style("tip:").yellow().bold(),
+            console::style(cmd).cyan()
+        );
+        return Ok(());
+    }
+
+    println!(
+        "\n  {} {}\n",
+        console::style("running:").green().bold(),
+        console::style(cmd).cyan()
+    );
+
+    // Split the command into program + args for cross-platform compatibility.
+    let mut parts = cmd.split_whitespace();
+    let program = match parts.next() {
+        Some(p) => p,
+        None => return Ok(()),
+    };
+    let cmd_args: Vec<&str> = parts.collect();
+
+    let status = std::process::Command::new(program)
+        .args(&cmd_args)
+        .current_dir(target)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => {
+            println!(
+                "\n  {} Setup complete.\n",
+                console::style("done:").green().bold()
+            );
+        }
+        Ok(s) => {
+            output::print_warning(&format!(
+                "`{cmd}` exited with status {s}. Run it manually if needed."
+            ));
+        }
+        Err(e) => {
+            output::print_warning(&format!(
+                "could not run `{cmd}`: {e}. Run it manually if needed."
+            ));
+        }
+    }
+
     Ok(())
 }
 
@@ -311,6 +463,20 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
     }
 
     Ok(registry)
+}
+
+/// Convert a typed TOML value from an answers file into a minijinja Value.
+///
+/// Preserves bool → bool and string → string so that template conditionals
+/// behave correctly on replay.
+fn toml_val_to_minijinja(v: &toml::Value) -> minijinja::Value {
+    match v {
+        toml::Value::Boolean(b) => minijinja::Value::from(*b),
+        toml::Value::String(s) => minijinja::Value::from(s.clone()),
+        toml::Value::Integer(i) => minijinja::Value::from(*i),
+        toml::Value::Float(f) => minijinja::Value::from(*f),
+        _ => minijinja::Value::from(v.to_string()),
+    }
 }
 
 fn toml_value_to_string(v: &toml::Value) -> String {

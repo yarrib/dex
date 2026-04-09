@@ -18,6 +18,9 @@ pub struct TemplateManifest {
     pub files: Vec<FileRule>,
     #[serde(default)]
     pub hooks: Option<HooksSpec>,
+    /// Post-scaffold activation hook.
+    #[serde(default)]
+    pub on_success: Option<OnSuccessSpec>,
     /// Skill packs suggested for projects scaffolded from this template.
     #[serde(default)]
     pub skills: Option<TemplateSkillsSpec>,
@@ -86,6 +89,20 @@ pub struct HooksSpec {
     pub pre_scaffold: Option<String>,
     #[serde(default)]
     pub post_scaffold: Option<String>,
+}
+
+/// Post-scaffold activation config (`[on_success]` in `template.toml`).
+///
+/// After scaffolding, the CLI layer can optionally run a setup command (e.g.
+/// `uv sync`) in the new project directory and/or print a follow-up message.
+#[derive(Debug, Deserialize, Clone)]
+pub struct OnSuccessSpec {
+    /// Shell command to run in the scaffolded directory (e.g. `"uv sync"`).
+    #[serde(default)]
+    pub run: Option<String>,
+    /// Message to display after scaffold completes (e.g. `"Run: dex run test"`).
+    #[serde(default)]
+    pub message: Option<String>,
 }
 
 impl TemplateManifest {
@@ -212,6 +229,44 @@ mod tests {
         assert_eq!(vars[1].name, "python_version");
         // unordered trails
         assert_eq!(vars[2].name, "author");
+    }
+
+    #[test]
+    fn parse_on_success_section() {
+        let toml_str = r#"
+            [template]
+            name = "default"
+            description = "Test"
+            version = "0.1.0"
+
+            [on_success]
+            run = "uv sync"
+            message = "Project ready. Run: dex run test"
+        "#;
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
+        let on_success = manifest.on_success.expect("on_success should be parsed");
+        assert_eq!(on_success.run.as_deref(), Some("uv sync"));
+        assert_eq!(
+            on_success.message.as_deref(),
+            Some("Project ready. Run: dex run test")
+        );
+    }
+
+    #[test]
+    fn parse_on_success_run_only() {
+        let toml_str = r#"
+            [template]
+            name = "default"
+            description = "Test"
+            version = "0.1.0"
+
+            [on_success]
+            run = "pip install -e ."
+        "#;
+        let manifest = TemplateManifest::parse(toml_str).unwrap();
+        let on_success = manifest.on_success.expect("on_success should be parsed");
+        assert_eq!(on_success.run.as_deref(), Some("pip install -e ."));
+        assert!(on_success.message.is_none());
     }
 
     #[test]

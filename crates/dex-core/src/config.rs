@@ -276,6 +276,120 @@ pub fn load_preset(
         .collect())
 }
 
+/// Save prompt answers to a TOML file for later replay.
+///
+/// The answers file format:
+/// ```toml
+/// # Saved by dex on 2026-04-09
+/// template = "dabs-package"
+///
+/// [values]
+/// project_name = "user_events"
+/// python_version = "3.12"
+/// include_notebook = true
+/// use_serverless = false
+/// ```
+///
+/// Values retain their original types (booleans, strings) so that replay is
+/// faithful. The file is user-owned; dex only writes it when `--save-answers`
+/// is explicitly passed.
+pub fn save_answers(
+    path: &Path,
+    template_name: &str,
+    values: &HashMap<String, toml::Value>,
+) -> Result<(), DexError> {
+    let date = chrono_date_today();
+    let mut lines = vec![
+        format!("# Saved by dex on {date}"),
+        format!("template = {:?}", template_name),
+        String::new(),
+        "[values]".to_string(),
+    ];
+    for (k, v) in values {
+        let rendered = match v {
+            toml::Value::Boolean(b) => format!("{k} = {b}"),
+            toml::Value::String(s) => format!("{k} = {:?}", s),
+            toml::Value::Integer(i) => format!("{k} = {i}"),
+            toml::Value::Float(f) => format!("{k} = {f}"),
+            _ => format!("{k} = {:?}", v.to_string()),
+        };
+        lines.push(rendered);
+    }
+    lines.push(String::new());
+    let content = lines.join("\n");
+
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+        && !parent.exists()
+    {
+        std::fs::create_dir_all(parent).map_err(|source| DexError::Io {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
+
+    std::fs::write(path, content).map_err(|source| DexError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+
+    Ok(())
+}
+
+/// Load variable pre-fills from a saved answers TOML file.
+///
+/// Returns the typed values from the `[values]` section. Returns an empty map
+/// if the file does not exist (so that `--answers` with a missing file is
+/// gracefully handled by the caller).
+pub fn load_answers(path: &Path) -> Result<HashMap<String, toml::Value>, DexError> {
+    if !path.exists() {
+        return Ok(HashMap::new());
+    }
+
+    let content = std::fs::read_to_string(path).map_err(|source| DexError::Io {
+        path: path.to_path_buf(),
+        source,
+    })?;
+
+    let table: toml::Table = toml::from_str(&content).map_err(ConfigError::Parse)?;
+
+    let values = table
+        .get("values")
+        .and_then(|v| v.as_table())
+        .cloned()
+        .unwrap_or_default();
+
+    Ok(values.into_iter().collect())
+}
+
+/// Return today's date as an ISO 8601 string (YYYY-MM-DD) without pulling in chrono.
+fn chrono_date_today() -> String {
+    // Use the system time offset from Unix epoch to derive a calendar date.
+    // This is a lightweight calculation that avoids a heavy dependency.
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    // Days since Unix epoch.
+    let days = secs / 86400;
+
+    // Rata Die algorithm: convert epoch days (1970-01-01 = day 0) to Y-M-D.
+    // We add the epoch offset (719_468 days from 0000-03-01 to 1970-01-01).
+    let z = days as i64 + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
 /// Load and merge user config (`~/.config/dex/config.toml`) and project
 /// config (`./dex.toml`). Project config takes precedence; remotes are additive.
 pub fn load_dex_config() -> DexConfig {
@@ -670,6 +784,61 @@ workspace_url = "https://etl.cloud.databricks.com"
         let standards = load_standards(Some(&path)).unwrap();
         assert_eq!(standards.get("author").unwrap(), "yarrib");
         assert_eq!(standards.get("python_version").unwrap(), "3.12");
+    }
+
+    #[test]
+    fn save_and_load_answers_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("answers.toml");
+
+        let mut values = HashMap::new();
+        values.insert(
+            "project_name".to_string(),
+            toml::Value::String("my_proj".to_string()),
+        );
+        values.insert("include_notebook".to_string(), toml::Value::Boolean(false));
+        values.insert(
+            "python_version".to_string(),
+            toml::Value::String("3.11".to_string()),
+        );
+
+        save_answers(&path, "dabs-package", &values).unwrap();
+
+        let loaded = load_answers(&path).unwrap();
+        assert_eq!(
+            loaded.get("project_name"),
+            Some(&toml::Value::String("my_proj".to_string()))
+        );
+        assert_eq!(
+            loaded.get("include_notebook"),
+            Some(&toml::Value::Boolean(false))
+        );
+        assert_eq!(
+            loaded.get("python_version"),
+            Some(&toml::Value::String("3.11".to_string()))
+        );
+    }
+
+    #[test]
+    fn load_answers_missing_file_returns_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nonexistent.toml");
+        let loaded = load_answers(&path).unwrap();
+        assert!(loaded.is_empty());
+    }
+
+    #[test]
+    fn save_answers_writes_readable_toml() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("answers.toml");
+        let mut values = HashMap::new();
+        values.insert("use_serverless".to_string(), toml::Value::Boolean(true));
+        save_answers(&path, "dabs-package", &values).unwrap();
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("template = \"dabs-package\""));
+        assert!(content.contains("[values]"));
+        assert!(content.contains("use_serverless = true"));
     }
 
     #[test]

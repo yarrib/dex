@@ -56,6 +56,7 @@ fn load_directory_template(template_dir: &Path) -> Result<Template, DexError> {
         file_rules: manifest.files,
         files,
         suggested_skills,
+        on_success: manifest.on_success,
     })
 }
 
@@ -182,6 +183,7 @@ fn load_embedded_template(name: &str) -> Result<Template, DexError> {
         file_rules: manifest.files,
         files,
         suggested_skills,
+        on_success: manifest.on_success,
     })
 }
 
