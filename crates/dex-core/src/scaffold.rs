@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::error::DexError;
-use crate::template::{OnSuccessSpec, Template};
 use crate::template::engine::TemplateEngine;
+use crate::template::{OnSuccessSpec, Template};
 
 /// Result of a successful scaffold operation.
 #[derive(Debug)]

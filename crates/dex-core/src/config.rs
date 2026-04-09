@@ -796,10 +796,7 @@ workspace_url = "https://etl.cloud.databricks.com"
             "project_name".to_string(),
             toml::Value::String("my_proj".to_string()),
         );
-        values.insert(
-            "include_notebook".to_string(),
-            toml::Value::Boolean(false),
-        );
+        values.insert("include_notebook".to_string(), toml::Value::Boolean(false));
         values.insert(
             "python_version".to_string(),
             toml::Value::String("3.11".to_string()),

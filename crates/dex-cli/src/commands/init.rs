@@ -332,11 +332,7 @@ fn run_on_success(
     no_prompt: bool,
 ) -> Result<(), DexError> {
     if let Some(msg) = &on_success.message {
-        println!(
-            "  {} {}\n",
-            console::style("next:").cyan().bold(),
-            msg
-        );
+        println!("  {} {}\n", console::style("next:").cyan().bold(), msg);
     }
 
     let Some(cmd) = &on_success.run else {
