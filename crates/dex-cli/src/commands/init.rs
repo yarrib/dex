@@ -8,8 +8,7 @@ use console::style;
 use dialoguer::{Confirm, Input, Select};
 
 use dex_core::config::{
-    default_answers_path, load_answers, load_dex_config, load_preset, load_standards,
-    resolve_remote, save_answers,
+    load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
 };
 use dex_core::context_map::write_context_map;
 use dex_core::template::TemplateSource;
@@ -272,9 +271,10 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
 
     // Save answers for future replay if --save-answers / -s was passed.
     // An empty string means "auto-name from template" (flag present, no path given).
+    // Auto-named path: .dex/<template>.toml inside the scaffolded project directory.
     let resolved_save_path: Option<PathBuf> = args.save_answers.as_deref().map(|s| {
         if s.is_empty() {
-            default_answers_path(&args.template)
+            target.join(".dex").join(format!("{}.toml", args.template))
         } else {
             PathBuf::from(s)
         }
