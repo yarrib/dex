@@ -7,7 +7,9 @@ use clap::Args;
 use console::style;
 use dialoguer::{Confirm, Input, Select};
 
-use dex_core::config::{load_dex_config, load_preset, load_standards, resolve_remote};
+use dex_core::config::{
+    load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
+};
 use dex_core::context_map::write_context_map;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
@@ -41,6 +43,14 @@ pub struct InitArgs {
     /// TOML presets file to use instead of the default location.
     #[arg(long)]
     presets_file: Option<PathBuf>,
+
+    /// Load pre-filled variable values from a saved answers file (skips prompts for matched vars).
+    #[arg(long)]
+    answers: Option<PathBuf>,
+
+    /// Save answered variable values to a TOML file after scaffold.
+    #[arg(long)]
+    save_answers: Option<PathBuf>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -82,6 +92,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         prefills.insert(k.clone(), v.clone());
     }
 
+    // Load answers file (highest-priority pre-fills; overrides standards and preset).
+    let answers_prefills = if let Some(ref path) = args.answers {
+        load_answers(path)?
+    } else {
+        HashMap::new()
+    };
+
     // Load the template.
     let template = load_template(&entry.source, &args.template)?;
 
@@ -104,6 +121,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
                 .map(toml_value_to_string)
                 .unwrap_or_default()
         };
+
+        // Answers file (highest priority): overrides standards, preset, and defaults.
+        if let Some(toml_val) = answers_prefills.get(&spec.name) {
+            let mj_val = toml_val_to_minijinja(toml_val);
+            variables.insert(spec.name.clone(), mj_val);
+            continue;
+        }
 
         // Pre-fill: preset or standards value skips the prompt entirely.
         if let Some(val) = prefills.get(&spec.name) {
@@ -242,6 +266,40 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
             console::style(template.suggested_skills.join(", ")).cyan(),
             console::style("dex skills init").cyan()
         );
+    }
+
+    // Save answers for future replay if --save-answers was passed.
+    if let Some(ref save_path) = args.save_answers {
+        let typed_values: std::collections::HashMap<String, toml::Value> = template
+            .variables
+            .iter()
+            .filter_map(|spec| {
+                variables.get(&spec.name).map(|v| {
+                    let toml_val = match spec.var_type {
+                        VariableType::Bool => toml::Value::Boolean(v.is_true()),
+                        _ => toml::Value::String(
+                            v.as_str()
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| v.to_string()),
+                        ),
+                    };
+                    (spec.name.clone(), toml_val)
+                })
+            })
+            .collect();
+
+        match save_answers(save_path, &args.template, &typed_values) {
+            Ok(()) => {
+                println!(
+                    "  {} Answers saved to {}\n",
+                    console::style("saved:").green(),
+                    console::style(save_path.display()).cyan()
+                );
+            }
+            Err(e) => {
+                output::print_warning(&format!("could not save answers: {e}"));
+            }
+        }
     }
 
     // Post-scaffold activation hook.
@@ -398,6 +456,20 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
     }
 
     Ok(registry)
+}
+
+/// Convert a typed TOML value from an answers file into a minijinja Value.
+///
+/// Preserves bool → bool and string → string so that template conditionals
+/// behave correctly on replay.
+fn toml_val_to_minijinja(v: &toml::Value) -> minijinja::Value {
+    match v {
+        toml::Value::Boolean(b) => minijinja::Value::from(*b),
+        toml::Value::String(s) => minijinja::Value::from(s.clone()),
+        toml::Value::Integer(i) => minijinja::Value::from(*i),
+        toml::Value::Float(f) => minijinja::Value::from(*f),
+        _ => minijinja::Value::from(v.to_string()),
+    }
 }
 
 fn toml_value_to_string(v: &toml::Value) -> String {
