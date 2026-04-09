@@ -8,7 +8,8 @@ use console::style;
 use dialoguer::{Confirm, Input, Select};
 
 use dex_core::config::{
-    load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
+    default_answers_path, load_answers, load_dex_config, load_preset, load_standards,
+    resolve_remote, save_answers,
 };
 use dex_core::context_map::write_context_map;
 use dex_core::template::TemplateSource;
@@ -49,8 +50,9 @@ pub struct InitArgs {
     answers: Option<PathBuf>,
 
     /// Save answered variable values to a TOML file after scaffold.
-    #[arg(long)]
-    save_answers: Option<PathBuf>,
+    /// Omit the path to use the default: ~/.config/dex/answers/<template>.toml
+    #[arg(long, short = 's', num_args = 0..=1, default_missing_value = "")]
+    save_answers: Option<String>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -268,8 +270,17 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         );
     }
 
-    // Save answers for future replay if --save-answers was passed.
-    if let Some(ref save_path) = args.save_answers {
+    // Save answers for future replay if --save-answers / -s was passed.
+    // An empty string means "auto-name from template" (flag present, no path given).
+    let resolved_save_path: Option<PathBuf> = args.save_answers.as_deref().map(|s| {
+        if s.is_empty() {
+            default_answers_path(&args.template)
+        } else {
+            PathBuf::from(s)
+        }
+    });
+
+    if let Some(ref save_path) = resolved_save_path {
         let typed_values: std::collections::HashMap<String, toml::Value> = template
             .variables
             .iter()

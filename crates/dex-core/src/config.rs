@@ -143,6 +143,17 @@ pub fn presets_path() -> PathBuf {
         .join("presets.toml")
 }
 
+/// Default path for auto-named answers files: `~/.config/dex/answers/<template>.toml`.
+///
+/// Used when `--save-answers` / `-s` is passed without an explicit path.
+pub fn default_answers_path(template_name: &str) -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("~/.config"))
+        .join("dex")
+        .join("answers")
+        .join(format!("{template_name}.toml"))
+}
+
 pub fn remote_cache_dir() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| PathBuf::from("~/.cache"))
