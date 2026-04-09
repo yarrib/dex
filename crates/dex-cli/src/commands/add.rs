@@ -262,5 +262,6 @@ fn io_error(e: impl std::fmt::Display) -> DexError {
 fn evaluate_when(expr: &str, vars: &HashMap<String, minijinja::Value>) -> bool {
     let env = minijinja::Environment::new();
     let source = format!("{{% if {expr} %}}true{{% else %}}false{{% endif %}}");
-    env.render_str(&source, vars).is_ok_and(|r| r.trim() == "true")
+    env.render_str(&source, vars)
+        .is_ok_and(|r| r.trim() == "true")
 }
