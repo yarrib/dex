@@ -24,6 +24,13 @@ pub struct VariableSpec {
     /// definition order.
     #[serde(default)]
     pub order: Option<u32>,
+    /// Optional Jinja2 condition expression. If present, this variable is only
+    /// prompted (and included) when the expression evaluates to truthy using the
+    /// already-resolved variables as context. Skipped variables use their default.
+    ///
+    /// Example: `when = "include_serving"` — only prompt when `include_serving` is true.
+    #[serde(default)]
+    pub when: Option<String>,
 }
 
 /// Inline variable spec used when parsing the `[variables]` table format.
@@ -43,6 +50,8 @@ pub struct VariableSpecInline {
     pub validate: Option<String>,
     #[serde(default)]
     pub order: Option<u32>,
+    #[serde(default)]
+    pub when: Option<String>,
 }
 
 impl VariableSpecInline {
@@ -56,6 +65,7 @@ impl VariableSpecInline {
             choices: self.choices,
             validate: self.validate,
             order: self.order,
+            when: self.when,
         }
     }
 }
@@ -120,6 +130,7 @@ mod tests {
             choices: choices.map(|c| c.into_iter().map(String::from).collect()),
             validate: validate.map(String::from),
             order: None,
+            when: None,
         }
     }
 

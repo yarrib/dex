@@ -98,6 +98,21 @@ pub fn run(args: AddArgs) -> Result<(), DexError> {
             .map(toml_value_to_string)
             .unwrap_or_default();
 
+        // Skip this variable if its `when` condition evaluates to false.
+        if let Some(when_expr) = &spec.when
+            && !evaluate_when(when_expr, &variables)
+        {
+            let default_val = match spec.var_type {
+                VariableType::Bool => {
+                    let b = effective_default.is_empty() || effective_default == "true";
+                    minijinja::Value::from(b)
+                }
+                _ => minijinja::Value::from(effective_default),
+            };
+            variables.insert(spec.name.clone(), default_val);
+            continue;
+        }
+
         if args.no_prompt || args.dry_run {
             let val = match spec.var_type {
                 VariableType::Bool => {
@@ -237,4 +252,15 @@ fn io_error(e: impl std::fmt::Display) -> DexError {
         path: PathBuf::from("<stdin>"),
         source: std::io::Error::other(e.to_string()),
     }
+}
+
+/// Evaluate a Jinja2 boolean expression against already-resolved variables.
+///
+/// Returns `true` if the expression evaluates to a truthy value, `false` otherwise
+/// (including on evaluation errors, so a bad `when` expression silently skips the
+/// variable rather than crashing the prompt loop).
+fn evaluate_when(expr: &str, vars: &HashMap<String, minijinja::Value>) -> bool {
+    let env = minijinja::Environment::new();
+    let source = format!("{{% if {expr} %}}true{{% else %}}false{{% endif %}}");
+    env.render_str(&source, vars).is_ok_and(|r| r.trim() == "true")
 }
