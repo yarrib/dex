@@ -1,37 +1,73 @@
-"""{{ project_name }} — {{ description }}"""
+"""{{ project_name }} — {{ description }}
 
+Entry point. Implements a minimal plan → act → review loop via BAML.
+"""
+
+import json
 import logging
 
 import mlflow
-
 from baml_client import b
 from baml_client.types import AgentOutput
+
+from {{ project_name }}.tools import discover_tools
+from {{ project_name }}.tools.planner import plan as plan_tool
+from {{ project_name }}.tools.reviewer import review as review_tool
 
 logger = logging.getLogger(__name__)
 
 
 def run(input_data: str | None = None) -> str:
-    """Run the agent.
+    """Run the agent end-to-end.
+
+    Flow:
+      1. Plan     — `planner.plan(input)` calls BAML `Plan` to produce a plan.
+      2. Act      — `b.RunAgent(input)` produces the typed draft response.
+      3. Review   — `reviewer.review(...)` calls BAML `Review` to critique.
+      4. Return   — emit the reviewed result.
 
     Args:
-        input_data: Input to the agent. None for scheduled/event-triggered agents.
+        input_data: Caller's request. None for scheduled/event triggers.
 
     Returns:
-        Agent output or status message.
+        The agent's reviewed result as a string.
     """
     mlflow.set_experiment("{{ project_name }}")
 
-    logger.info("agent_start", extra={"input": input_data})
+    request = input_data or ""
+    tools = discover_tools()
 
-    result: AgentOutput = b.RunAgent(input=input_data or "")
+    with mlflow.start_run():
+        mlflow.log_param("tools", list(tools.keys()))
+        logger.info("agent_start", extra={"input": request})
 
-    logger.info("agent_complete", extra={"result": result.result})
-    return result.result
+        # 1. Plan
+        plan_result = plan_tool(request)
+        plan_text = plan_result.data if plan_result.success else "(planning failed)"
+        mlflow.log_text(plan_text, "plan.md")
+
+        # 2. Act
+        result: AgentOutput = b.RunAgent(input=request)
+        draft = result.result
+        mlflow.log_text(draft, "draft.md")
+
+        # 3. Review
+        review_result = review_tool(
+            request=request,
+            plan=plan_text,
+            tool_trace="(no tool calls in this starter implementation)",
+            draft=draft,
+        )
+        review_text = review_result.data if review_result.success else "(review failed)"
+        mlflow.log_text(review_text, "review.md")
+
+        # 4. Return. In a real agent, parse VERDICT from review_text and gate the return.
+        logger.info("agent_complete", extra={"verdict_preview": review_text[:120]})
+        return draft
 
 
 def main() -> None:
     """CLI entry point for local development."""
-    import json
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     result = run()
     print(json.dumps({"result": result}, indent=2))

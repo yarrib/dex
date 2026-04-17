@@ -294,7 +294,7 @@ fn mcp_initialize_returns_server_info() {
 }
 
 #[test]
-fn mcp_tools_list_returns_three_tools() {
+fn mcp_tools_list_returns_all_tools() {
     let req = r#"{"jsonrpc":"2.0","id":8,"method":"tools/list","params":{}}"#;
     let responses = mcp_call(&format!("{req}\n"));
 
@@ -304,13 +304,64 @@ fn mcp_tools_list_returns_three_tools() {
         .expect("expected tools array");
 
     let names: Vec<&str> = tools.iter().filter_map(|t| t["name"].as_str()).collect();
-    assert!(names.contains(&"list_templates"), "missing list_templates");
+    for expected in [
+        "list_templates",
+        "get_template_variables",
+        "scaffold_project",
+        "scaffold_agent",
+    ] {
+        assert!(names.contains(&expected), "missing tool: {expected}");
+    }
+}
+
+#[test]
+fn mcp_scaffold_agent_creates_files_and_installs_skills() {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("mcpagent");
+
+    let req = format!(
+        r#"{{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{{"name":"scaffold_agent","arguments":{{"sdk":"anthropic","dir":"{}","variables":{{"project_name":"mcpagent","description":"test agent"}}}}}}}}"#,
+        project_dir.display()
+    );
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    let is_error = responses[0]["result"]["isError"].as_bool().unwrap_or(false);
+    assert!(!is_error, "scaffold_agent returned error: {responses:?}");
+
+    // AGENTS.md and planner/reviewer stubs should exist.
+    assert!(project_dir.join("AGENTS.md").exists(), "missing AGENTS.md");
+    assert!(project_dir.join(".mcp.json").exists(), "missing .mcp.json");
     assert!(
-        names.contains(&"get_template_variables"),
-        "missing get_template_variables"
+        project_dir.join("src/mcpagent/tools/planner.py").exists(),
+        "missing planner.py"
     );
     assert!(
-        names.contains(&"scaffold_project"),
-        "missing scaffold_project"
+        project_dir.join("src/mcpagent/tools/reviewer.py").exists(),
+        "missing reviewer.py"
     );
+
+    // Skill packs should have been installed for all four targets.
+    assert!(
+        project_dir.join(".claude/commands").is_dir(),
+        "expected .claude/commands to be populated"
+    );
+    assert!(
+        project_dir.join(".cursor/rules").is_dir(),
+        "expected .cursor/rules to be populated"
+    );
+}
+
+#[test]
+fn mcp_scaffold_agent_invalid_sdk_returns_error() {
+    let base = tempfile::tempdir().unwrap();
+    let req = format!(
+        r#"{{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{{"name":"scaffold_agent","arguments":{{"sdk":"haskell","dir":"{}"}}}}}}"#,
+        base.path().display()
+    );
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    let is_error = responses[0]["result"]["isError"].as_bool().unwrap_or(false);
+    assert!(is_error, "expected error for invalid sdk");
 }

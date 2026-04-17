@@ -1,0 +1,19 @@
+"""Planner tool — produces an explicit plan for a request via BAML."""
+
+from baml_client import b
+
+from . import ToolResult
+
+
+def plan(request: str) -> ToolResult:
+    """Produce a plan for the given request before any action is taken.
+
+    Delegates to the BAML `Plan` function (see `baml_src/{{ project_name }}.baml`).
+    Returns a ToolResult whose data is the plan text in the format defined by
+    `prompts/planning.md`.
+    """
+    try:
+        result = b.Plan(request=request)
+        return ToolResult(success=True, data=result.plan)
+    except Exception as e:
+        return ToolResult(success=False, data=None, error=str(e))

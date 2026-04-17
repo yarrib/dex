@@ -49,6 +49,10 @@ pub struct InitArgs {
     /// Install specific packs (comma-separated). Skips interactive selection.
     #[arg(long)]
     packs: Option<String>,
+
+    /// Auto-confirm all prompts (e.g. updating dex.toml). Requires --packs and --targets.
+    #[arg(short = 'y', long)]
+    yes: bool,
 }
 
 #[derive(Args)]
@@ -219,11 +223,15 @@ fn run_init(args: InitArgs) -> Result<(), DexError> {
     // Offer to update dex.toml.
     let dex_toml = target_dir.join("dex.toml");
     if dex_toml.exists() {
-        let update = Confirm::new()
-            .with_prompt("Update dex.toml [skills] with selected packs and targets?")
-            .default(true)
-            .interact()
-            .map_err(io_error)?;
+        let update = if args.yes {
+            true
+        } else {
+            Confirm::new()
+                .with_prompt("Update dex.toml [skills] with selected packs and targets?")
+                .default(true)
+                .interact()
+                .map_err(io_error)?
+        };
 
         if update {
             write_skills_to_dex_toml(&dex_toml, &selected_packs, &selected_targets)?;

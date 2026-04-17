@@ -22,36 +22,36 @@ use crate::output;
 pub struct InitArgs {
     /// Template to scaffold from.
     #[arg(short, long, default_value = "default")]
-    template: String,
+    pub template: String,
 
     /// Target directory.
     #[arg(short, long, default_value = ".")]
-    dir: String,
+    pub dir: String,
 
     /// Use defaults for all variables (non-interactive).
     #[arg(long)]
-    no_prompt: bool,
+    pub no_prompt: bool,
 
     /// TOML file of pre-filled variable values (skips prompts for matched vars).
     #[arg(long)]
-    standards: Option<PathBuf>,
+    pub standards: Option<PathBuf>,
 
     /// Named preset profile to load (from ~/.config/dex/presets.toml).
     #[arg(long)]
-    preset: Option<String>,
+    pub preset: Option<String>,
 
     /// TOML presets file to use instead of the default location.
     #[arg(long)]
-    presets_file: Option<PathBuf>,
+    pub presets_file: Option<PathBuf>,
 
     /// Load pre-filled variable values from a saved answers file (skips prompts for matched vars).
     #[arg(long)]
-    answers: Option<PathBuf>,
+    pub answers: Option<PathBuf>,
 
     /// Save answered variable values to a TOML file after scaffold.
     /// Omit the path to use the default: ~/.config/dex/answers/<template>.toml
     #[arg(long, short = 's', num_args = 0..=1, default_missing_value = "")]
-    save_answers: Option<String>,
+    pub save_answers: Option<String>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -328,12 +328,31 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         }
     }
 
-    // Post-scaffold activation hook.
+    // Post-scaffold activation hook. Render run/message against the resolved
+    // variables so templates can reference user choices (e.g. --targets {{ ai_tools }}).
     if let Some(on_success) = &result.on_success {
-        run_on_success(on_success, &target, args.no_prompt)?;
+        let rendered = render_on_success(on_success, &variables);
+        run_on_success(&rendered, &target, args.no_prompt)?;
     }
 
     Ok(())
+}
+
+/// Render `on_success.run` and `on_success.message` through Jinja against the
+/// resolved variable map. Rendering failures fall back to the raw string.
+fn render_on_success(
+    spec: &dex_core::OnSuccessSpec,
+    vars: &HashMap<String, minijinja::Value>,
+) -> dex_core::OnSuccessSpec {
+    let env = minijinja::Environment::new();
+    let render = |s: &str| -> String {
+        env.render_str(s, vars)
+            .unwrap_or_else(|_| s.to_string())
+    };
+    dex_core::OnSuccessSpec {
+        run: spec.run.as_deref().map(render),
+        message: spec.message.as_deref().map(render),
+    }
 }
 
 /// Execute the `[on_success]` activation hook from the template.

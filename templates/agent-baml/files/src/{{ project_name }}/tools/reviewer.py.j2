@@ -1,0 +1,27 @@
+"""Reviewer tool — critiques a draft response before it is returned."""
+
+from baml_client import b
+
+from . import ToolResult
+
+
+def review(request: str, plan: str, tool_trace: str, draft: str) -> ToolResult:
+    """Self-review a draft response against the plan and tool trace.
+
+    Delegates to the BAML `Review` function (see `baml_src/{{ project_name }}.baml`).
+    Returns a ToolResult whose data is a structured review in the format
+    defined by `prompts/review.md`.
+    """
+    try:
+        result = b.Review(
+            request=request,
+            plan=plan,
+            tool_trace=tool_trace,
+            draft=draft,
+        )
+        return ToolResult(
+            success=True,
+            data=f"VERDICT: {result.verdict}\nISSUES: {result.issues}\nREWRITE: {result.rewrite or ''}",
+        )
+    except Exception as e:
+        return ToolResult(success=False, data=None, error=str(e))

@@ -1,0 +1,33 @@
+"""Planner tool — produces an explicit plan for a request."""
+
+from pathlib import Path
+
+import openai
+
+from . import ToolResult
+
+_PLANNING_PROMPT = (
+    Path(__file__).parent.parent / "prompts" / "planning.md"
+).read_text()
+
+_client = openai.OpenAI()
+
+
+def plan(request: str) -> ToolResult:
+    """Produce a plan for the given request before any action is taken.
+
+    Returns a ToolResult whose data is the plan text in the format defined by
+    `prompts/planning.md`. The caller is expected to execute the plan step by
+    step, recording tool calls and results for later review.
+    """
+    try:
+        response = _client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": _PLANNING_PROMPT},
+                {"role": "user", "content": request},
+            ],
+        )
+        return ToolResult(success=True, data=response.choices[0].message.content or "")
+    except Exception as e:
+        return ToolResult(success=False, data=None, error=str(e))

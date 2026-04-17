@@ -1,0 +1,52 @@
+[pack]
+name        = "agent-dev"
+description = "AI agent development skills — evals, prompt tuning, planning, review"
+version     = "0.1.0"
+
+[[skills]]
+name        = "eval"
+type        = "command"
+file        = "commands/eval.md"
+description = "Run the agent's eval suite and report pass/fail"
+
+[[skills]]
+name        = "trace-review"
+type        = "command"
+file        = "commands/trace-review.md"
+description = "Inspect recent MLflow traces for this agent"
+
+[[skills]]
+name        = "prompt-tune"
+type        = "command"
+file        = "commands/prompt-tune.md"
+description = "Iterate on the agent's system prompt with measurable evals"
+
+[[skills]]
+name        = "tool-add"
+type        = "command"
+file        = "commands/tool-add.md"
+description = "Scaffold a new tool file under src/<agent>/tools/"
+
+[[skills]]
+name        = "planner"
+type        = "agent"
+file        = "agents/planner.md"
+description = "Agent planner — produces an explicit plan before acting"
+
+[[skills]]
+name        = "prompt-engineer"
+type        = "agent"
+file        = "agents/prompt-engineer.md"
+description = "Prompt engineer — iterate on system prompts with evidence"
+
+[[skills]]
+name        = "eval-designer"
+type        = "agent"
+file        = "agents/eval-designer.md"
+description = "Eval designer — author cases that cover success and failure modes"
+
+[[skills]]
+name        = "safety-reviewer"
+type        = "agent"
+file        = "agents/safety-reviewer.md"
+description = "Safety reviewer — audit guardrails and failure modes"

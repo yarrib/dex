@@ -84,3 +84,45 @@ choices = ["job", "serving_endpoint"]
 default = "job"
 required = false
 
+[[variables]]
+name = "ai_tools"
+prompt = "Which AI coding assistants should this project support?"
+type = "multi"
+choices = ["claude", "cursor", "copilot", "generic"]
+default = "claude,cursor,copilot,generic"
+required = false
+
+[[variables]]
+name = "include_mcp"
+prompt = "Include a .mcp.json for MCP-capable tools (Claude Code, Claude Desktop, Cursor)?"
+type = "bool"
+default = true
+required = false
+
+[skills]
+packs = ["default", "agent-dev"]
+
+[[files]]
+src = ".mcp.json.j2"
+condition = "include_mcp"
+context_role = "ai_config"
+context_description = "MCP server config for AI coding assistants"
+
+[[files]]
+src = "AGENTS.md.j2"
+context_role = "ai_doc"
+context_description = "Canonical agent-orientation doc for any AI coding assistant"
+
+[on_success]
+run = "dex skills init --yes --packs default,agent-dev --targets {{ ai_tools }}"
+message = """
+Skills installed. Next steps:
+  cd {{ project_name }}
+  uv sync
+  uv run baml generate
+  uv run pytest
+  uv run python evals/runner.py
+
+Open the project in your AI coding assistant (Claude Code, Cursor, Copilot,
+or any MCP client) and read AGENTS.md to get oriented.
+"""

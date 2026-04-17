@@ -1,42 +1,5 @@
 # CLAUDE.md — {{ project_name }}
 
-## What This Agent Does
-
-{{ description }}
-
-## Project Structure
-
-```
-{{ project_name }}/
-├── src/{{ project_name }}/
-│   ├── agent.py              # Agent entry point
-│   ├── tools/                # Tool implementations (auto-discovered)
-│   └── prompts/system.md     # System prompt
-├── evals/                    # Eval cases and runner
-├── resources/                # DAB resource definitions
-├── tests/
-├── databricks.yml            # DAB root config
-└── pyproject.toml
-```
-
-## Conventions
-
-- All tools return `ToolResult(success, data, error)`.
-- Tools are auto-discovered from `tools/` — any public function with a docstring.
-- The system prompt in `prompts/system.md` is loaded at startup.
-- Structured JSON logging only. No `print()` statements in agent code.
-
-## Build & Test
-
-```bash
-uv sync
-uv run pytest
-uv run python evals/runner.py
-```
-
-## Deploy
-
-```bash
-databricks bundle deploy --target dev
-databricks bundle deploy --target prod
-```
+See [`AGENTS.md`](./AGENTS.md) for the canonical, vendor-neutral orientation
+doc. It describes the behavior contract, architecture, skills, MCP config,
+and non-negotiables that apply to any AI coding assistant working here.

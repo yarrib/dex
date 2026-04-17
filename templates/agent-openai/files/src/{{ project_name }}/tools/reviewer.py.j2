@@ -1,0 +1,39 @@
+"""Reviewer tool — critiques a draft response before it is returned."""
+
+from pathlib import Path
+
+import openai
+
+from . import ToolResult
+
+_REVIEW_PROMPT = (
+    Path(__file__).parent.parent / "prompts" / "review.md"
+).read_text()
+
+_client = openai.OpenAI()
+
+
+def review(request: str, plan: str, tool_trace: str, draft: str) -> ToolResult:
+    """Self-review a draft response against the plan and tool trace.
+
+    Returns a ToolResult whose data follows the VERDICT/ISSUES/REWRITE format
+    defined by `prompts/review.md`. Callers must honor a "reject" verdict and
+    must apply "revise" rewrites before returning to the user.
+    """
+    message = (
+        f"REQUEST:\n{request}\n\n"
+        f"PLAN:\n{plan}\n\n"
+        f"TOOL TRACE:\n{tool_trace}\n\n"
+        f"DRAFT:\n{draft}\n"
+    )
+    try:
+        response = _client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": _REVIEW_PROMPT},
+                {"role": "user", "content": message},
+            ],
+        )
+        return ToolResult(success=True, data=response.choices[0].message.content or "")
+    except Exception as e:
+        return ToolResult(success=False, data=None, error=str(e))

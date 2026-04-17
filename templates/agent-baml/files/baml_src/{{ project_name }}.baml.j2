@@ -15,7 +15,7 @@ class AgentOutput {
 function RunAgent(input: string) -> AgentOutput {
   client "anthropic/claude-opus-4-5"
   prompt #"
-    {{ ctx.output_format }}
+    {{ "{{" }} ctx.output_format {{ "}}" }}
 
     {% if reads %}You have access to: {{ reads }}.{% endif %}
     {% if writes %}You can modify: {{ writes }}.{% endif %}
@@ -27,5 +27,60 @@ function RunAgent(input: string) -> AgentOutput {
     {% endif %}
 
     Input: {{ "{{" }}input{{ "}}" }}
+  "#
+}
+
+// Planner — produces an explicit plan before any action.
+class PlanResult {
+  plan string @description("The ordered plan in GOAL/PRECONDITIONS/STEPS/EXIT/RISKS format")
+}
+
+function Plan(request: string) -> PlanResult {
+  client "anthropic/claude-opus-4-5"
+  prompt #"
+    {{ "{{" }} ctx.output_format {{ "}}" }}
+
+    You are the planner for {{ project_name }}. Before any tool call, produce a short,
+    explicit plan. Use this exact format:
+
+    GOAL: <one sentence>
+    PRECONDITIONS: <comma-separated>
+    STEPS:
+      1. <verb> <target>
+      2. ...
+    EXIT: <how you know you are done>
+    RISKS: <anything unknown or risky>
+
+    Keep it under 12 lines. Do not invent tools that do not exist in `tools/`.
+    {% if bad_output %}If executing this plan could produce "{{ bad_output }}", refuse instead.{% endif %}
+
+    Request: {{ "{{" }}request{{ "}}" }}
+  "#
+}
+
+// Reviewer — critiques a draft response before it is returned.
+class ReviewResult {
+  verdict string @description("accept, revise, or reject")
+  issues  string @description("Bullet list of specific issues; empty string if none")
+  rewrite string?  @description("Minimal corrected draft when verdict is revise")
+}
+
+function Review(request: string, plan: string, tool_trace: string, draft: string) -> ReviewResult {
+  client "anthropic/claude-opus-4-5"
+  prompt #"
+    {{ "{{" }} ctx.output_format {{ "}}" }}
+
+    Review the draft against the plan and tool trace. Answer:
+    1. Grounded — does every claim trace back to a successful tool result or the request?
+    2. Guarded — does it respect the behavior contract?{% if bad_output %} Does it resemble "{{ bad_output }}"?{% endif %}
+    3. Complete — does it actually answer the request?
+
+    Verdict must be one of: accept, revise, reject.
+    Never reject purely on style.
+
+    REQUEST: {{ "{{" }}request{{ "}}" }}
+    PLAN: {{ "{{" }}plan{{ "}}" }}
+    TOOL_TRACE: {{ "{{" }}tool_trace{{ "}}" }}
+    DRAFT: {{ "{{" }}draft{{ "}}" }}
   "#
 }
