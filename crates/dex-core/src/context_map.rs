@@ -309,10 +309,11 @@ mod tests {
     fn build_context_map_produces_files() {
         use crate::template::TemplateMeta;
 
-        let mut files_created = Vec::new();
-        files_created.push(std::path::PathBuf::from("dex.toml"));
-        files_created.push(std::path::PathBuf::from("src/main.py"));
-        files_created.push(std::path::PathBuf::from("README.md"));
+        let files_created = vec![
+            std::path::PathBuf::from("dex.toml"),
+            std::path::PathBuf::from("src/main.py"),
+            std::path::PathBuf::from("README.md"),
+        ];
 
         let result = ScaffoldResult {
             files_created,

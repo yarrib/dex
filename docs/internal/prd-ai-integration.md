@@ -1,6 +1,6 @@
 # PRD: AI Integration
 
-**Status:** Skeleton implemented (v0.1) / Full tools (v0.2) / Agent scaffolding (v0.3)
+**Status:** v0.2 complete / Agent scaffolding (v0.3)
 **Owner:** TBD
 
 ---
@@ -131,10 +131,10 @@ are configured via `dex.toml`, not a separate binary:
 
 ### v0.2 — Full scaffold tools
 
-- [ ] `scaffold_project`: call `dex_core::scaffold()` from the MCP handler
-- [ ] `get_template_variables`: call `dex_core::load_template()` and return variable specs
-- [ ] Error handling: return structured errors, not raw panics
-- [ ] Integration test: Claude Code can scaffold a default project end-to-end
+- [x] `scaffold_project`: call `dex_core::scaffold()` from the MCP handler
+- [x] `get_template_variables`: call `dex_core::load_template()` and return variable specs (includes `validate` pattern and `when` condition annotations)
+- [x] Error handling: return structured errors (`isError: true` in result), not raw panics
+- [x] Integration tests: `list_templates`, `get_template_variables`, `scaffold_project` covered in `crates/dex-cli/tests/integration.rs`
 
 ### v0.3 — Agent scaffolding
 

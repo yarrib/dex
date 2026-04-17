@@ -237,6 +237,12 @@ fn tool_get_template_variables(args: &Value) -> Result<String, DexError> {
         if let Some(default) = &v.default {
             line.push_str(&format!(" (default: {default})"));
         }
+        if let Some(pattern) = &v.validate {
+            line.push_str(&format!(" (must match: {pattern})"));
+        }
+        if let Some(condition) = &v.when {
+            line.push_str(&format!(" (only when: {condition})"));
+        }
         lines.push(line);
     }
 
