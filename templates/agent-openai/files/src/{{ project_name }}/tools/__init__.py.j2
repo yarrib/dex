@@ -1,10 +1,17 @@
-"""Tool discovery and registration."""
+"""Tool discovery and registration.
+
+`planner` and `reviewer` are orchestration primitives called directly by
+`agent.py`, not model-callable tools, so they're excluded from discovery.
+"""
 
 import importlib
 import pkgutil
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+# Modules that are part of the agent control loop, not tools exposed to the model.
+_CONTROL_MODULES = {"planner", "reviewer"}
 
 
 @dataclass
@@ -22,7 +29,7 @@ def discover_tools() -> dict[str, Callable]:
     package = importlib.import_module(__package__)
 
     for _, module_name, _ in pkgutil.iter_modules(package.__path__):
-        if module_name.startswith("_"):
+        if module_name.startswith("_") or module_name in _CONTROL_MODULES:
             continue
         module = importlib.import_module(f"{__package__}.{module_name}")
         for attr_name in dir(module):

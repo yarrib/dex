@@ -110,3 +110,22 @@ any MCP client:
 - **UI**: `dex-cli` only — `dex-core` never touches the terminal
 
 Full rules: see `CLAUDE.md`.
+
+---
+
+## Known issues / rough edges
+
+Surfaced here so AI assistants don't silently hit them. Fix in a focused branch
+— do not address inline during unrelated work.
+
+- `DABs composite mode` removed — all templates are standalone (minijinja only).
+- `AgentScaffoldResultPy` drops `system_prompt` and `claude_md` fields.
+- `agent_new` name/description logic has a no-op guard.
+- `MCP scaffold_agent` runs entirely in-process: it does not execute any
+  template `[on_success]` command. Agent templates do not rely on that
+  (skills install via the library API), but any future template using
+  `on_success.run` will be skipped when invoked via MCP.
+- `.mcp.json` uses bare `"command": "dex"`. GUI-launched MCP clients (e.g.
+  Claude Desktop on macOS) may not inherit a login-shell PATH — if the server
+  fails to launch, edit `.mcp.json` to use the absolute path to the `dex`
+  binary.

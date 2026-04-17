@@ -114,9 +114,8 @@ context_role = "ai_doc"
 context_description = "Canonical agent-orientation doc for any AI coding assistant"
 
 [on_success]
-run = "dex skills init --yes --packs default,agent-dev --targets {{ ai_tools }}"
 message = """
-Skills installed. Next steps:
+Next steps:
   cd {{ project_name }}
   uv sync
   uv run baml generate
@@ -125,4 +124,8 @@ Skills installed. Next steps:
 
 Open the project in your AI coding assistant (Claude Code, Cursor, Copilot,
 or any MCP client) and read AGENTS.md to get oriented.
+
+If `.mcp.json` doesn't load in a GUI-launched client (e.g. Claude Desktop),
+the `dex` binary may not be on your PATH — edit `.mcp.json` to use the
+absolute path: $(which dex).
 """

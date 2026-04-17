@@ -372,8 +372,8 @@ my-agent/
 └── pyproject.toml
 ```
 
-Plus assistant surfaces installed by the `on_success` hook (gated on the
-`ai_tools` multi-select variable):
+Plus assistant surfaces installed directly by `dex init` via the library
+API (gated on the `ai_tools` multi-select variable):
 
 - `.claude/commands/*.md`, `.claude/agents/*.md`
 - `.cursor/rules/*.mdc`
@@ -382,12 +382,17 @@ Plus assistant surfaces installed by the `on_success` hook (gated on the
 
 ### 8.4. Framework Differences
 
+All three templates now share the plan → act → review loop and a `tools/`
+directory containing `planner.py` and `reviewer.py` control modules. The SDK
+differs in how the primary model is called:
+
 | | `agent-anthropic` | `agent-openai` | `agent-baml` |
 |---|---|---|---|
 | SDK | `anthropic` | `openai` | `baml-py` |
-| Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` |
+| Primary call | `client.messages.create()` | `client.chat.completions.create()` | `b.RunAgent(input=...)` |
+| Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` (plus `prompts/` for planner/reviewer) |
 | Output schema | untyped string | untyped string | typed via BAML class |
-| Tool pattern | `tools/` autodiscovery | `tools/` autodiscovery | BAML function args |
+| Planner/Reviewer | direct SDK calls | direct SDK calls | typed BAML functions (`b.Plan`, `b.Review`) |
 
 ## 9. Skills System (`dex skills`)
 

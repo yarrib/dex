@@ -330,7 +330,8 @@ fn mcp_scaffold_agent_creates_files_and_installs_skills() {
     assert!(!is_error, "scaffold_agent returned error: {responses:?}");
 
     // AGENTS.md and planner/reviewer stubs should exist.
-    assert!(project_dir.join("AGENTS.md").exists(), "missing AGENTS.md");
+    let agents_md = project_dir.join("AGENTS.md");
+    assert!(agents_md.exists(), "missing AGENTS.md");
     assert!(project_dir.join(".mcp.json").exists(), "missing .mcp.json");
     assert!(
         project_dir.join("src/mcpagent/tools/planner.py").exists(),
@@ -341,7 +342,18 @@ fn mcp_scaffold_agent_creates_files_and_installs_skills() {
         "missing reviewer.py"
     );
 
-    // Skill packs should have been installed for all four targets.
+    // AGENTS.md must actually render — no raw Jinja tokens, project_name resolved.
+    let agents_body = std::fs::read_to_string(&agents_md).unwrap();
+    assert!(
+        agents_body.contains("# AGENTS.md — mcpagent"),
+        "AGENTS.md header not rendered: {agents_body}"
+    );
+    assert!(
+        !agents_body.contains("{{"),
+        "AGENTS.md contains unrendered Jinja tokens"
+    );
+
+    // Skills installed for all four targets when ai_tools is unset.
     assert!(
         project_dir.join(".claude/commands").is_dir(),
         "expected .claude/commands to be populated"
@@ -350,6 +362,93 @@ fn mcp_scaffold_agent_creates_files_and_installs_skills() {
         project_dir.join(".cursor/rules").is_dir(),
         "expected .cursor/rules to be populated"
     );
+    assert!(
+        project_dir.join(".github/copilot-instructions.md").exists(),
+        "expected .github/copilot-instructions.md to be written"
+    );
+    assert!(
+        project_dir.join(".ai-skills/commands").is_dir(),
+        "expected .ai-skills/commands to be populated"
+    );
+}
+
+#[test]
+fn mcp_scaffold_agent_honors_ai_tools_variable() {
+    // When ai_tools is narrowed, only named targets get skill packs.
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("cursoronly");
+
+    let req = format!(
+        r#"{{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{{"name":"scaffold_agent","arguments":{{"sdk":"anthropic","dir":"{}","variables":{{"project_name":"cursoronly","ai_tools":"cursor"}}}}}}}}"#,
+        project_dir.display()
+    );
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    let is_error = responses[0]["result"]["isError"].as_bool().unwrap_or(false);
+    assert!(!is_error, "scaffold_agent returned error: {responses:?}");
+
+    assert!(
+        project_dir.join(".cursor/rules").is_dir(),
+        "cursor target should have been installed"
+    );
+    assert!(
+        !project_dir.join(".claude").exists(),
+        "claude target should NOT have been installed when ai_tools=cursor"
+    );
+    assert!(
+        !project_dir.join(".github/copilot-instructions.md").exists(),
+        "copilot target should NOT have been installed when ai_tools=cursor"
+    );
+    assert!(
+        !project_dir.join(".ai-skills").exists(),
+        "generic target should NOT have been installed when ai_tools=cursor"
+    );
+}
+
+#[test]
+fn init_slugifies_hyphenated_dir_name_to_valid_python_module() {
+    // `dex init --dir foo-bar` must produce `src/foo_bar/` — not `src/foo-bar/`
+    // which would be an invalid Python import path.
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("my-hyphenated-agent");
+    std::fs::create_dir(&project_dir).unwrap();
+
+    dex()
+        .args([
+            "init",
+            "--template",
+            "agent-anthropic",
+            "--no-prompt",
+            "--dir",
+        ])
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    assert!(
+        project_dir.join("src/my_hyphenated_agent").is_dir(),
+        "expected slugified module path; got entries: {:?}",
+        std::fs::read_dir(project_dir.join("src"))
+            .unwrap()
+            .filter_map(|e| e.ok().map(|e| e.file_name()))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        !project_dir.join("src/my-hyphenated-agent").exists(),
+        "hyphenated path must not have been created"
+    );
+}
+
+#[test]
+fn skills_init_yes_without_packs_and_targets_exits_failure() {
+    // --yes requires --packs and --targets so it never deadlocks on a prompt.
+    let dir = tempfile::tempdir().unwrap();
+    dex()
+        .args(["skills", "init", "--yes", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .failure();
 }
 
 #[test]

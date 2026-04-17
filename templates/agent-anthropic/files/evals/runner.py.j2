@@ -1,4 +1,11 @@
-"""Eval harness — loads cases, runs the agent, logs results to MLflow."""
+"""Eval harness — loads cases, runs the agent, logs results to MLflow.
+
+A case passes when:
+  1. The agent runs to completion without raising.
+  2. The output does not contain any string listed in `must_not_contain`.
+
+Add more assertions (e.g. `must_contain`, semantic checks) as your agent matures.
+"""
 
 import json
 import logging
@@ -18,22 +25,43 @@ def load_cases(cases_dir: Path | None = None) -> list[dict]:
     return [json.loads(p.read_text()) for p in sorted(cases_dir.glob("*.json"))]
 
 
+def _check_case(case: dict, output: str) -> tuple[bool, str]:
+    """Return (passed, reason). Extend as your guardrails grow."""
+    for banned in case.get("must_not_contain", []) or []:
+        if banned and banned in output:
+            return False, f"output contains banned substring: {banned!r}"
+    for required in case.get("must_contain", []) or []:
+        if required and required not in output:
+            return False, f"output missing required substring: {required!r}"
+    return True, "ok"
+
+
 def run_evals(cases_dir: Path | None = None) -> dict:
     """Run all eval cases and log results to MLflow."""
     cases = load_cases(cases_dir)
-    results = {"total": len(cases), "passed": 0, "failed": 0}
+    results: dict = {"total": len(cases), "passed": 0, "failed": 0, "cases": []}
 
     with mlflow.start_run(run_name="eval"):
         for case in cases:
-            case_id = case.get("id", "unknown")
+            case_id = case.get("name") or case.get("id") or "unknown"
             try:
-                run(case.get("input"))
-                results["passed"] += 1
-                mlflow.log_metric(f"case_{case_id}_pass", 1)
+                output = run(case.get("input")) or ""
             except Exception as e:
                 results["failed"] += 1
+                results["cases"].append({"name": case_id, "passed": False, "reason": f"raised: {e}"})
                 mlflow.log_metric(f"case_{case_id}_pass", 0)
-                logger.error("Case %s failed: %s", case_id, e)
+                logger.error("Case %s raised: %s", case_id, e)
+                continue
+
+            passed, reason = _check_case(case, output)
+            if passed:
+                results["passed"] += 1
+                mlflow.log_metric(f"case_{case_id}_pass", 1)
+            else:
+                results["failed"] += 1
+                mlflow.log_metric(f"case_{case_id}_pass", 0)
+                logger.error("Case %s failed: %s", case_id, reason)
+            results["cases"].append({"name": case_id, "passed": passed, "reason": reason})
 
         mlflow.log_metrics({
             "eval_total": results["total"],

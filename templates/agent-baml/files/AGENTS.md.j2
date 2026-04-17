@@ -56,20 +56,29 @@
 
 ## Skills installed in this project
 
-This project suggests the `default` and `agent-dev` skill packs. Skills are
-installed per-assistant by `dex skills init` and live at:
+This project uses the `default` and `agent-dev` skill packs. Skills were
+installed into the following assistant surfaces (per the `ai_tools` variable
+chosen at scaffold time):
 
-- `.claude/commands/` and `.claude/agents/` — for Claude Code.
-- `.cursor/rules/*.mdc` — for Cursor.
-- `.github/copilot-instructions.md` — for GitHub Copilot.
-- `.ai-skills/commands/` and `.ai-skills/agents/` — generic/any MCP client.
+{% if 'claude' in ai_tools -%}
+- `.claude/commands/` and `.claude/agents/` — Claude Code.
+{%- endif %}
+{% if 'cursor' in ai_tools -%}
+- `.cursor/rules/*.mdc` — Cursor.
+{%- endif %}
+{% if 'copilot' in ai_tools -%}
+- `.github/copilot-instructions.md` — GitHub Copilot.
+{%- endif %}
+{% if 'generic' in ai_tools -%}
+- `.ai-skills/commands/` and `.ai-skills/agents/` — generic / any MCP client.
+{%- endif %}
 
-To (re-)install for a different assistant:
+To (re-)install, add a target, or pull upstream updates:
 
 ```bash
-dex skills sync
-# or explicitly:
-dex skills init --yes --packs default,agent-dev --targets cursor
+dex skills sync                                    # reproducible from dex.toml
+dex skills init --yes \
+    --packs default,agent-dev --targets cursor     # add a specific target
 ```
 
 ### Slash commands available to the assistant

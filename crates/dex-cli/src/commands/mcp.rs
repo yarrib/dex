@@ -1,15 +1,15 @@
 //! `dex mcp serve` — JSON-RPC 2.0 MCP server over stdio.
 //!
-//! Exposes dex operations to MCP clients (Claude Desktop, Claude Code, etc.)
-//! via the Model Context Protocol over stdin/stdout.
+//! Exposes dex operations to MCP clients (Claude Desktop, Claude Code, Cursor,
+//! or any MCP-capable tool) via the Model Context Protocol over stdin/stdout.
 //!
 //! Tools provided:
 //! - `list_templates` — list all available dex templates
 //! - `get_template_variables` — return variable specs for a named template
 //! - `scaffold_project` — scaffold a project from a template into a directory
-//!
-//! Agent scaffolding uses `scaffold_project` with an agent template
-//! (e.g. `agent-anthropic`, `agent-openai`, `agent-baml`).
+//! - `scaffold_agent` — scaffold an AI agent (sdk = anthropic|openai|baml);
+//!   thin wrapper over `scaffold_project` that also installs skill packs into
+//!   the targets named in the `ai_tools` variable (default: all four).
 
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
@@ -370,16 +370,29 @@ fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
 
     let body = tool_scaffold_project(&forwarded)?;
 
-    // Install agent skill packs to all four assistant targets so the project is
-    // ready out of the box for Claude Code, Cursor, Copilot, and generic MCP clients.
+    // Install agent skill packs. Honor the caller's `ai_tools` variable so the
+    // MCP path matches `dex agent new`'s behavior exactly; default to all four
+    // targets when unspecified.
     let dir = args.get("dir").and_then(|v| v.as_str()).unwrap_or(".");
     let target_dir = PathBuf::from(dir);
-    let targets = [
-        InstallTarget::Claude,
-        InstallTarget::Cursor,
-        InstallTarget::Copilot,
-        InstallTarget::Generic,
-    ];
+    let targets: Vec<InstallTarget> = args
+        .get("variables")
+        .and_then(|v| v.get("ai_tools"))
+        .and_then(|v| v.as_str())
+        .map(|s| {
+            s.split(',')
+                .filter_map(|tok| InstallTarget::parse(tok.trim()).ok())
+                .collect::<Vec<_>>()
+        })
+        .filter(|v: &Vec<InstallTarget>| !v.is_empty())
+        .unwrap_or_else(|| {
+            vec![
+                InstallTarget::Claude,
+                InstallTarget::Cursor,
+                InstallTarget::Copilot,
+                InstallTarget::Generic,
+            ]
+        });
     let mut skills_written = 0usize;
     let mut skills_notes: Vec<String> = Vec::new();
     for pack_name in ["default", "agent-dev"] {
@@ -392,13 +405,16 @@ fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
         }
     }
 
+    let target_names = targets
+        .iter()
+        .map(|t| t.as_str())
+        .collect::<Vec<_>>()
+        .join("/");
     let skills_summary = if skills_notes.is_empty() {
-        format!(
-            "\n\nInstalled {skills_written} skill files for claude/cursor/copilot/generic targets."
-        )
+        format!("\n\nInstalled {skills_written} skill files for {target_names} targets.")
     } else {
         format!(
-            "\n\nInstalled {skills_written} skill files. Notes:\n{}",
+            "\n\nInstalled {skills_written} skill files for {target_names} targets. Notes:\n{}",
             skills_notes.join("\n")
         )
     };
