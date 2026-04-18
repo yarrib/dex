@@ -49,6 +49,10 @@ pub struct InitArgs {
     /// Install specific packs (comma-separated). Skips interactive selection.
     #[arg(long)]
     packs: Option<String>,
+
+    /// Auto-confirm all prompts (e.g. updating dex.toml). Requires --packs and --targets.
+    #[arg(short = 'y', long)]
+    yes: bool,
 }
 
 #[derive(Args)]
@@ -95,10 +99,67 @@ pub fn run(args: SkillsArgs) -> Result<(), DexError> {
 }
 
 // ---------------------------------------------------------------------------
+// Template-driven install (library API path, no shell)
+// ---------------------------------------------------------------------------
+
+/// Install the given skill packs into `target_dir` for the given targets, and
+/// record the choice in `dex.toml`. Invoked by the scaffold flow (`dex init` and
+/// the MCP `scaffold_agent` tool) so the output is identical on both paths.
+///
+/// `quiet` suppresses per-file output; a one-line summary is still printed.
+pub fn install_template_skills(
+    target_dir: &std::path::Path,
+    packs: &[String],
+    targets: &[InstallTarget],
+    quiet: bool,
+) -> Result<usize, DexError> {
+    let config = load_dex_config();
+    let mut total = 0usize;
+
+    for pack_name in packs {
+        match load_pack_with_remote_fetch(
+            pack_name,
+            config.skills_dir.as_deref(),
+            &config.skill_remotes,
+            false,
+        ) {
+            Ok(pack) => {
+                let result = install_skills(&pack, target_dir, targets)?;
+                total += result.files_written.len();
+                if !quiet {
+                    println!(
+                        "  {} {} ({} files)",
+                        style("✓").green(),
+                        style(pack_name).cyan(),
+                        result.files_written.len()
+                    );
+                }
+            }
+            Err(e) => {
+                output::print_warning(&format!("could not load pack '{pack_name}': {e}"));
+            }
+        }
+    }
+
+    let dex_toml = target_dir.join("dex.toml");
+    if dex_toml.exists() {
+        write_skills_to_dex_toml(&dex_toml, packs, targets)?;
+    }
+
+    Ok(total)
+}
+
+// ---------------------------------------------------------------------------
 // dex skills init
 // ---------------------------------------------------------------------------
 
 fn run_init(args: InitArgs) -> Result<(), DexError> {
+    if args.yes && (args.packs.is_none() || args.targets.is_none()) {
+        return Err(DexError::Config(dex_core::error::ConfigError::Invalid(
+            "--yes requires both --packs and --targets (non-interactive mode cannot prompt)".into(),
+        )));
+    }
+
     let target_dir = PathBuf::from(&args.dir)
         .canonicalize()
         .unwrap_or_else(|_| PathBuf::from(&args.dir));
@@ -219,11 +280,15 @@ fn run_init(args: InitArgs) -> Result<(), DexError> {
     // Offer to update dex.toml.
     let dex_toml = target_dir.join("dex.toml");
     if dex_toml.exists() {
-        let update = Confirm::new()
-            .with_prompt("Update dex.toml [skills] with selected packs and targets?")
-            .default(true)
-            .interact()
-            .map_err(io_error)?;
+        let update = if args.yes {
+            true
+        } else {
+            Confirm::new()
+                .with_prompt("Update dex.toml [skills] with selected packs and targets?")
+                .default(true)
+                .interact()
+                .map_err(io_error)?
+        };
 
         if update {
             write_skills_to_dex_toml(&dex_toml, &selected_packs, &selected_targets)?;

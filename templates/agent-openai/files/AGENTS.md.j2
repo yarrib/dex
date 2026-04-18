@@ -1,0 +1,156 @@
+# AGENTS.md — {{ project_name }}
+
+> This is the canonical orientation doc for any AI coding assistant working on
+> this project (Claude Code, Cursor, Copilot, Claude Desktop, or any MCP
+> client). Read this first before touching code.
+
+## Purpose
+
+{{ description }}
+
+## Behavior contract
+
+- **Trigger:** {{ trigger }}
+{%- if success_criteria %}
+- **Success:** {{ success_criteria }}
+{%- endif %}
+- **Mode:** {% if autonomous %}Autonomous — act without per-step confirmation.{% else %}Confirm before taking actions with side effects.{% endif %}
+{%- if reads %}
+- **Reads:** {{ reads }}
+{%- endif %}
+{%- if writes %}
+- **Writes:** {{ writes }}
+{%- endif %}
+{%- if bad_output %}
+- **Never output:** {{ bad_output }}
+{%- endif %}
+
+## Architecture
+
+```
+{{ project_name }}/
+├── AGENTS.md                       # You are here.
+├── CLAUDE.md                       # Pointer to this file (for Claude Code).
+├── .mcp.json                       # MCP server config (dex tools over stdio).
+├── dex.toml                        # Project config + [skills] pack list.
+├── src/{{ project_name }}/
+│   ├── agent.py                    # Entry point: plan → act → review loop.
+│   ├── prompts/
+│   │   ├── system.md               # Main system prompt.
+│   │   ├── planning.md             # Planner sub-prompt.
+│   │   └── review.md               # Self-review sub-prompt.
+│   └── tools/                      # Auto-discovered tools (any public fn + docstring).
+│       ├── planner.py              # Produces a plan from a request.
+│       ├── reviewer.py             # Critiques a draft response.
+│       └── example_tool.py         # Replace with real tools.
+├── evals/
+│   ├── runner.py                   # Iterates cases/*.json, prints pass/fail.
+│   └── cases/
+│       ├── example.json            # Happy-path case.
+│       └── guardrail.json          # Negative case — agent must refuse.
+├── resources/                      # Databricks Asset Bundle resource defs.
+├── tests/                          # pytest unit tests.
+├── databricks.yml                  # DAB root config.
+└── pyproject.toml                  # Python deps (managed by `uv`).
+```
+
+## Skills installed in this project
+
+This project uses the `default` and `agent-dev` skill packs. Skills were
+installed into the following assistant surfaces (per the `ai_tools` variable
+chosen at scaffold time):
+
+{% if 'claude' in ai_tools -%}
+- `.claude/commands/` and `.claude/agents/` — Claude Code.
+{%- endif %}
+{% if 'cursor' in ai_tools -%}
+- `.cursor/rules/*.mdc` — Cursor.
+{%- endif %}
+{% if 'copilot' in ai_tools -%}
+- `.github/copilot-instructions.md` — GitHub Copilot.
+{%- endif %}
+{% if 'generic' in ai_tools -%}
+- `.ai-skills/commands/` and `.ai-skills/agents/` — generic / any MCP client.
+{%- endif %}
+
+To (re-)install, add a target, or pull upstream updates:
+
+```bash
+dex skills sync                                    # reproducible from dex.toml
+dex skills init --yes \
+    --packs default,agent-dev --targets cursor     # add a specific target
+```
+
+### Slash commands available to the assistant
+
+| Command | What it does |
+|---|---|
+| `/build` | Install deps (`uv sync`). |
+| `/test` | Run the pytest suite. |
+| `/lint` | Run linters and formatters. |
+| `/eval` | Run `evals/runner.py` and report pass/fail. |
+| `/trace-review` | Inspect recent MLflow traces for this agent. |
+| `/prompt-tune` | Evidence-driven iteration on `prompts/system.md`. |
+| `/tool-add` | Scaffold a new tool file under `tools/`. |
+| `/commit` | Create a well-formed git commit. |
+
+### Personas available to the assistant
+
+| Persona | When to invoke |
+|---|---|
+| `architect` | Reviewing design, boundaries, extension points. |
+| `code-reviewer` | Peer review of concrete changes. |
+| `common-sense` | Sanity check on complexity and scope. |
+| `planner` | Before acting — produce an explicit plan. |
+| `prompt-engineer` | Iterating on `prompts/system.md` with evidence. |
+| `eval-designer` | Authoring or critiquing eval cases. |
+| `safety-reviewer` | Auditing guardrails, data access, failure modes. |
+
+## MCP server
+
+`.mcp.json` registers the `dex` MCP server, exposing these tools to any
+MCP-capable assistant:
+
+- `list_templates` — list dex project templates.
+- `get_template_variables` — inspect a template's inputs.
+- `scaffold_project` — scaffold a new project from a template.
+- `scaffold_agent` — scaffold a sibling agent project.
+
+## Dev loop
+
+```bash
+uv sync                                # install
+uv run pytest                          # tests
+uv run python evals/runner.py          # evals
+uv run python -m {{ project_name }}.agent  # local run
+```
+
+## Deploy (Databricks)
+
+```bash
+databricks bundle deploy --target dev
+databricks bundle deploy --target prod
+```
+
+{% if example_input -%}
+## Example
+
+**Input:** {{ example_input }}
+
+{% if example_output -%}
+**Expected behavior:** {{ example_output }}
+{%- endif %}
+{%- endif %}
+
+## Non-negotiables for any AI assistant working here
+
+1. Changes to `prompts/system.md` require running `evals/runner.py` before and
+   after. No prompt edits without evidence.
+2. Any new tool must return `ToolResult(success, data, error)` — no bare
+   return values, no exceptions bubbling out of the tool layer.
+3. All agent actions are traced via MLflow. Do not disable tracing.
+4. The guardrail eval case (`evals/cases/guardrail.json`) must always pass.
+{%- if not autonomous %}
+5. This agent is NOT autonomous — never add code paths that take side-effecting
+   actions without a confirmation step.
+{%- endif %}

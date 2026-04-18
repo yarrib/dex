@@ -5,53 +5,55 @@ use std::path::{Path, PathBuf};
 
 use clap::Args;
 use console::style;
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::{Confirm, Input, MultiSelect, Select};
 
 use dex_core::config::{
     load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
 };
 use dex_core::context_map::write_context_map;
+use dex_core::skills::InstallTarget;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
 use dex_core::{DexError, scaffold};
 
+use crate::commands::skills::install_template_skills;
 use crate::output;
 
 #[derive(Args)]
 pub struct InitArgs {
     /// Template to scaffold from.
     #[arg(short, long, default_value = "default")]
-    template: String,
+    pub template: String,
 
     /// Target directory.
     #[arg(short, long, default_value = ".")]
-    dir: String,
+    pub dir: String,
 
     /// Use defaults for all variables (non-interactive).
     #[arg(long)]
-    no_prompt: bool,
+    pub no_prompt: bool,
 
     /// TOML file of pre-filled variable values (skips prompts for matched vars).
     #[arg(long)]
-    standards: Option<PathBuf>,
+    pub standards: Option<PathBuf>,
 
     /// Named preset profile to load (from ~/.config/dex/presets.toml).
     #[arg(long)]
-    preset: Option<String>,
+    pub preset: Option<String>,
 
     /// TOML presets file to use instead of the default location.
     #[arg(long)]
-    presets_file: Option<PathBuf>,
+    pub presets_file: Option<PathBuf>,
 
     /// Load pre-filled variable values from a saved answers file (skips prompts for matched vars).
     #[arg(long)]
-    answers: Option<PathBuf>,
+    pub answers: Option<PathBuf>,
 
     /// Save answered variable values to a TOML file after scaffold.
     /// Omit the path to use the default: ~/.config/dex/answers/<template>.toml
     #[arg(long, short = 's', num_args = 0..=1, default_missing_value = "")]
-    save_answers: Option<String>,
+    pub save_answers: Option<String>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -103,12 +105,15 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
     // Load the template.
     let template = load_template(&entry.source, &args.template)?;
 
-    // Determine default project name from target directory.
-    let default_project_name = target
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("my_project")
-        .to_string();
+    // Determine default project name from target directory. Slugify to satisfy
+    // the common `^[a-z][a-z0-9_]*$` rule: lowercase, hyphens/dots → underscores,
+    // strip anything else, ensure a leading alpha.
+    let default_project_name = slugify_project_name(
+        target
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("my_project"),
+    );
 
     // Collect variables via interactive prompts.
     let mut variables: HashMap<String, minijinja::Value> = HashMap::new();
@@ -186,6 +191,27 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
                         .interact()
                         .map_err(io_error)?;
                     minijinja::Value::from(choices[selection].clone())
+                }
+                VariableType::Multi => {
+                    let choices = spec.choices.as_deref().unwrap_or(&[]);
+                    let preselected: Vec<&str> = effective_default
+                        .split(',')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    let defaults: Vec<bool> = choices
+                        .iter()
+                        .map(|c| preselected.contains(&c.as_str()))
+                        .collect();
+                    let selections = MultiSelect::new()
+                        .with_prompt(&spec.prompt)
+                        .items(choices)
+                        .defaults(&defaults)
+                        .interact()
+                        .map_err(io_error)?;
+                    let picked: Vec<String> =
+                        selections.into_iter().map(|i| choices[i].clone()).collect();
+                    minijinja::Value::from(picked.join(","))
                 }
                 VariableType::Bool => {
                     let default = effective_default.is_empty() || effective_default == "true";
@@ -274,14 +300,32 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         );
     }
 
-    // If the template suggests skill packs, print a hint.
+    // If the template suggests skill packs, install them now via the library
+    // API (no shell) so scaffold is atomic and survives a missing $PATH.
+    // Targets come from the `ai_tools` variable if present, else all four.
     if !template.suggested_skills.is_empty() {
+        let targets = resolve_install_targets(&variables);
         println!(
-            "  {} Suggested skill packs: {}\n  Run {} to install them.\n",
-            console::style("tip:").yellow().bold(),
-            console::style(template.suggested_skills.join(", ")).cyan(),
-            console::style("dex skills init").cyan()
+            "  {} Installing suggested skill packs: {}",
+            console::style("skills:").cyan().bold(),
+            console::style(template.suggested_skills.join(", ")).cyan()
         );
+        match install_template_skills(&target, &template.suggested_skills, &targets, true) {
+            Ok(n) => {
+                let target_names: Vec<&str> = targets.iter().map(|t| t.as_str()).collect();
+                println!(
+                    "  {} {} skill files installed for: {}\n",
+                    console::style("✓").green(),
+                    n,
+                    console::style(target_names.join(", ")).cyan()
+                );
+            }
+            Err(e) => {
+                output::print_warning(&format!(
+                    "skill install failed: {e}. Run `dex skills init` manually."
+                ));
+            }
+        }
     }
 
     // Save answers for future replay if --save-answers / -s was passed.
@@ -328,12 +372,28 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         }
     }
 
-    // Post-scaffold activation hook.
+    // Post-scaffold activation hook. Render run/message against the resolved
+    // variables so templates can reference user choices (e.g. --targets {{ ai_tools }}).
     if let Some(on_success) = &result.on_success {
-        run_on_success(on_success, &target, args.no_prompt)?;
+        let rendered = render_on_success(on_success, &variables);
+        run_on_success(&rendered, &target, args.no_prompt)?;
     }
 
     Ok(())
+}
+
+/// Render `on_success.run` and `on_success.message` through Jinja against the
+/// resolved variable map. Rendering failures fall back to the raw string.
+fn render_on_success(
+    spec: &dex_core::OnSuccessSpec,
+    vars: &HashMap<String, minijinja::Value>,
+) -> dex_core::OnSuccessSpec {
+    let env = minijinja::Environment::new();
+    let render = |s: &str| -> String { env.render_str(s, vars).unwrap_or_else(|_| s.to_string()) };
+    dex_core::OnSuccessSpec {
+        run: spec.run.as_deref().map(render),
+        message: spec.message.as_deref().map(render),
+    }
 }
 
 /// Execute the `[on_success]` activation hook from the template.
@@ -502,6 +562,57 @@ fn toml_value_to_string(v: &toml::Value) -> String {
         toml::Value::Float(f) => f.to_string(),
         other => other.to_string(),
     }
+}
+
+/// Normalize a directory basename into a Python-identifier-compatible slug.
+///
+/// Agent templates validate `project_name` against `^[a-z][a-z0-9_]*$` because
+/// it's used as a Python module path. Without this, `dex init --dir my-agent`
+/// would silently produce `src/my-agent/` — a `SyntaxError` at import time.
+fn slugify_project_name(name: &str) -> String {
+    let lowered: String = name
+        .chars()
+        .map(|c| match c {
+            'A'..='Z' => c.to_ascii_lowercase(),
+            'a'..='z' | '0'..='9' | '_' => c,
+            '-' | '.' | ' ' => '_',
+            _ => '_',
+        })
+        .collect();
+
+    match lowered.chars().next() {
+        Some(c) if c.is_ascii_alphabetic() => lowered,
+        _ => format!("p_{lowered}"),
+    }
+}
+
+/// Resolve the install-targets list from a scaffolded project's variables.
+/// Honors the `ai_tools` variable if present (CSV string or single token);
+/// falls back to all four targets otherwise.
+fn resolve_install_targets(variables: &HashMap<String, minijinja::Value>) -> Vec<InstallTarget> {
+    let raw = variables
+        .get("ai_tools")
+        .and_then(|v| v.as_str())
+        .map(str::to_string);
+
+    if let Some(s) = raw
+        && !s.is_empty()
+    {
+        let parsed: Vec<InstallTarget> = s
+            .split(',')
+            .filter_map(|tok| InstallTarget::parse(tok.trim()).ok())
+            .collect();
+        if !parsed.is_empty() {
+            return parsed;
+        }
+    }
+
+    vec![
+        InstallTarget::Claude,
+        InstallTarget::Cursor,
+        InstallTarget::Copilot,
+        InstallTarget::Generic,
+    ]
 }
 
 fn io_error(e: impl std::fmt::Display) -> DexError {

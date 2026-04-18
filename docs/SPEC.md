@@ -52,15 +52,25 @@ dex init [--template <name>] [--dir <path>] [--no-prompt]
     unless --no-prompt is set (uses defaults). --preset loads a named profile
     from the presets file; --standards loads flat key-value pre-fills.
 
+dex agent new [--sdk <anthropic|openai|baml>] [--dir <path>] [--no-prompt]
+              [--preset <profile>] [--standards <path>]
+    Scaffold a batteries-included AI agent project. Thin wrapper over
+    `dex init` that restricts the template to the `agent-*` family. The
+    generated project is coding-assistant agnostic: it includes AGENTS.md,
+    .mcp.json, planner/reviewer stubs, and — via an on_success hook — skills
+    installed into .claude/, .cursor/, .github/, and .ai-skills/.
+
 dex init --template agent-anthropic
 dex init --template agent-openai
 dex init --template agent-baml
-    Scaffold an AI agent project using a framework-specific template.
-    Agent templates include: prompts, tools, evals, DAB deployment config.
-    Choose the template matching your LLM SDK.
+    Alternative entry point to the same agent templates. `dex agent new` is
+    the recommended UX; `dex init --template agent-*` is the equivalent
+    low-level form.
 
 dex mcp serve
     Start the MCP server for AI agent integration.
+    Tools: list_templates, get_template_variables, scaffold_project,
+    scaffold_agent.
 
 dex run <task> [-- <extra-args>]
     Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
@@ -300,16 +310,23 @@ See [Template Authoring](templates/authoring.md) and [Org Templates](templates/o
 
 ### 8.1. Overview
 
-AI agent projects are scaffolded via `dex init` using framework-specific templates.
-Choose the template that matches your LLM SDK. All agent templates share the same
-variable set (description, trigger, reads/writes, etc.) and produce a deployable
-skeleton integrated with Databricks Asset Bundles.
+AI agent projects are scaffolded via `dex agent new` (or `dex init --template
+agent-*`). Choose the SDK that matches your provider. All agent templates share
+the same variable set (description, trigger, reads/writes, etc.) and produce a
+batteries-included, coding-assistant-agnostic skeleton integrated with
+Databricks Asset Bundles.
 
 ```
-dex init --template agent-anthropic   # Anthropic SDK (claude-*)
-dex init --template agent-openai      # OpenAI SDK (gpt-*)
-dex init --template agent-baml        # BAML typed functions (any provider)
+dex agent new --sdk anthropic   # Anthropic SDK (claude-*)
+dex agent new --sdk openai      # OpenAI SDK (gpt-*)
+dex agent new --sdk baml        # BAML typed functions (any provider)
 ```
+
+Every scaffold includes a plan → act → review agent loop, a vendor-neutral
+`AGENTS.md` orientation doc, a `.mcp.json` that registers `dex mcp serve` for
+any MCP client, and an `on_success` hook that installs the `default` and
+`agent-dev` skill packs into whichever assistants the user selected
+(`ai_tools` variable: claude, cursor, copilot, generic).
 
 ### 8.2. Shared Template Variables
 
@@ -333,27 +350,49 @@ All agent templates prompt for the same variables:
 
 ```
 my-agent/
+├── AGENTS.md               # canonical vendor-neutral orientation doc
+├── CLAUDE.md               # 3-line pointer at AGENTS.md
+├── .mcp.json               # registers `dex mcp serve` (MCP standard)
 ├── baml_src/               # (agent-baml only) BAML function definitions
 ├── src/my_agent/
-│   ├── agent.py            # Entry point
-│   ├── tools/              # Tool implementations (anthropic/openai only)
-│   └── prompts/system.md   # System prompt
-├── evals/                  # Eval runner + example cases
+│   ├── agent.py            # plan → act → review loop (MLflow-traced)
+│   ├── tools/
+│   │   ├── planner.py      # Planner tool stub
+│   │   └── reviewer.py     # Reviewer tool stub
+│   └── prompts/
+│       ├── system.md
+│       ├── planning.md
+│       └── review.md
+├── evals/
+│   ├── cases/example.json
+│   └── cases/guardrail.json    # negative case using bad_output
 ├── resources/              # DAB job and serving endpoint definitions
 ├── tests/
-├── CLAUDE.md               # Project instructions for Claude Code
-├── databricks.yml          # DAB root config
+├── databricks.yml
 └── pyproject.toml
 ```
 
+Plus assistant surfaces installed directly by `dex init` via the library
+API (gated on the `ai_tools` multi-select variable):
+
+- `.claude/commands/*.md`, `.claude/agents/*.md`
+- `.cursor/rules/*.mdc`
+- `.github/copilot-instructions.md`
+- `.ai-skills/commands/*.md`, `.ai-skills/agents/*.md`
+
 ### 8.4. Framework Differences
+
+All three templates now share the plan → act → review loop and a `tools/`
+directory containing `planner.py` and `reviewer.py` control modules. The SDK
+differs in how the primary model is called:
 
 | | `agent-anthropic` | `agent-openai` | `agent-baml` |
 |---|---|---|---|
 | SDK | `anthropic` | `openai` | `baml-py` |
-| Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` |
+| Primary call | `client.messages.create()` | `client.chat.completions.create()` | `b.RunAgent(input=...)` |
+| Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` (plus `prompts/` for planner/reviewer) |
 | Output schema | untyped string | untyped string | typed via BAML class |
-| Tool pattern | `tools/` autodiscovery | `tools/` autodiscovery | BAML function args |
+| Planner/Reviewer | direct SDK calls | direct SDK calls | typed BAML functions (`b.Plan`, `b.Review`) |
 
 ## 9. Skills System (`dex skills`)
 
@@ -453,6 +492,11 @@ dex ships two built-in skill packs embedded in the binary:
 **`databricks`** — Databricks workflow skills:
 - Commands: `deploy-bundle`, `run-job`
 - Agents: `data-engineer`, `platform-engineer`
+
+**`agent-dev`** — AI-agent development skills (suggested by the `agent-*`
+templates alongside `default`):
+- Commands: `eval`, `trace-review`, `prompt-tune`, `tool-add`
+- Agents: `planner`, `prompt-engineer`, `eval-designer`, `safety-reviewer`
 
 ### 9.6. Authoring Custom Packs
 
