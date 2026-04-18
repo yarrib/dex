@@ -389,10 +389,7 @@ fn render_on_success(
     vars: &HashMap<String, minijinja::Value>,
 ) -> dex_core::OnSuccessSpec {
     let env = minijinja::Environment::new();
-    let render = |s: &str| -> String {
-        env.render_str(s, vars)
-            .unwrap_or_else(|_| s.to_string())
-    };
+    let render = |s: &str| -> String { env.render_str(s, vars).unwrap_or_else(|_| s.to_string()) };
     dex_core::OnSuccessSpec {
         run: spec.run.as_deref().map(render),
         message: spec.message.as_deref().map(render),
@@ -592,9 +589,7 @@ fn slugify_project_name(name: &str) -> String {
 /// Resolve the install-targets list from a scaffolded project's variables.
 /// Honors the `ai_tools` variable if present (CSV string or single token);
 /// falls back to all four targets otherwise.
-fn resolve_install_targets(
-    variables: &HashMap<String, minijinja::Value>,
-) -> Vec<InstallTarget> {
+fn resolve_install_targets(variables: &HashMap<String, minijinja::Value>) -> Vec<InstallTarget> {
     let raw = variables
         .get("ai_tools")
         .and_then(|v| v.as_str())
