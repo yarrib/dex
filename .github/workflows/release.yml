@@ -75,9 +75,26 @@ jobs:
           tool: git-cliff
 
       - name: Generate changelog with git-cliff
-        run: git-cliff --unreleased --tag ${{ needs.prepare.outputs.tag }} --strip header --output CHANGELOG_RELEASE.md
+        run: git-cliff --latest --strip header --output CHANGELOG_RELEASE.md
         env:
           GITHUB_REPO: ${{ github.repository }}
+
+      - name: Promote lightweight tag to annotated with changelog
+        run: |
+          TAG="${{ needs.prepare.outputs.tag }}"
+          # Only promote if the tag is lightweight (cat-file type == "commit").
+          # Annotated tags (type == "tag") already carry a message — leave them.
+          if [ "$(git cat-file -t "$TAG")" = "tag" ]; then
+            echo "Tag $TAG is already annotated — leaving as-is."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            printf 'Release %s\n\n' "$TAG" > TAG_MESSAGE.md
+            cat CHANGELOG_RELEASE.md >> TAG_MESSAGE.md
+            git tag -a -f -F TAG_MESSAGE.md "$TAG" "$TAG"
+            git push origin -f "refs/tags/$TAG"
+            echo "Promoted $TAG from lightweight to annotated tag with changelog."
+          fi
 
       - uses: actions/upload-artifact@v4
         with:

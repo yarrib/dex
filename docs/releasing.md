@@ -48,6 +48,8 @@ make tag-release
 
 `make tag-release` tags the current `HEAD` with the version in `Cargo.toml` and pushes the tag to GitHub.
 
+The tag is annotated with the generated changelog when `git-cliff` is installed locally (run `make docs-install` to get it). If `git-cliff` is unavailable, a lightweight tag is pushed and the release workflow promotes it to an annotated tag with the same changelog — so either way, `git show v0.x.y` displays the release notes.
+
 ### 4. Watch the release workflow
 
 Go to **Actions → Release** on GitHub. The workflow:

@@ -84,11 +84,20 @@ bump-major: _bump-guard
 	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
 
 # Run this on main after the version bump PR is merged.
-# Tags the current HEAD and pushes — triggers the release workflow.
+# Tags the current HEAD (annotated with changelog) and pushes — triggers the release workflow.
+# Falls back to a lightweight tag if git-cliff isn't installed; CI will promote it.
 tag-release: _bump-guard
 	$(eval VER := $(shell bash scripts/bump-version.sh))
 	@git branch --show-current | grep -q '^main$$' || (echo "error: must be on main branch"; exit 1)
-	git tag v$(VER)
+	@if command -v git-cliff >/dev/null 2>&1; then \
+		printf 'Release v$(VER)\n\n' > /tmp/dex-tag-msg.md; \
+		git-cliff --unreleased --tag v$(VER) --strip header >> /tmp/dex-tag-msg.md; \
+		git tag -a -F /tmp/dex-tag-msg.md v$(VER); \
+		rm -f /tmp/dex-tag-msg.md; \
+	else \
+		echo "warn: git-cliff not installed — creating lightweight tag (CI will promote)"; \
+		git tag v$(VER); \
+	fi
 	git push origin v$(VER)
 	@echo "Tagged v$(VER) — release workflow will fire"
 
