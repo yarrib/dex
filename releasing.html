@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-549b00a0.js";
+            window.path_to_searchindex_js = "searchindex-666b3bfa.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d1c2384c.js"></script>
@@ -223,6 +223,7 @@ git push -u origin chore/release-v0.x.y
 make tag-release
 </code></pre>
 <p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>Cargo.toml</code> and pushes the tag to GitHub.</p>
+<p>The tag is annotated with the generated changelog when <code>git-cliff</code> is installed locally (run <code>make docs-install</code> to get it). If <code>git-cliff</code> is unavailable, a lightweight tag is pushed and the release workflow promotes it to an annotated tag with the same changelog — so either way, <code>git show v0.x.y</code> displays the release notes.</p>
 <h3 id="4-watch-the-release-workflow"><a class="header" href="#4-watch-the-release-workflow">4. Watch the release workflow</a></h3>
 <p>Go to <strong>Actions → Release</strong> on GitHub. The workflow:</p>
 <ol>
