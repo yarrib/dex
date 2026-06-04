@@ -15,8 +15,8 @@
         <link rel="icon" href="../favicon-de23e50b.svg">
         <link rel="shortcut icon" href="../favicon-8114d1fc.png">
         <link rel="stylesheet" href="../css/variables-8adf115d.css">
-        <link rel="stylesheet" href="../css/general-2459343d.css">
-        <link rel="stylesheet" href="../css/chrome-ae938929.css">
+        <link rel="stylesheet" href="../css/general-0392ca55.css">
+        <link rel="stylesheet" href="../css/chrome-fc474251.css">
         <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
 
         <!-- Fonts -->
@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-666b3bfa.js";
+            window.path_to_searchindex_js = "../searchindex-67574965.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-d1c2384c.js"></script>
+        <script src="../toc-f1d93b5a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -186,9 +186,10 @@
 <pre><code>dex mcp serve
 </code></pre>
 <h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>The MCP (Model Context Protocol) server lets AI tools like Claude Desktop and Claude Code call dex
-operations directly — scaffolding projects and listing templates — without leaving the chat
-interface.</p>
+<p>The MCP (Model Context Protocol) server lets AI coding tools — Claude Code, Claude
+Desktop, Cursor, VS Code / GitHub Copilot, OpenAI Codex, Zed, Google Antigravity,
+and any other MCP-capable client — call dex operations directly: scaffolding
+projects, listing templates, and creating agents without leaving the chat interface.</p>
 <h2 id="available-tools"><a class="header" href="#available-tools">Available tools</a></h2>
 <div class="table-wrapper">
 <table>
@@ -199,6 +200,7 @@ interface.</p>
 <tr><td><code>list_templates</code></td><td>Returns all built-in templates with names and descriptions</td></tr>
 <tr><td><code>get_template_variables</code></td><td>Returns variable specs for a named template</td></tr>
 <tr><td><code>scaffold_project</code></td><td>Scaffolds a project from a template into a directory</td></tr>
+<tr><td><code>scaffold_agent</code></td><td>Scaffolds a batteries-included AI agent project (<code>sdk</code> = <code>anthropic</code>, <code>openai</code>, or <code>baml</code>); also installs the <code>default</code> + <code>agent-dev</code> skill packs</td></tr>
 </tbody>
 </table>
 </div>
@@ -211,32 +213,146 @@ interface.</p>
 <pre><code class="language-bash">cargo install --path crates/dex-cli
 </code></pre>
 <p>See <a href="../installation.html">Installation</a> for full details.</p>
-<h2 id="wiring-into-claude-desktop"><a class="header" href="#wiring-into-claude-desktop">Wiring into Claude Desktop</a></h2>
-<p>Add to <code>claude_desktop_config.json</code>:</p>
+<h2 id="quick-setup-dex-mcp-install"><a class="header" href="#quick-setup-dex-mcp-install">Quick setup: <code>dex mcp install</code></a></h2>
+<p>The fastest way to wire dex into your editors is to let dex write the config for
+you. It merges a <code>dex</code> entry into each client’s config file <strong>without disturbing
+any servers you already have</strong>.</p>
+<pre><code class="language-bash"># Interactive picker over all supported clients
+dex mcp install
+
+# Or target specific clients
+dex mcp install --client claude-code --client cursor
+
+# Or wire up everything
+dex mcp install --all
+
+# Preview the exact changes without writing anything
+dex mcp install --all --dry-run
+</code></pre>
+<p>Supported <code>--client</code> values: <code>claude-code</code>, <code>claude-desktop</code>, <code>cursor</code>, <code>vscode</code>
+(alias <code>copilot</code>), <code>codex</code>, <code>zed</code>, <code>antigravity</code>.</p>
+<p>Useful flags:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Flag</th><th>Purpose</th></tr>
+</thead>
+<tbody>
+<tr><td><code>--all</code></td><td>Wire up every supported client</td></tr>
+<tr><td><code>--client &lt;name&gt;</code></td><td>Target one client (repeatable)</td></tr>
+<tr><td><code>--dir &lt;path&gt;</code></td><td>Project dir for project-scoped clients (<code>claude-code</code>, <code>vscode</code>); defaults to <code>.</code></td></tr>
+<tr><td><code>--command &lt;path&gt;</code></td><td>Executable the client launches; defaults to <code>dex</code>. Use an absolute path if dex isn’t on the client’s <code>PATH</code></td></tr>
+<tr><td><code>--dry-run</code></td><td>Print the resulting config for each client without writing</td></tr>
+</tbody>
+</table>
+</div>
+<p>After installing, <strong>restart the client</strong> (or reload its MCP servers) to pick up
+the change. The install script can also run this for you at the end of a binary
+install.</p>
+<h2 id="wiring-into-a-client-manually"><a class="header" href="#wiring-into-a-client-manually">Wiring into a client manually</a></h2>
+<p>Prefer to edit config by hand, or using a client <code>dex mcp install</code> doesn’t cover?
+Every client launches the same command — <code>dex mcp serve</code> — over stdio. Only the
+config file location and its surrounding shape differ. The shapes you’ll see are:</p>
+<ul>
+<li><strong><code>mcpServers</code> JSON</strong> — Claude Desktop, Claude Code, Cursor, Antigravity</li>
+<li><strong><code>servers</code> JSON</strong> (with <code>"type": "stdio"</code>) — VS Code / GitHub Copilot</li>
+<li><strong><code>context_servers</code> JSON</strong> — Zed</li>
+<li><strong><code>mcp_servers</code> TOML</strong> — OpenAI Codex CLI</li>
+</ul>
+<blockquote>
+<p><strong>PATH note (read this first):</strong> GUI apps (Claude Desktop, Cursor, Zed,
+Antigravity, VS Code) often don’t inherit your shell’s <code>PATH</code>, so a bare
+<code>"dex"</code> may fail with “command not found”. If a server won’t start, run
+<code>which dex</code> and use the absolute path instead — e.g.
+<code>"command": "/Users/you/.local/bin/dex"</code>.</p>
+</blockquote>
+<h3 id="claude-code"><a class="header" href="#claude-code">Claude Code</a></h3>
+<p>Quickest path is the CLI:</p>
+<pre><code class="language-bash"># project scope — writes .mcp.json in the current directory (shareable with your team)
+claude mcp add dex --scope project -- dex mcp serve
+
+# user scope — available across all your projects
+claude mcp add dex --scope user -- dex mcp serve
+</code></pre>
+<p>Or create <code>.mcp.json</code> at your project root by hand:</p>
 <pre><code class="language-json">{
   "mcpServers": {
+    "dex": { "command": "dex", "args": ["mcp", "serve"] }
+  }
+}
+</code></pre>
+<p>Claude Code starts the server automatically when you open the project. Run <code>/mcp</code>
+to confirm the <code>dex</code> server is connected.</p>
+<h3 id="claude-desktop"><a class="header" href="#claude-desktop">Claude Desktop</a></h3>
+<p>Add to <code>claude_desktop_config.json</code> (Settings → Developer → Edit Config), then
+restart the app. The dex tools appear in the tool picker.</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "dex": { "command": "dex", "args": ["mcp", "serve"] }
+  }
+}
+</code></pre>
+<h3 id="cursor"><a class="header" href="#cursor">Cursor</a></h3>
+<p>Add to <code>~/.cursor/mcp.json</code> (global) or <code>.cursor/mcp.json</code> (project root):</p>
+<pre><code class="language-json">{
+  "mcpServers": {
+    "dex": { "command": "dex", "args": ["mcp", "serve"] }
+  }
+}
+</code></pre>
+<h3 id="vs-code--github-copilot"><a class="header" href="#vs-code--github-copilot">VS Code / GitHub Copilot</a></h3>
+<p>VS Code (agent mode / Copilot) uses a <code>servers</code> key and an explicit
+<code>"type": "stdio"</code>. Add <code>.vscode/mcp.json</code> to your workspace (or run the
+<strong>MCP: Add Server</strong> command):</p>
+<pre><code class="language-json">{
+  "servers": {
+    "dex": { "type": "stdio", "command": "dex", "args": ["mcp", "serve"] }
+  }
+}
+</code></pre>
+<p>Open the Copilot Chat <strong>Agent</strong> view and check the tools picker; dex’s tools
+appear once the server starts. (The standalone GitHub Copilot CLI uses its own
+<code>copilot mcp add</code> command with the same <code>dex mcp serve</code> invocation.)</p>
+<h3 id="openai-codex-cli"><a class="header" href="#openai-codex-cli">OpenAI Codex CLI</a></h3>
+<p>Codex uses TOML, not JSON. Add to <code>~/.codex/config.toml</code> (or run
+<code>codex mcp add</code>):</p>
+<pre><code class="language-toml">[mcp_servers.dex]
+command = "dex"
+args = ["mcp", "serve"]
+</code></pre>
+<h3 id="zed"><a class="header" href="#zed">Zed</a></h3>
+<p>Zed calls them <em>context servers</em>. Add to <code>settings.json</code> (open with
+<code>cmd</code>/<code>ctrl</code>+<code>,</code>):</p>
+<pre><code class="language-json">{
+  "context_servers": {
     "dex": {
+      "source": "custom",
       "command": "dex",
-      "args": ["mcp", "serve"]
+      "args": ["mcp", "serve"],
+      "env": {}
     }
   }
 }
 </code></pre>
-<p>Restart Claude Desktop. The dex tools will appear in the tool picker.</p>
-<h2 id="wiring-into-claude-code"><a class="header" href="#wiring-into-claude-code">Wiring into Claude Code</a></h2>
-<p>Create <code>.mcp.json</code> at your project root (or <code>~/.claude/mcp.json</code> for global config):</p>
+<p>Zed restarts the context server on save — no editor restart needed. Check the
+Agent Panel settings for a green indicator next to <code>dex</code>.</p>
+<h3 id="google-antigravity"><a class="header" href="#google-antigravity">Google Antigravity</a></h3>
+<p>Antigravity uses the <code>mcpServers</code> shape at
+<code>~/.gemini/config/mcp_config.json</code>. Either edit that file directly, or in the
+IDE open the <strong>MCP Servers</strong> panel (the <code>...</code> dropdown on the agent panel) →
+<strong>Manage MCP Servers</strong> → <strong>View raw config</strong>:</p>
 <pre><code class="language-json">{
   "mcpServers": {
-    "dex": {
-      "command": "dex",
-      "args": ["mcp", "serve"]
-    }
+    "dex": { "command": "dex", "args": ["mcp", "serve"] }
   }
 }
 </code></pre>
-<p>Claude Code will start the server automatically when you open the project.</p>
+<h3 id="any-other-mcp-client"><a class="header" href="#any-other-mcp-client">Any other MCP client</a></h3>
+<p>dex follows the standard MCP stdio transport, so any compliant client works.
+Whatever the config format, the two things it needs are the <strong>command</strong> (<code>dex</code>)
+and its <strong>args</strong> (<code>["mcp", "serve"]</code>). Map those onto the client’s schema.</p>
 <h2 id="usage-examples"><a class="header" href="#usage-examples">Usage examples</a></h2>
-<p>Once connected, you can prompt Claude naturally:</p>
+<p>Once connected, you can prompt your assistant naturally:</p>
 <p><strong>List templates:</strong></p>
 <pre><code>What dex templates are available?
 </code></pre>
@@ -246,7 +362,10 @@ interface.</p>
 <p><strong>Scaffold a project:</strong></p>
 <pre><code>Scaffold a new dabs-package project called my_pipeline in ~/projects/my_pipeline
 </code></pre>
-<p>Claude will call the appropriate tool and report the created files.</p>
+<p><strong>Scaffold an AI agent:</strong></p>
+<pre><code>Scaffold an anthropic agent called triage_bot in ~/projects/triage_bot
+</code></pre>
+<p>The assistant will call the appropriate tool and report the created files.</p>
 <h2 id="see-also"><a class="header" href="#see-also">See also</a></h2>
 <ul>
 <li><a href="../installation.html">Installation</a></li>
@@ -297,11 +416,11 @@ interface.</p>
 
         <script src="../elasticlunr-ef4e11c1.min.js"></script>
         <script src="../mark-09e88c2c.min.js"></script>
-        <script src="../searcher-c2a407aa.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
 
         <script src="../clipboard-1626706a.min.js"></script>
         <script src="../highlight-abc7f01d.js"></script>
-        <script src="../book-a0b12cfe.js"></script>
+        <script src="../book-c22b7243.js"></script>
 
         <!-- Custom JS scripts -->
 
