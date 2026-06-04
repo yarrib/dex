@@ -6,6 +6,17 @@ on:
     branches: [main]
 
 jobs:
+  version:
+    name: Version check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full tag history to compare against the latest tag
+
+      - name: Version is not behind the latest tag
+        run: bash scripts/check-version.sh
+
   rust:
     name: Rust (clippy / fmt / test)
     runs-on: ubuntu-latest

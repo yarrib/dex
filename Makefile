@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt fmt-check clean all docs docs-serve docs-install help
+.PHONY: build test lint fmt fmt-check clean all docs docs-serve docs-install changelog help check-version
 .PHONY: version bump-patch bump-minor bump-major tag-release _bump-guard
 
 all: lint test
@@ -21,6 +21,7 @@ help:
 	@echo ""
 	@echo "Releases"
 	@echo "  version      print current version"
+	@echo "  check-version verify version isn't behind the latest tag (CI enforces this)"
 	@echo "  bump-patch   branch off main, bump patch, push, open release PR"
 	@echo "  bump-minor   branch off main, bump minor, push, open release PR"
 	@echo "  bump-major   branch off main, bump major, push, open release PR"
@@ -46,17 +47,21 @@ docs-install:
 	cargo install mdbook
 	cargo install git-cliff
 
-docs:
-	@if command -v git-cliff >/dev/null 2>&1; then \
-		git-cliff --output docs/changelog.md; \
-	fi
+# docs/changelog.md is generated (gitignored). Generate it with git-cliff, or
+# write a placeholder so mdbook still builds when git-cliff isn't installed.
+docs: changelog
 	mdbook build
 
-docs-serve:
+docs-serve: changelog
+	mdbook serve --open
+
+changelog:
 	@if command -v git-cliff >/dev/null 2>&1; then \
 		git-cliff --output docs/changelog.md; \
+	elif [ ! -f docs/changelog.md ]; then \
+		printf '# Changelog\n\n_Generated at build time by git-cliff. Run `make docs-install` to build it locally._\n' > docs/changelog.md; \
+		echo "warn: git-cliff not installed — wrote placeholder docs/changelog.md"; \
 	fi
-	mdbook serve --open
 
 clean:
 	cargo clean
@@ -65,6 +70,10 @@ clean:
 
 version:
 	@bash scripts/bump-version.sh
+
+# Verify the version isn't behind the latest tag (also enforced in CI).
+check-version:
+	@bash scripts/check-version.sh
 
 # Each bump target branches off main, bumps the version, pushes, and opens a PR.
 # Merging that PR fires .github/workflows/tag-on-merge.yml, which tags the
