@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5bd25716.js";
+            window.path_to_searchindex_js = "searchindex-b1e6f451.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f1d93b5a.js"></script>
@@ -243,15 +243,18 @@ the <code>gh</code> CLI it still pushes the branch — open the PR manually.</p>
 <li>macOS Intel</li>
 </ul>
 </li>
-<li>Creates a GitHub Release with the binaries attached</li>
+<li>Creates the GitHub Release <strong>as a draft</strong> with the binaries attached</li>
 </ol>
-<h3 id="5-verify-the-release"><a class="header" href="#5-verify-the-release">5. Verify the release</a></h3>
+<h3 id="5-review-the-draft-then-publish"><a class="header" href="#5-review-the-draft-then-publish">5. Review the draft, then publish</a></h3>
+<p>The release is created as a <strong>draft</strong> — built and tagged automatically, but not
+yet public. This is the human checkpoint:</p>
 <ul>
-<li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
-<li>Confirm binaries are attached for all platforms</li>
-<li>Confirm the changelog looks correct</li>
-<li>The docs site redeploys automatically (see below)</li>
+<li>Open the draft under <a href="https://github.com/yarrib/dex/releases">Releases</a></li>
+<li>Confirm binaries are attached for all platforms and the changelog looks right</li>
+<li>Click <strong>Publish release</strong> to make it public</li>
 </ul>
+<p>The docs site redeploys automatically right after the tag is pushed (see below),
+so the changelog updates regardless of whether you’ve published the draft yet.</p>
 <hr>
 <h2 id="changelog-and-the-docs-site"><a class="header" href="#changelog-and-the-docs-site">Changelog and the docs site</a></h2>
 <p>The changelog is generated from commit messages with
@@ -260,8 +263,10 @@ build artifact (gitignored); <code>docs.yml</code> regenerates it on each deploy
 <p>The docs site redeploys:</p>
 <ul>
 <li>on every push to <code>main</code> (keeps the <strong>Unreleased</strong> section current), and</li>
-<li>after the <strong>Release</strong> workflow completes (via <code>workflow_run</code>), so the
-just-released commits move under their version heading once the tag exists.</li>
+<li>on release — <code>tag-on-merge.yml</code> dispatches <code>docs.yml</code> right after pushing the
+tag, so the just-released commits move under their version heading. (A tag or a
+<code>GITHUB_TOKEN</code>-dispatched run can’t trigger workflows on its own, so the deploy
+is dispatched explicitly rather than chained off the tag or the Release run.)</li>
 </ul>
 <p>Use conventional commit prefixes so changes appear in the right section:</p>
 <div class="table-wrapper">

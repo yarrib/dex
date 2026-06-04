@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-5bd25716.js";
+            window.path_to_searchindex_js = "searchindex-b1e6f451.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f1d93b5a.js"></script>
@@ -1798,15 +1798,18 @@ the <code>gh</code> CLI it still pushes the branch — open the PR manually.</p>
 <li>macOS Intel</li>
 </ul>
 </li>
-<li>Creates a GitHub Release with the binaries attached</li>
+<li>Creates the GitHub Release <strong>as a draft</strong> with the binaries attached</li>
 </ol>
-<h3 id="5-verify-the-release"><a class="header" href="#5-verify-the-release">5. Verify the release</a></h3>
+<h3 id="5-review-the-draft-then-publish"><a class="header" href="#5-review-the-draft-then-publish">5. Review the draft, then publish</a></h3>
+<p>The release is created as a <strong>draft</strong> — built and tagged automatically, but not
+yet public. This is the human checkpoint:</p>
 <ul>
-<li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
-<li>Confirm binaries are attached for all platforms</li>
-<li>Confirm the changelog looks correct</li>
-<li>The docs site redeploys automatically (see below)</li>
+<li>Open the draft under <a href="https://github.com/yarrib/dex/releases">Releases</a></li>
+<li>Confirm binaries are attached for all platforms and the changelog looks right</li>
+<li>Click <strong>Publish release</strong> to make it public</li>
 </ul>
+<p>The docs site redeploys automatically right after the tag is pushed (see below),
+so the changelog updates regardless of whether you’ve published the draft yet.</p>
 <hr>
 <h2 id="changelog-and-the-docs-site"><a class="header" href="#changelog-and-the-docs-site">Changelog and the docs site</a></h2>
 <p>The changelog is generated from commit messages with
@@ -1815,8 +1818,10 @@ build artifact (gitignored); <code>docs.yml</code> regenerates it on each deploy
 <p>The docs site redeploys:</p>
 <ul>
 <li>on every push to <code>main</code> (keeps the <strong>Unreleased</strong> section current), and</li>
-<li>after the <strong>Release</strong> workflow completes (via <code>workflow_run</code>), so the
-just-released commits move under their version heading once the tag exists.</li>
+<li>on release — <code>tag-on-merge.yml</code> dispatches <code>docs.yml</code> right after pushing the
+tag, so the just-released commits move under their version heading. (A tag or a
+<code>GITHUB_TOKEN</code>-dispatched run can’t trigger workflows on its own, so the deploy
+is dispatched explicitly rather than chained off the tag or the Release run.)</li>
 </ul>
 <p>Use conventional commit prefixes so changes appear in the right section:</p>
 <div class="table-wrapper">
@@ -1873,6 +1878,11 @@ git push origin :refs/tags/v0.1.1
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
 <p>All notable changes to dex are documented here.</p>
+<h2 id="unreleased"><a class="header" href="#unreleased">[Unreleased]</a></h2>
+<h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<ul>
+<li><strong>release</strong>: Reliable docs redeploy on release + draft GitHub Releases (#61) (<a href="https://github.com/yarrib/dex/commit/9a708500a4a8057b25589c93818eef4f6893fdb4"><code>9a70850</code></a>)</li>
+</ul>
 <h2 id="023--2026-06-04"><a class="header" href="#023--2026-06-04">[0.2.3] — 2026-06-04</a></h2>
 <h3 id="chores"><a class="header" href="#chores">Chores</a></h3>
 <ul>
@@ -1884,7 +1894,7 @@ git push origin :refs/tags/v0.1.1
 <li>Add runnable org-setup examples and fix template config syntax (#56) (<a href="https://github.com/yarrib/dex/commit/ff57dbb95e551ec159c9a18c313b28e13c1a55c6"><code>ff57dbb</code></a>)</li>
 </ul>
 <h2 id="021--2026-06-04"><a class="header" href="#021--2026-06-04">[0.2.1] — 2026-06-04</a></h2>
-<h3 id="bug-fixes"><a class="header" href="#bug-fixes">Bug Fixes</a></h3>
+<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
 <ul>
 <li><strong>context-map</strong>: Populate tasks from scaffolded dex.toml (#48) (<a href="https://github.com/yarrib/dex/commit/a25d62d3aa99f3359451d0c25085c443e728cd9b"><code>a25d62d</code></a>)</li>
 <li><strong>release</strong>: Generate release notes with –latest and auto-annotate tags (#54) (<a href="https://github.com/yarrib/dex/commit/be11212486c72231ade07b24aaaba8618d35deed"><code>be11212</code></a>)</li>
@@ -1915,7 +1925,7 @@ git push origin :refs/tags/v0.1.1
 <li><strong>mcp</strong>: Dex mcp install + client wiring docs (#55) (<a href="https://github.com/yarrib/dex/commit/9013fdac583cdb9856e5045bf4eff25f9b3ba03c"><code>9013fda</code></a>)</li>
 </ul>
 <h2 id="020--2026-04-02"><a class="header" href="#020--2026-04-02">[0.2.0] — 2026-04-02</a></h2>
-<h3 id="bug-fixes-1"><a class="header" href="#bug-fixes-1">Bug Fixes</a></h3>
+<h3 id="bug-fixes-2"><a class="header" href="#bug-fixes-2">Bug Fixes</a></h3>
 <ul>
 <li><strong>release</strong>: Use cross for Linux musl targets (<a href="https://github.com/yarrib/dex/commit/bb227029828d164b138a89b1e1f7b4924af6373e"><code>bb22702</code></a>)</li>
 </ul>
@@ -1935,7 +1945,7 @@ git push origin :refs/tags/v0.1.1
 <li><strong>devcontainer</strong>: Ai-dev-kit integration with profile-based skill setup (#38) (<a href="https://github.com/yarrib/dex/commit/4535cd05e9d32a3228f3a0ef450e72471b2e5634"><code>4535cd0</code></a>)</li>
 </ul>
 <h2 id="011--2026-04-01"><a class="header" href="#011--2026-04-01">[0.1.1] — 2026-04-01</a></h2>
-<h3 id="bug-fixes-2"><a class="header" href="#bug-fixes-2">Bug Fixes</a></h3>
+<h3 id="bug-fixes-3"><a class="header" href="#bug-fixes-3">Bug Fixes</a></h3>
 <ul>
 <li><strong>release</strong>: Align install.sh artifact names with release.yml and add linux aarch64 target (#30) (<a href="https://github.com/yarrib/dex/commit/a378387df248fe7c905e5be001ad617b457854e0"><code>a378387</code></a>)</li>
 <li><strong>release</strong>: Support workflow_dispatch and fix first-release changelog (#31) (<a href="https://github.com/yarrib/dex/commit/5da5907f1ba574bb3906d91ca4f3b1902553520d"><code>5da5907</code></a>)</li>
@@ -1964,7 +1974,7 @@ git push origin :refs/tags/v0.1.1
 <li><strong>core</strong>: Add regression tests for embedded template variable and file loading (#27) (<a href="https://github.com/yarrib/dex/commit/bf5f8b53942e498e7555a273491ed43fd2201a17"><code>bf5f8b5</code></a>)</li>
 </ul>
 <h2 id="010--2026-03-10"><a class="header" href="#010--2026-03-10">[0.1.0] — 2026-03-10</a></h2>
-<h3 id="bug-fixes-3"><a class="header" href="#bug-fixes-3">Bug Fixes</a></h3>
+<h3 id="bug-fixes-4"><a class="header" href="#bug-fixes-4">Bug Fixes</a></h3>
 <ul>
 <li>Tag-only versioning to work with branch protection rules (<a href="https://github.com/yarrib/dex/commit/22f9f8085ebaca22d64a86d33f5c6446abb984e6"><code>22f9f80</code></a>)</li>
 <li>Slugify hyphens to underscores, expose system_prompt and claude_md in PyO3 binding (<a href="https://github.com/yarrib/dex/commit/c57622776889e2a3b3a61a1024af25aca7f44e47"><code>c576227</code></a>)</li>
