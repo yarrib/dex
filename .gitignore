@@ -21,6 +21,10 @@ htmlcov/
 
 # Docs build output
 site/
+book/
+
+# Generated changelog (produced from git history by git-cliff at build/deploy time)
+docs/changelog.md
 
 # uv
 uv.lock

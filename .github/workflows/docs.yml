@@ -1,10 +1,16 @@
 name: Deploy docs
 
 on:
+  # Update the site (including the "Unreleased" changelog section) on every merge.
   push:
     branches: [main]
-    tags:
-      - "v*"
+  # Redeploy after a release finishes, so the changelog regenerates with the new
+  # tag present and the just-released commits land under their version heading
+  # (rather than "Unreleased"). The tag itself is pushed by GITHUB_TOKEN in
+  # tag-on-merge.yml, which can't trigger workflows — so we key off Release here.
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
