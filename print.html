@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-6a8203e4.js";
+            window.path_to_searchindex_js = "searchindex-cdde6255.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f1d93b5a.js"></script>
@@ -1736,11 +1736,13 @@ chore:     build, deps, tooling
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="releasing"><a class="header" href="#releasing">Releasing</a></h1>
-<p>Releases are manual and tag-driven. Because <code>main</code> is protected, version bumps go through a PR. The tag is pushed after the PR is merged, which triggers the release workflow.</p>
+<p>Releases are <strong>tag-driven and automated</strong>. Because <code>main</code> is protected, the
+version bump goes through a PR. Merging that PR tags the release and kicks off the
+build automatically — you don’t push tags by hand.</p>
 <h2 id="prerequisites"><a class="header" href="#prerequisites">Prerequisites</a></h2>
 <ul>
 <li>All changes for the release are merged to <code>main</code></li>
-<li>You have push access to the repo (to push tags)</li>
+<li>You can open and merge PRs</li>
 </ul>
 <h2 id="release-flow"><a class="header" href="#release-flow">Release flow</a></h2>
 <h3 id="1-decide-the-version-bump"><a class="header" href="#1-decide-the-version-bump">1. Decide the version bump</a></h3>
@@ -1757,55 +1759,66 @@ chore:     build, deps, tooling
 </tbody>
 </table>
 </div>
-<h3 id="2-create-the-version-bump-pr"><a class="header" href="#2-create-the-version-bump-pr">2. Create the version bump PR</a></h3>
+<h3 id="2-open-the-release-pr"><a class="header" href="#2-open-the-release-pr">2. Open the release PR</a></h3>
+<p>From an up-to-date <code>main</code>:</p>
 <pre><code class="language-bash">git checkout main &amp;&amp; git pull
-git checkout -b chore/release-v0.x.y
 make bump-patch   # or bump-minor / bump-major
-git push -u origin chore/release-v0.x.y
 </code></pre>
-<p><code>make bump-patch</code> will:</p>
+<p><code>make bump-patch</code> runs <code>scripts/release.sh</code>, which:</p>
 <ol>
-<li>Update the version in <code>Cargo.toml</code> files</li>
-<li>Commit the changes with message <code>chore: bump version to vX.Y.Z</code></li>
+<li>Branches <code>chore/release-vX.Y.Z</code></li>
+<li>Bumps the version in the <code>Cargo.toml</code> files</li>
+<li>Commits <code>chore: bump version to vX.Y.Z</code></li>
+<li>Pushes the branch and opens a PR with <code>gh</code></li>
 </ol>
-<p>Open a PR for the branch, get it merged.</p>
 <blockquote>
-<p><strong>Warning:</strong> The bump commands check for uncommitted changes and will abort if any exist.</p>
+<p><strong>Note:</strong> It aborts if the working tree is dirty or you’re not on <code>main</code>. Without
+the <code>gh</code> CLI it still pushes the branch — open the PR manually.</p>
 </blockquote>
-<h3 id="3-tag-and-push"><a class="header" href="#3-tag-and-push">3. Tag and push</a></h3>
-<p>After the PR is merged:</p>
-<pre><code class="language-bash">git checkout main &amp;&amp; git pull
-make tag-release
-</code></pre>
-<p><code>make tag-release</code> tags the current <code>HEAD</code> with the version in <code>Cargo.toml</code> and pushes the tag to GitHub.</p>
-<p>The tag is annotated with the generated changelog when <code>git-cliff</code> is installed locally (run <code>make docs-install</code> to get it). If <code>git-cliff</code> is unavailable, a lightweight tag is pushed and the release workflow promotes it to an annotated tag with the same changelog — so either way, <code>git show v0.x.y</code> displays the release notes.</p>
+<p>CI runs <code>make check-version</code>, which fails if the version is behind the latest tag
+(that would make the release a no-op).</p>
+<h3 id="3-merge-the-pr--tagging-and-release-are-automatic"><a class="header" href="#3-merge-the-pr--tagging-and-release-are-automatic">3. Merge the PR — tagging and release are automatic</a></h3>
+<p>When the PR merges to <code>main</code>, <code>.github/workflows/tag-on-merge.yml</code>:</p>
+<ol>
+<li>Reads the version from <code>crates/dex-cli/Cargo.toml</code></li>
+<li>If no <code>vX.Y.Z</code> tag exists yet, pushes the tag</li>
+<li>Dispatches the <code>Release</code> workflow</li>
+</ol>
+<p>A merge that doesn’t change the version releases nothing — that’s intended.</p>
 <h3 id="4-watch-the-release-workflow"><a class="header" href="#4-watch-the-release-workflow">4. Watch the release workflow</a></h3>
 <p>Go to <strong>Actions → Release</strong> on GitHub. The workflow:</p>
 <ol>
-<li>Validates the tag format (<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>)</li>
-<li>Verifies <code>Cargo.toml</code> version matches the tag</li>
+<li>Validates the tag format (<code>v&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;</code>) and that it matches <code>Cargo.toml</code></li>
 <li>Generates a changelog from conventional commits (git-cliff)</li>
-<li>Builds native binaries for all target platforms:
+<li>Builds native binaries:
 <ul>
-<li>Linux x86_64</li>
-<li>Linux aarch64</li>
+<li>Linux x86_64 (musl)</li>
+<li>Linux aarch64 (musl)</li>
 <li>macOS Apple Silicon</li>
 <li>macOS Intel</li>
-<li>Windows x86_64</li>
 </ul>
 </li>
-<li>Creates a GitHub Release with all binaries attached</li>
+<li>Creates a GitHub Release with the binaries attached</li>
 </ol>
 <h3 id="5-verify-the-release"><a class="header" href="#5-verify-the-release">5. Verify the release</a></h3>
 <ul>
 <li>Check <a href="https://github.com/yarrib/dex/releases">GitHub Releases</a> for the new release</li>
 <li>Confirm binaries are attached for all platforms</li>
 <li>Confirm the changelog looks correct</li>
-<li>The docs site will auto-deploy the new versioned docs via the <code>docs.yml</code> workflow</li>
+<li>The docs site redeploys automatically (see below)</li>
 </ul>
 <hr>
-<h2 id="commit-conventions-and-changelog"><a class="header" href="#commit-conventions-and-changelog">Commit conventions and changelog</a></h2>
-<p>The changelog is generated automatically from commit messages using <a href="https://git-cliff.org/">git-cliff</a>. Use conventional commit prefixes so changes appear correctly:</p>
+<h2 id="changelog-and-the-docs-site"><a class="header" href="#changelog-and-the-docs-site">Changelog and the docs site</a></h2>
+<p>The changelog is generated from commit messages with
+<a href="https://git-cliff.org/">git-cliff</a> — never hand-edited. <code>docs/changelog.md</code> is a
+build artifact (gitignored); <code>docs.yml</code> regenerates it on each deploy.</p>
+<p>The docs site redeploys:</p>
+<ul>
+<li>on every push to <code>main</code> (keeps the <strong>Unreleased</strong> section current), and</li>
+<li>after the <strong>Release</strong> workflow completes (via <code>workflow_run</code>), so the
+just-released commits move under their version heading once the tag exists.</li>
+</ul>
+<p>Use conventional commit prefixes so changes appear in the right section:</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -1824,31 +1837,38 @@ make tag-release
 </div>
 <p>Commits without a conventional prefix are filtered out of the changelog.</p>
 <hr>
+<h2 id="manual-fallback"><a class="header" href="#manual-fallback">Manual fallback</a></h2>
+<p>The automated path covers normal releases. If you need to drive one by hand
+(e.g. the merge workflow is disabled, or re-cutting a botched tag):</p>
+<pre><code class="language-bash">git checkout main &amp;&amp; git pull
+make tag-release        # tags main HEAD with the Cargo.toml version and pushes
+</code></pre>
+<p>Or use <strong>Actions → Release → Run workflow</strong> (<code>workflow_dispatch</code>) with the version
+(e.g. <code>0.2.3</code>). Both validate the version against <code>Cargo.toml</code> on <code>main</code>, so the
+bump PR must be merged first either way.</p>
+<hr>
 <h2 id="hotfix-releases"><a class="header" href="#hotfix-releases">Hotfix releases</a></h2>
-<p>Same flow as a regular release — fix on a branch, PR to main, then tag:</p>
+<p>Same automated flow — fix on a branch, merge, then bump:</p>
 <pre><code class="language-bash">git checkout -b fix/critical-bug
 # make your fix
 git push -u origin fix/critical-bug
 # open PR, merge
+
 git checkout main &amp;&amp; git pull
-make bump-patch
-git push -u origin chore/release-vX.Y.Z
-# open PR, merge
-git checkout main &amp;&amp; git pull
-make tag-release
+make bump-patch         # opens the release PR; merging it ships the hotfix
 </code></pre>
 <hr>
 <h2 id="if-the-release-workflow-fails"><a class="header" href="#if-the-release-workflow-fails">If the release workflow fails</a></h2>
 <p>The most common causes:</p>
 <ul>
-<li><strong>Tag/version mismatch</strong> — <code>Cargo.toml</code> version doesn’t match the tag. Delete the tag, fix the version, re-tag.</li>
-<li><strong>Build failure</strong> — a Rust compilation error. Fix the code, delete the tag, re-tag.</li>
+<li><strong>Tag/version mismatch</strong> — <code>Cargo.toml</code> version doesn’t match the tag. Fix the
+version on <code>main</code>, delete the tag, re-trigger.</li>
+<li><strong>Build failure</strong> — a Rust compilation error. Fix the code and re-release.</li>
 </ul>
-<p>To delete a tag and re-release:</p>
+<p>To delete a tag and redo:</p>
 <pre><code class="language-bash">git tag -d v0.1.1
 git push origin :refs/tags/v0.1.1
-# fix the issue, then
-make tag-release
+# fix the issue, then re-run the release (bump PR, or make tag-release)
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="changelog"><a class="header" href="#changelog">Changelog</a></h1>
@@ -1857,6 +1877,7 @@ make tag-release
 <h3 id="chores"><a class="header" href="#chores">Chores</a></h3>
 <ul>
 <li>Automate release tagging on bump-PR merge (#59) (<a href="https://github.com/yarrib/dex/commit/866138882b0432a2bcda8febe1c3ad7ea6bb31fe"><code>8661388</code></a>)</li>
+<li>Release v0.2.3 — automated tagging, version gate, changelog (#60) (<a href="https://github.com/yarrib/dex/commit/e9af81b5b9c399910176c8b74be11579e4ec362f"><code>e9af81b</code></a>)</li>
 </ul>
 <h3 id="documentation"><a class="header" href="#documentation">Documentation</a></h3>
 <ul>
