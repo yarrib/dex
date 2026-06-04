@@ -14,6 +14,9 @@ pub enum DexError {
     #[error(transparent)]
     Skill(#[from] SkillError),
 
+    #[error(transparent)]
+    Mcp(#[from] McpError),
+
     #[error("render error: {0}")]
     Render(#[from] minijinja::Error),
 
@@ -48,6 +51,27 @@ pub enum SkillError {
 
     #[error("unknown install target: '{0}'. Valid targets: claude, cursor, copilot, generic")]
     InvalidTarget(String),
+}
+
+/// Errors related to wiring the MCP server into client config files.
+#[derive(Debug, thiserror::Error)]
+pub enum McpError {
+    #[error(
+        "unknown MCP client: '{0}'. Valid clients: claude-code, claude-desktop, cursor, vscode, codex, zed, antigravity"
+    )]
+    UnknownClient(String),
+
+    #[error("could not determine your home directory (needed for {0} config)")]
+    HomeDirNotFound(&'static str),
+
+    #[error("could not parse existing config at {path}: {message}")]
+    Parse { path: String, message: String },
+
+    #[error("config at {path} has a '{key}' entry that is not a table/object")]
+    NotAnObject { path: String, key: String },
+
+    #[error("failed to serialize config for {path}: {message}")]
+    Serialize { path: String, message: String },
 }
 
 /// Errors related to template operations.

@@ -464,3 +464,77 @@ fn mcp_scaffold_agent_invalid_sdk_returns_error() {
     let is_error = responses[0]["result"]["isError"].as_bool().unwrap_or(false);
     assert!(is_error, "expected error for invalid sdk");
 }
+
+// --- mcp install integration tests ---
+
+#[test]
+fn mcp_install_help_exits_success() {
+    dex().args(["mcp", "install", "--help"]).assert().success();
+}
+
+#[test]
+fn mcp_install_unknown_client_exits_failure() {
+    dex()
+        .args(["mcp", "install", "--client", "notaneditor"])
+        .assert()
+        .failure();
+}
+
+#[test]
+fn mcp_install_writes_project_scoped_configs() {
+    let base = tempfile::tempdir().unwrap();
+
+    dex()
+        .args([
+            "mcp",
+            "install",
+            "--client",
+            "claude-code",
+            "--client",
+            "vscode",
+            "--dir",
+        ])
+        .arg(base.path())
+        .assert()
+        .success();
+
+    // Claude Code: .mcp.json with mcpServers.dex
+    let mcp_json = base.path().join(".mcp.json");
+    assert!(mcp_json.exists(), "expected {mcp_json:?} to be created");
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&mcp_json).unwrap()).unwrap();
+    assert_eq!(v["mcpServers"]["dex"]["command"], "dex");
+
+    // VS Code: .vscode/mcp.json with servers.dex (type stdio)
+    let vscode_json = base.path().join(".vscode").join("mcp.json");
+    assert!(
+        vscode_json.exists(),
+        "expected {vscode_json:?} to be created"
+    );
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&vscode_json).unwrap()).unwrap();
+    assert_eq!(v["servers"]["dex"]["type"], "stdio");
+}
+
+#[test]
+fn mcp_install_dry_run_writes_nothing() {
+    let base = tempfile::tempdir().unwrap();
+
+    dex()
+        .args([
+            "mcp",
+            "install",
+            "--client",
+            "claude-code",
+            "--dry-run",
+            "--dir",
+        ])
+        .arg(base.path())
+        .assert()
+        .success();
+
+    assert!(
+        !base.path().join(".mcp.json").exists(),
+        "dry-run must not write any files"
+    );
+}

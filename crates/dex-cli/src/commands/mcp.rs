@@ -16,15 +16,20 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
+use console::style;
+use dialoguer::MultiSelect;
 use serde_json::{Value, json};
 
 use dex_core::context_map::write_context_map;
 use dex_core::error::ConfigError;
+use dex_core::mcp::{McpClient, apply_mcp_plan, plan_mcp_client};
 use dex_core::skills::{InstallTarget, install_skills, load_pack};
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
 use dex_core::{DexError, scaffold};
+
+use crate::output;
 
 #[derive(Args)]
 pub struct McpArgs {
@@ -36,11 +41,39 @@ pub struct McpArgs {
 pub enum McpCommand {
     /// Start the MCP server on stdio (JSON-RPC 2.0).
     Serve,
+    /// Wire the dex MCP server into AI coding assistants' config files.
+    Install(InstallArgs),
+}
+
+#[derive(Args)]
+pub struct InstallArgs {
+    /// Client to wire up (repeatable). One of: claude-code, claude-desktop,
+    /// cursor, vscode, codex, zed, antigravity. Omit for an interactive picker.
+    #[arg(long = "client", value_name = "NAME")]
+    clients: Vec<String>,
+
+    /// Wire up every supported client.
+    #[arg(long)]
+    all: bool,
+
+    /// Project directory for project-scoped clients (claude-code, vscode).
+    #[arg(short, long, default_value = ".")]
+    dir: String,
+
+    /// Executable the client should launch. Defaults to "dex"; pass an absolute
+    /// path if dex is not on the client's PATH (common for GUI apps).
+    #[arg(long)]
+    command: Option<String>,
+
+    /// Show what would be written without modifying any files.
+    #[arg(long)]
+    dry_run: bool,
 }
 
 pub fn run(args: McpArgs) -> Result<(), DexError> {
     match args.cmd {
         McpCommand::Serve => serve(),
+        McpCommand::Install(a) => install(a),
     }
 }
 
@@ -91,6 +124,134 @@ fn serve() -> Result<(), DexError> {
     }
 
     Ok(())
+}
+
+// --- mcp install ---
+
+fn install(args: InstallArgs) -> Result<(), DexError> {
+    let command = args.command.as_deref().unwrap_or("dex").to_string();
+
+    let project_dir = PathBuf::from(&args.dir)
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(&args.dir));
+
+    // Resolve the set of clients to wire up.
+    let clients = select_clients(&args)?;
+    if clients.is_empty() {
+        output::print_dim("No clients selected.");
+        return Ok(());
+    }
+
+    println!(
+        "\n{} (command: {})\n",
+        style("dex mcp install").bold(),
+        style(&command).cyan()
+    );
+
+    let mut applied = 0usize;
+    for client in clients {
+        match plan_mcp_client(client, &project_dir, &command) {
+            Ok(plan) => {
+                if args.dry_run {
+                    let verb = if plan.created { "create" } else { "update" };
+                    println!(
+                        "  {} {} — would {} {}",
+                        style("•").cyan(),
+                        client.display_name(),
+                        verb,
+                        style(plan.path.display()).dim()
+                    );
+                    println!("{}\n", indent(&plan.content));
+                } else {
+                    apply_mcp_plan(&plan)?;
+                    let verb = if plan.created { "created" } else { "updated" };
+                    println!(
+                        "  {} {} — {} {}",
+                        style("✓").green(),
+                        client.display_name(),
+                        verb,
+                        style(plan.path.display()).dim()
+                    );
+                    applied += 1;
+                }
+            }
+            // Don't abort the whole run if one client can't be resolved
+            // (e.g. no home directory); report and continue.
+            Err(e) => {
+                output::print_warning(&format!("{}: {e}", client.display_name()));
+            }
+        }
+    }
+
+    if args.dry_run {
+        println!(
+            "{}",
+            style("Dry run — no files were modified. Re-run without --dry-run to apply.").dim()
+        );
+    } else {
+        println!(
+            "\n{} wired up {} client{}.",
+            style("Done!").green().bold(),
+            applied,
+            if applied == 1 { "" } else { "s" }
+        );
+        if command == "dex" {
+            println!(
+                "{}",
+                style(
+                    "Tip: GUI clients may not see `dex` on their PATH. If a server fails to \
+                     start, re-run with --command \"$(command -v dex)\"."
+                )
+                .dim()
+            );
+        }
+        println!(
+            "{}",
+            style("Restart the client (or reload its MCP servers) to pick up the change.").dim()
+        );
+    }
+
+    Ok(())
+}
+
+/// Determine which clients to target: `--all`, explicit `--client` flags, or an
+/// interactive multi-select.
+fn select_clients(args: &InstallArgs) -> Result<Vec<McpClient>, DexError> {
+    if args.all {
+        return Ok(McpClient::ALL.to_vec());
+    }
+
+    if !args.clients.is_empty() {
+        return args
+            .clients
+            .iter()
+            .map(|c| McpClient::parse(c))
+            .collect::<Result<Vec<_>, _>>();
+    }
+
+    // Interactive picker over all clients.
+    let labels: Vec<&str> = McpClient::ALL.iter().map(|c| c.display_name()).collect();
+    let selections = MultiSelect::new()
+        .with_prompt("Select clients to wire dex into (space to toggle, enter to confirm)")
+        .items(&labels)
+        .interact()
+        .map_err(io_error)?;
+
+    Ok(selections.into_iter().map(|i| McpClient::ALL[i]).collect())
+}
+
+fn indent(s: &str) -> String {
+    s.lines()
+        .map(|l| format!("      {l}"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn io_error(e: impl std::fmt::Display) -> DexError {
+    DexError::Io {
+        path: PathBuf::from("<stdin>"),
+        source: std::io::Error::other(e.to_string()),
+    }
 }
 
 // --- Protocol handlers ---

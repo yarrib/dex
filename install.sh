@@ -127,3 +127,29 @@ case ":${PATH}:" in
 esac
 
 "${INSTALL_DIR}/dex" --version
+
+# --- Offer to wire up the MCP server ---
+
+DEX_BIN="${INSTALL_DIR}/dex"
+
+echo ""
+echo "dex ships an MCP server (dex mcp serve) for AI coding assistants"
+echo "(Claude Code, Cursor, VS Code/Copilot, Codex, Zed, Antigravity, ...)."
+
+# Only prompt when a terminal is attached. With \`curl ... | sh\` stdin is the
+# pipe, so read from /dev/tty if it's available; otherwise just print the hint.
+if [ -r /dev/tty ]; then
+  printf "Wire it into your editors now? [y/N] "
+  read -r REPLY < /dev/tty || REPLY=""
+  case "${REPLY}" in
+    [yY] | [yY][eE][sS])
+      # Pass the absolute path so GUI clients don't depend on PATH.
+      "${DEX_BIN}" mcp install --command "${DEX_BIN}" < /dev/tty || true
+      ;;
+    *)
+      echo "Skipped. Wire it up later with: dex mcp install"
+      ;;
+  esac
+else
+  echo "Wire it up with: dex mcp install"
+fi
