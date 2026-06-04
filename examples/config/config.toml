@@ -1,0 +1,34 @@
+# Example user config — copy to ~/.config/dex/config.toml
+#
+# This is where each engineer points dex at the org's shared templates. dex
+# merges this with any ./dex.toml in the current project (project values win;
+# remotes from both are combined).
+
+[defaults]
+# Default template for `dex init` when --template is omitted.
+template = "acme-etl"
+
+# --- Option A: a local directory of templates ---------------------------------
+# A single path to a directory whose immediate subdirectories are templates
+# (each containing a template.toml). `~` is expanded. This is one string, NOT
+# a list — `dir`, not `paths`.
+[templates]
+dir = "~/acme-dex-templates"
+
+# --- Option B: remote git repositories ----------------------------------------
+# dex clones each repo into its cache (~/.cache/dex/templates/<name>) on first
+# use and `git pull`s it on subsequent runs. Use this so engineers never have to
+# clone or update templates by hand. You can list `dir` and `remotes` together.
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"             # optional: branch, tag, or pin a release
+
+# Skill packs can be shared the same way (local dir and/or remote repos).
+[skills]
+dir = "~/acme-dex-skills"
+
+[[skills.remotes]]
+name = "acme-skills"
+url  = "https://github.com/acme/acme-dex-skills.git"
+ref  = "main"

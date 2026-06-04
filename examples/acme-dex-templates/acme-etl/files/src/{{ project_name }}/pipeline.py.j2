@@ -1,0 +1,23 @@
+"""DLT ingestion pipeline for {{ project_name }}.
+
+Reads raw files from the Autoloader source path and lands them as a streaming
+Delta table. Edit the schema and transforms to fit your source.
+"""
+
+import dlt
+from pyspark.sql.functions import current_timestamp
+
+SOURCE_PATH = "{{ source_path }}"
+
+
+@dlt.table(
+    name="{{ project_name }}_raw",
+    comment="Raw records ingested via Autoloader.",
+)
+def {{ project_name }}_raw():
+    return (
+        spark.readStream.format("cloudFiles")
+        .option("cloudFiles.format", "json")
+        .load(SOURCE_PATH)
+        .withColumn("_ingested_at", current_timestamp())
+    )

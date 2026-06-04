@@ -1,0 +1,36 @@
+[project]
+name        = "{{ project_name }}"
+description = "Acme DLT ingestion pipeline"
+template    = "acme-etl"
+
+# Pass-throughs: every engineer on this project gets `dex db ...` and `dex dlt ...`
+# without any individual setup beyond having `databricks` on their PATH.
+[passthrough.db]
+command     = "databricks"
+description = "Databricks CLI"
+
+[passthrough.dlt]
+command     = "databricks"
+description = "DLT pipeline operations"
+
+# Standardized tasks. Run with `dex run <name>`. `depends_on` runs prerequisites first.
+[tasks.test]
+command     = "pytest tests/"
+description = "Run the test suite"
+
+[tasks.deploy-dev]
+command     = "databricks bundle deploy --target dev"
+description = "Deploy the bundle to the dev workspace"
+depends_on  = ["test"]
+
+[tasks.deploy-prod]
+command     = "databricks bundle deploy --target prod"
+description = "Deploy the bundle to the prod workspace"
+depends_on  = ["test"]
+
+# Environment profiles consumed by your tooling / bundle targets.
+[profiles.dev]
+workspace_url = "https://dev.cloud.databricks.com"
+
+[profiles.prod]
+workspace_url = "https://prod.cloud.databricks.com"

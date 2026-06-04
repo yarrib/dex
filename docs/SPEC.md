@@ -159,8 +159,14 @@ User-level defaults and preferences.
 template = "dabs-package"
 
 [templates]
-# Additional template directories to search
-paths = ["~/dex-templates"]
+# A local directory of templates (single path string).
+dir = "~/dex-templates"
+
+# And/or remote git repos that dex clones and keeps updated.
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "main"      # optional: branch, tag, or commit
 
 [ui]
 color = "auto"    # auto | always | never
@@ -270,8 +276,12 @@ condition = "include_notebook"
 Templates are resolved in order:
 
 1. **Embedded** — built-in templates compiled into the binary
-2. **Project-local** — `./templates/` directory
-3. **User-configured** — paths in `~/.config/dex/config.toml`
+2. **User-configured** — `templates.dir` and `[[templates.remotes]]` in
+   `~/.config/dex/config.toml` (or in a project's `dex.toml`)
+
+Later sources win on a name collision, so an org template can shadow a built-in.
+A project that wants to ship its own `templates/` directory opts in with
+`[templates] dir = "templates"` in its `dex.toml`; there is no automatic scan.
 
 ## 7. Extension Model
 
@@ -302,16 +312,20 @@ Add custom templates to a directory and reference it in `~/.config/dex/config.to
 
 ```toml
 [templates]
-paths = ["~/acme-dex-templates"]
+dir = "~/acme-dex-templates"
 ```
 
-Or point dex at a directory directly:
+Or have dex clone and update a git repo of templates:
 
-```bash
-dex init --template-dir ./templates --template my-template --dir my_project
+```toml
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "main"
 ```
 
-See [Template Authoring](templates/authoring.md) and [Org Templates](templates/org-templates.md).
+See [Template Authoring](templates/authoring.md), [Org Templates](templates/org-templates.md),
+and the runnable [`examples/`](../examples/README.md).
 
 ## 8. Agent Scaffolding (templates)
 

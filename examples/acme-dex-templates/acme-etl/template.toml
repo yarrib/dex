@@ -1,0 +1,56 @@
+[template]
+name            = "acme-etl"
+description      = "Acme standard DLT ingestion pipeline"
+version         = "0.1.0"
+min_dex_version = "0.1.0"
+
+# --- Variables ---
+# Prompted in order. Give every optional variable a sensible default so that
+# `dex init --no-prompt` (and CI scaffolding) works without interaction.
+
+[[variables]]
+name     = "project_name"
+prompt   = "Project name"
+type     = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"     # enforce snake_case (valid Python module name)
+
+[[variables]]
+name    = "python_version"
+prompt  = "Python version"
+type    = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+
+[[variables]]
+name    = "source_path"
+prompt  = "Autoloader source path"
+type    = "string"
+default = "abfss://raw@acme.dfs.core.windows.net/landing/"
+
+[[variables]]
+name    = "use_serverless"
+prompt  = "Use serverless compute?"
+type    = "bool"
+default = false
+
+[[variables]]
+name    = "include_notebook"
+prompt  = "Include an exploration notebook?"
+type    = "bool"
+default = true
+
+# --- File rules (conditional inclusion) ---
+# The notebooks/ directory is only scaffolded when include_notebook is truthy.
+
+[[files]]
+src       = "notebooks/"
+condition = "include_notebook"
+
+# --- Post-scaffold hook ---
+# Printed after scaffolding; dex offers to run `uv sync` (skip with --no-prompt
+# answering no, or auto-run in CI).
+
+[on_success]
+run     = "uv sync"
+message = "Pipeline scaffolded. Run `dex run deploy-dev` to ship it to the dev workspace."

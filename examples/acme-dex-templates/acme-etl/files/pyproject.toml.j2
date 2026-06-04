@@ -1,0 +1,19 @@
+[project]
+name            = "{{ project_name }}"
+version         = "0.1.0"
+description     = "Acme DLT ingestion pipeline"
+requires-python = ">={{ python_version }}"
+dependencies    = [
+    "databricks-sdk>=0.20",
+    "delta-spark>=3.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.5",
+    "databricks-connect>=15.0",
+]
+
+[tool.ruff]
+target-version = "py{{ python_version | replace(".", "") }}"

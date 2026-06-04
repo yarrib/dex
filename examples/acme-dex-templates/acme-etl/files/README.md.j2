@@ -1,0 +1,17 @@
+# {{ project_name }}
+
+Acme DLT ingestion pipeline, scaffolded from the `acme-etl` org template.
+
+- **Python:** {{ python_version }}
+- **Source:** `{{ source_path }}`
+- **Serverless:** {{ use_serverless | lower }}
+
+## Common tasks
+
+```bash
+dex run test          # run the test suite
+dex run deploy-dev    # test, then deploy the bundle to dev
+dex run deploy-prod   # test, then deploy the bundle to prod
+```
+
+`dex db ...` and `dex dlt ...` pass through to the Databricks CLI.

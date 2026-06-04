@@ -39,7 +39,7 @@ dex db clusters list    # → databricks clusters list
 dex tf plan             # → terraform plan
 ```
 
-See [Extending dex](docs/extending.md) and [Building Org Templates](docs/templates/org-templates-guide.md) for how to share templates and pass-throughs across your team.
+See [Extending dex](docs/extending.md) and [Building Org Templates](docs/templates/org-templates-guide.md) for how to share templates and pass-throughs across your team, or jump straight to the runnable [`examples/`](examples/README.md) for a complete org setup you can copy.
 
 ## Development
 
