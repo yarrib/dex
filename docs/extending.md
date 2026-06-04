@@ -40,25 +40,42 @@ Add custom templates to a directory and tell dex where to find them.
 
 ### Per-user (global)
 
-In `~/.config/dex/config.toml`:
+In `~/.config/dex/config.toml`, point at a local directory of templates
+(a single path string under `dir`):
 
 ```toml
 [templates]
-paths = ["~/acme-dex-templates"]
+dir = "~/acme-dex-templates"
+```
+
+Or have dex clone and update one or more git repos for you:
+
+```toml
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"   # optional: branch, tag, or commit
 ```
 
 ### Per-project
 
-Place templates in a `templates/` directory at the project root. dex discovers
-them automatically alongside built-in templates.
+Keep templates inside a project (e.g. a monorepo) by opting in from that
+project's `dex.toml`. dex does not auto-scan `./templates/`, so name the
+directory explicitly:
 
 ```
 my-project/
-├── dex.toml
+├── dex.toml          # [templates] dir = "templates"
 └── templates/
     └── acme-etl/
         ├── template.toml
         └── files/
+```
+
+```toml
+# dex.toml
+[templates]
+dir = "templates"
 ```
 
 Then use them like any built-in template:
@@ -69,7 +86,8 @@ dex init --template acme-etl --dir my_pipeline
 
 See the [Template Authoring Guide](templates/authoring.md) for the full template format,
 and [Org Template Registries](templates/org-templates.md) for how to share templates
-across a team.
+across a team. For a complete, runnable org setup — a sample templates repo plus
+config, standards, and presets files — see [`examples/`](../examples/README.md).
 
 ## Org-wide dex.toml
 

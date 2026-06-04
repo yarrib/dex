@@ -1,0 +1,14 @@
+# Example standards file — flat key/value pre-fills for template variables.
+#
+# Any key here that matches a template variable name fills it in and SKIPS the
+# prompt. Use it for org-wide constants so engineers never retype them.
+#
+# Default location: ~/.config/dex/standards.toml (used automatically).
+# Or pass an explicit path:
+#     dex init --template acme-etl --standards ./examples/config/standards.toml
+#
+# Precedence (lowest -> highest): template default < --preset < --standards
+#                                 < --answers < interactive answer.
+
+python_version = "3.12"
+source_path    = "abfss://raw@acme.dfs.core.windows.net/landing/"

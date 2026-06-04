@@ -1,0 +1,45 @@
+# Example PROJECT config — check this into a repo as ./dex.toml.
+#
+# Everyone who clones the repo inherits these pass-throughs, tasks, and profiles
+# with zero per-user setup (beyond having the target CLIs on their PATH). This
+# is the lowest-friction way to standardize a team: no templates required.
+#
+# A project can ALSO point at templates here — handy for a monorepo that ships
+# its own templates/ folder. There is no automatic ./templates/ discovery, so
+# opt in explicitly:
+#     [templates]
+#     dir = "templates"
+
+[project]
+name        = "acme-revenue-pipeline"
+description = "Daily revenue ingestion"
+
+[passthrough.db]
+command     = "databricks"
+description = "Databricks CLI"
+
+[passthrough.tf]
+command     = "terraform"
+description = "Terraform"
+
+[tasks.test]
+command     = "pytest tests/"
+description = "Run the test suite"
+
+[tasks.deploy-dev]
+command     = "databricks bundle deploy --target dev"
+description = "Deploy the bundle to dev"
+depends_on  = ["test"]
+
+[tasks.deploy-prod]
+command     = "databricks bundle deploy --target prod"
+description = "Deploy the bundle to prod"
+depends_on  = ["test"]
+
+[profiles.dev]
+workspace_url = "https://dev.cloud.databricks.com"
+cluster_id    = "0123-456789-devetl0"
+
+[profiles.prod]
+workspace_url = "https://prod.cloud.databricks.com"
+cluster_id    = "9876-543210-prodetl"

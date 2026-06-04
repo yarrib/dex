@@ -1,0 +1,6 @@
+# This file has no .j2 extension, so dex copies it verbatim (no rendering).
+.venv/
+__pycache__/
+*.pyc
+.databricks/
+dist/

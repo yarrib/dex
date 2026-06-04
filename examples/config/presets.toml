@@ -1,0 +1,20 @@
+# Example presets file — named bundles of variable pre-fills.
+#
+# Unlike standards (one flat set applied everywhere), presets let you pick a
+# named profile per run. Each [profiles.<name>] block is a set of pre-fills.
+#
+# Default location: ~/.config/dex/presets.toml.
+# Select a profile:
+#     dex init --template acme-etl --preset etl
+# Or use a non-default file:
+#     dex init --template acme-etl --preset etl --presets-file ./examples/config/presets.toml
+
+[profiles.etl]
+python_version = "3.11"
+source_path    = "abfss://raw@acme.dfs.core.windows.net/etl-landing/"
+use_serverless = "false"
+
+[profiles.ml]
+python_version = "3.12"
+source_path    = "abfss://raw@acme.dfs.core.windows.net/ml-features/"
+use_serverless = "true"

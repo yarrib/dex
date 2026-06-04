@@ -54,3 +54,5 @@ my_project/
 - [Installation](installation.md) — install from GitHub Releases or build from source
 - [Usage: dex init](usage/init.md) — all options and templates
 - [Templates](usage/templates.md) — template reference
+- [Set up dex for your org](../examples/README.md) — runnable example: org templates, config, standards, presets
+- [Building Org Templates](templates/org-templates-guide.md) — author and share templates with your team

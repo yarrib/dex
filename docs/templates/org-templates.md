@@ -7,7 +7,7 @@ or git repository. Users reference them the same way as built-in templates.
 
 1. Create a directory of templates following the [authoring guide](authoring.md)
 2. Distribute the directory (git repo, shared filesystem, etc.)
-3. Users point dex at the directory via `~/.config/dex/config.toml` or `--template-dir`
+3. Users point dex at the templates via `~/.config/dex/config.toml`
 
 No package manager, no Python, no runtime required.
 
@@ -35,48 +35,60 @@ Templates follow the same format as built-in templates. See the [authoring guide
 
 ---
 
-## 2. Distribute via git
+## 2. Distribute
 
-Host the templates in a git repository:
-
-```bash
-git clone https://github.com/acme/acme-dex-templates
-```
+Host the templates in a git repository, or sync the directory to a shared
+location your team can reach.
 
 ---
 
 ## 3. Configure dex to find the templates
 
-### Per-user (global)
+### Per-user, local directory
 
-Add the templates directory to `~/.config/dex/config.toml`:
+Point `~/.config/dex/config.toml` at a directory of templates. `dir` is a
+single path string (not a list, and not `paths`):
 
 ```toml
 [templates]
-paths = ["~/acme-dex-templates"]
+dir = "~/acme-dex-templates"
 ```
 
 Now all `dex` commands on this machine can use the org templates.
 
+### Per-user, remote git repo
+
+Let dex own the clone. It clones each repo into its cache
+(`~/.cache/dex/templates/<name>`) on first use and `git pull`s it on later
+runs, so engineers never clone or update by hand:
+
+```toml
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "main"   # optional: branch, tag, or commit
+```
+
+You can list `dir` and one or more `[[templates.remotes]]` together.
+
 ### Per-project
 
-Place templates in a `templates/` directory at the project root:
+Keep templates inside a project repo and opt in from its `dex.toml`. dex does
+not auto-scan `./templates/`, so name the directory explicitly:
 
 ```
 my-project/
-├── dex.toml
+├── dex.toml          # [templates] dir = "templates"
 └── templates/
     └── acme-etl/
         ├── template.toml
         └── files/
 ```
 
-dex discovers them automatically.
-
-### One-off (via CLI flag)
-
-```bash
-dex init --template-dir ~/acme-dex-templates --template acme-etl --dir my_pipeline
+```toml
+# dex.toml
+[templates]
+dir = "templates"
 ```
 
 ---
@@ -98,20 +110,38 @@ If an org template name conflicts with a built-in, the org template takes preced
 
 ## Versioning org templates
 
-Pin a specific commit or tag in your team's setup instructions:
+With a remote, pin a tag or commit via `ref` so everyone resolves the same
+templates:
+
+```toml
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"
+```
+
+With a local `dir`, pin in your team's setup instructions instead:
 
 ```bash
 git clone --branch v1.2.0 https://github.com/acme/acme-dex-templates ~/acme-dex-templates
 ```
 
-Or check out the templates directory as a git submodule in your project repos.
-
 ## Monorepo pattern
 
-If templates live in a monorepo alongside other tooling:
+If templates live in a monorepo alongside other tooling, point `dir` at the
+subdirectory:
 
 ```toml
 # ~/.config/dex/config.toml
 [templates]
-paths = ["~/acme-platform/dex-templates"]
+dir = "~/acme-platform/dex-templates"
 ```
+
+---
+
+## A runnable example
+
+[`examples/`](../../examples/README.md) contains a complete worked setup: a
+sample `acme-dex-templates` repo with a working `acme-etl` template, plus
+example `config.toml`, `standards.toml`, `presets.toml`, and project `dex.toml`
+files you can copy.

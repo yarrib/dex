@@ -1,0 +1,11 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # {{ project_name }} — exploration
+# MAGIC
+# MAGIC Scratch notebook for inspecting the raw source before/after the pipeline runs.
+# MAGIC This directory is only scaffolded when `include_notebook` is true.
+
+# COMMAND ----------
+
+df = spark.read.format("json").load("{{ source_path }}")
+display(df.limit(100))

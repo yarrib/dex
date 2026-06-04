@@ -1,0 +1,10 @@
+resources:
+  pipelines:
+    {{ project_name }}_pipeline:
+      name: "{{ project_name }}"
+      serverless: {{ use_serverless | lower }}
+      libraries:
+        - notebook:
+            path: ../src/{{ project_name }}/pipeline.py
+      configuration:
+        source_path: "{{ source_path }}"
