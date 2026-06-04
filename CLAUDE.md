@@ -88,19 +88,23 @@ docs/               Specification and architecture documents.
 
 ## Release Process
 
-Releases are tag-driven. Because main is protected, version bumps go through a PR:
+Releases are tag-driven. Because main is protected, version bumps go through a PR.
+The flow is two steps — one command, then a merge:
 
 ```bash
-# 1. On a release branch, bump versions in Cargo.toml files:
-git checkout -b chore/release-v0.x.y
-# Update version in workspace and crate Cargo.toml files
-git commit -m "chore: bump version to 0.x.y"
-git push -u origin chore/release-v0.x.y
+# 1. From an up-to-date main, open a release PR (branches, bumps, pushes, opens PR):
+make bump-patch        # 0.x.y -> 0.x.(y+1)   (fix:/chore:/refactor:/docs:/test:)
+make bump-minor        # feat:
+make bump-major        # BREAKING CHANGE
 
-# 2. After merging, tag main:
-git checkout main && git pull
-git tag v0.x.y && git push origin v0.x.y
+# 2. Review and merge the PR.
 ```
+
+Merging the PR fires `.github/workflows/tag-on-merge.yml`, which detects the new
+version in `crates/dex-cli/Cargo.toml`, pushes the `vX.Y.Z` tag, and dispatches
+`release.yml` (build binaries + changelog + GitHub Release). No manual tagging.
+
+`make tag-release` remains as a manual fallback to tag `main` HEAD by hand.
 
 ## Git Workflow
 

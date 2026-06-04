@@ -1,0 +1,45 @@
+name: Tag on merge
+
+# When a version-bump PR merges to main, tag the release and trigger release.yml.
+#
+# Why dispatch instead of relying on the tag push? A tag pushed with the default
+# GITHUB_TOKEN does NOT trigger other workflows (GitHub's loop-prevention rule),
+# so release.yml's `on: push: tags` would never fire. We push the tag (so the
+# changelog and release reference it) and then explicitly dispatch release.yml,
+# which is permitted with the built-in token. No PAT required.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write   # push the tag
+  actions: write    # dispatch release.yml
+
+jobs:
+  tag:
+    name: Tag new version and trigger release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag and dispatch release if version is new
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(grep '^version = ' crates/dex-cli/Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')"
+          TAG="v${VERSION}"
+
+          if git ls-remote --tags --exit-code origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists — version unchanged, nothing to release."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          echo "Pushed ${TAG}. Dispatching release workflow."
+          gh workflow run release.yml -f version="${VERSION}"
