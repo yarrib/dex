@@ -23,6 +23,7 @@
 
 - [Why dex?](why-dex.md)
 - [Extending dex](extending.md)
+- [Knowledge Graph](knowledge-graph.md)
 - [Contributing](contributing.md)
 - [Releasing](releasing.md)
 - [Changelog](changelog.md)
