@@ -21,10 +21,11 @@ help:
 	@echo ""
 	@echo "Releases"
 	@echo "  version      print current version"
-	@echo "  bump-patch   bump patch version and commit (open PR, then make tag-release)"
-	@echo "  bump-minor   bump minor version and commit (open PR, then make tag-release)"
-	@echo "  bump-major   bump major version and commit (open PR, then make tag-release)"
-	@echo "  tag-release  tag current HEAD with version from Cargo.toml and push"
+	@echo "  bump-patch   branch off main, bump patch, push, open release PR"
+	@echo "  bump-minor   branch off main, bump minor, push, open release PR"
+	@echo "  bump-major   branch off main, bump major, push, open release PR"
+	@echo "               (merging the PR auto-tags + releases via tag-on-merge.yml)"
+	@echo "  tag-release  manual fallback: tag main HEAD with the Cargo.toml version and push"
 
 build:
 	cargo build
@@ -65,25 +66,20 @@ clean:
 version:
 	@bash scripts/bump-version.sh
 
-bump-patch: _bump-guard
-	$(eval NEW := $(shell bash scripts/bump-version.sh patch))
-	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
-	git commit -m "chore: bump version to v$(NEW)"
-	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
+# Each bump target branches off main, bumps the version, pushes, and opens a PR.
+# Merging that PR fires .github/workflows/tag-on-merge.yml, which tags the
+# release and dispatches release.yml — no manual tagging needed.
+bump-patch:
+	@bash scripts/release.sh patch
 
-bump-minor: _bump-guard
-	$(eval NEW := $(shell bash scripts/bump-version.sh minor))
-	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
-	git commit -m "chore: bump version to v$(NEW)"
-	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
+bump-minor:
+	@bash scripts/release.sh minor
 
-bump-major: _bump-guard
-	$(eval NEW := $(shell bash scripts/bump-version.sh major))
-	git add crates/dex-core/Cargo.toml crates/dex-cli/Cargo.toml Cargo.lock
-	git commit -m "chore: bump version to v$(NEW)"
-	@echo "Version bumped to v$(NEW). Push a PR, merge to main, then: make tag-release"
+bump-major:
+	@bash scripts/release.sh major
 
-# Run this on main after the version bump PR is merged.
+# Manual fallback. The normal path auto-tags on PR merge (tag-on-merge.yml);
+# use this only to tag main HEAD by hand (e.g. if that workflow is disabled).
 # Tags the current HEAD (annotated with changelog) and pushes — triggers the release workflow.
 # Falls back to a lightweight tag if git-cliff isn't installed; CI will promote it.
 tag-release: _bump-guard
