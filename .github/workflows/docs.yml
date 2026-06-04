@@ -4,13 +4,11 @@ on:
   # Update the site (including the "Unreleased" changelog section) on every merge.
   push:
     branches: [main]
-  # Redeploy after a release finishes, so the changelog regenerates with the new
-  # tag present and the just-released commits land under their version heading
-  # (rather than "Unreleased"). The tag itself is pushed by GITHUB_TOKEN in
-  # tag-on-merge.yml, which can't trigger workflows — so we key off Release here.
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
+  # On release, tag-on-merge.yml dispatches this workflow AFTER pushing the tag,
+  # so the changelog regenerates with the new tag present and the released commits
+  # land under their version heading instead of "Unreleased". (A workflow_run
+  # trigger can't be used: the Release run is dispatched with GITHUB_TOKEN, which
+  # by GitHub's loop-prevention rule emits no workflow_run event.)
   workflow_dispatch:
 
 permissions:

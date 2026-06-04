@@ -78,7 +78,8 @@ merged first either way.
 3. Generates a changelog from conventional commits with `git-cliff`
 4. Builds native binaries: `dex-linux-x86_64`, `dex-linux-aarch64` (musl, via
    `cross`), `dex-macos-x86_64`, `dex-macos-aarch64`
-5. Creates the GitHub Release with the binaries attached and the changelog body
+5. Creates the GitHub Release **as a draft** (binaries + changelog) — review it
+   and click **Publish release** to make it public
 
 ## Troubleshooting
 

@@ -1,12 +1,16 @@
 name: Tag on merge
 
-# When a version-bump PR merges to main, tag the release and trigger release.yml.
+# When a version-bump PR merges to main, tag the release and trigger the
+# Release and Deploy-docs workflows.
 #
-# Why dispatch instead of relying on the tag push? A tag pushed with the default
-# GITHUB_TOKEN does NOT trigger other workflows (GitHub's loop-prevention rule),
-# so release.yml's `on: push: tags` would never fire. We push the tag (so the
-# changelog and release reference it) and then explicitly dispatch release.yml,
-# which is permitted with the built-in token. No PAT required.
+# Why dispatch everything instead of relying on triggers?
+#  - A tag pushed with the default GITHUB_TOKEN does NOT trigger other workflows
+#    (GitHub's loop-prevention rule), so release.yml's `on: push: tags` won't fire.
+#  - For the same reason, a run we dispatch here with GITHUB_TOKEN does not emit a
+#    `workflow_run` event, so docs.yml can't chain off Release completing either.
+# A `workflow_dispatch` made with GITHUB_TOKEN DOES start a run, so we dispatch
+# both release.yml and docs.yml directly — after the tag exists, so the changelog
+# renders the new version under its heading instead of "Unreleased". No PAT needed.
 
 on:
   push:
@@ -14,18 +18,18 @@ on:
 
 permissions:
   contents: write   # push the tag
-  actions: write    # dispatch release.yml
+  actions: write    # dispatch release.yml and docs.yml
 
 jobs:
   tag:
-    name: Tag new version and trigger release
+    name: Tag new version and trigger release + docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Tag and dispatch release if version is new
+      - name: Tag and dispatch release + docs if version is new
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -41,5 +45,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag "${TAG}"
           git push origin "${TAG}"
-          echo "Pushed ${TAG}. Dispatching release workflow."
+          echo "Pushed ${TAG}. Dispatching release and docs workflows."
           gh workflow run release.yml -f version="${VERSION}"
+          # Redeploy docs now that the tag exists, so the changelog moves the
+          # released commits under their version heading.
+          gh workflow run docs.yml
