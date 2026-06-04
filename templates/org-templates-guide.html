@@ -35,7 +35,7 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-1bb996e7.js";
+            window.path_to_searchindex_js = "../searchindex-3acd0fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="../toc-f1d93b5a.js"></script>
@@ -337,13 +337,22 @@ dev = [
 </div>
 <hr>
 <h2 id="4-test-locally"><a class="header" href="#4-test-locally">4. Test locally</a></h2>
-<p>Before sharing, test that the template renders correctly. Point dex at your templates directory with <code>--template-dir</code> (or configure it in user config — see step 5):</p>
-<pre><code class="language-bash"># Interactive
-dex init --template-dir ~/acme-dex-templates --template acme-etl --dir /tmp/test-etl
+<p>Before sharing, test that the template renders correctly. There is no
+<code>--template-dir</code> flag — dex discovers a directory of templates through config.
+The quickest way to test in isolation is a throwaway project whose <code>dex.toml</code>
+points at your templates directory:</p>
+<pre><code class="language-bash">mkdir -p /tmp/tmpl-test &amp;&amp; cd /tmp/tmpl-test
+printf '[project]\nname = "scratch"\n\n[templates]\ndir = "%s"\n' \
+  ~/acme-dex-templates &gt; dex.toml
+
+# Interactive
+dex init --template acme-etl --dir /tmp/test-etl
 
 # Non-interactive (tests --no-prompt path + all defaults)
-dex init --template-dir ~/acme-dex-templates --template acme-etl --no-prompt --dir /tmp/test-etl-defaults
+dex init --template acme-etl --no-prompt --dir /tmp/test-etl-defaults
 </code></pre>
+<p>(dex reads <code>dex.toml</code> from the current directory, so run <code>dex init</code> from
+<code>/tmp/tmpl-test</code>.)</p>
 <p>Check the output:</p>
 <pre><code class="language-bash"># Verify files exist
 ls /tmp/test-etl
@@ -372,29 +381,40 @@ ls /tmp/test-etl/src/
 <hr>
 <h2 id="5-make-it-available-to-your-team"><a class="header" href="#5-make-it-available-to-your-team">5. Make it available to your team</a></h2>
 <p>There are two ways to share templates across your org. Use whichever fits your infrastructure.</p>
-<h3 id="option-a-shared-git-repository"><a class="header" href="#option-a-shared-git-repository">Option A: Shared git repository</a></h3>
-<p>Host the templates directory as a git repo. Team members clone it once and point dex at it.</p>
-<pre><code class="language-bash"># Team member setup (run once)
-git clone https://github.com/acme/acme-dex-templates ~/acme-dex-templates
+<h3 id="option-a-remote-git-repository-dex-manages-the-clone"><a class="header" href="#option-a-remote-git-repository-dex-manages-the-clone">Option A: Remote git repository (dex manages the clone)</a></h3>
+<p>Host the templates directory as a git repo and let dex clone and update it. Add
+to <code>~/.config/dex/config.toml</code>:</p>
+<pre><code class="language-toml">[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"   # optional: pin a tag/branch/commit; omit for default branch
 </code></pre>
-<p>Add to <code>~/.config/dex/config.toml</code>:</p>
-<pre><code class="language-toml">[templates]
-paths = ["~/acme-dex-templates"]
+<p>dex clones into <code>~/.cache/dex/templates/&lt;name&gt;</code> on first use and <code>git pull</code>s it
+on later runs — no manual cloning or updating. Bumping <code>ref</code> rolls everyone to a
+new version.</p>
+<h3 id="option-b-shared-local-directory"><a class="header" href="#option-b-shared-local-directory">Option B: Shared local directory</a></h3>
+<p>If you’d rather manage the checkout yourself, clone once and point <code>dir</code> at it:</p>
+<pre><code class="language-bash">git clone https://github.com/acme/acme-dex-templates ~/acme-dex-templates
 </code></pre>
-<p>To update to the latest templates:</p>
-<pre><code class="language-bash">git -C ~/acme-dex-templates pull
+<pre><code class="language-toml"># ~/.config/dex/config.toml
+[templates]
+dir = "~/acme-dex-templates"   # a single path string, not a list
 </code></pre>
-<p><strong>Pin a specific version</strong> in your onboarding docs:</p>
-<pre><code class="language-bash">git clone --branch v1.2.0 https://github.com/acme/acme-dex-templates ~/acme-dex-templates
-</code></pre>
-<h3 id="option-b-project-local-templates"><a class="header" href="#option-b-project-local-templates">Option B: Project-local templates</a></h3>
-<p>For templates that belong to a specific project or monorepo, commit them into a <code>templates/</code> directory at the repo root. dex discovers them automatically — no config needed.</p>
+<p>Update with <code>git -C ~/acme-dex-templates pull</code>.</p>
+<h3 id="option-c-project-local-templates"><a class="header" href="#option-c-project-local-templates">Option C: Project-local templates</a></h3>
+<p>For templates that belong to a specific project or monorepo, commit them into a
+<code>templates/</code> directory at the repo root and opt in from <code>dex.toml</code>. dex does not
+auto-scan <code>./templates/</code>, so name it explicitly:</p>
 <pre><code>my-platform/
-├── dex.toml
+├── dex.toml          # [templates] dir = "templates"
 └── templates/
     └── acme-etl/
         ├── template.toml
         └── files/
+</code></pre>
+<pre><code class="language-toml"># dex.toml
+[templates]
+dir = "templates"
 </code></pre>
 <p>Anyone who clones the repo gets the template immediately.</p>
 <hr>
@@ -407,26 +427,25 @@ source_path    = "abfss://raw@acme.dfs.core.windows.net/landing/"
 <p>Team members reference it with <code>--standards</code>:</p>
 <pre><code class="language-bash">dex init --template acme-etl --standards ~/acme-standards.toml --dir my_pipeline
 </code></pre>
-<p>Or set a default in <code>~/.config/dex/config.toml</code>:</p>
-<pre><code class="language-toml">[defaults]
-standards_file = "~/acme-standards.toml"
-</code></pre>
+<p>To apply it automatically without the flag, save it at the default location
+<code>~/.config/dex/standards.toml</code> — dex loads that file whenever <code>--standards</code> is
+omitted.</p>
 <hr>
 <h2 id="7-full-team-onboarding-checklist"><a class="header" href="#7-full-team-onboarding-checklist">7. Full team onboarding checklist</a></h2>
 <p>Once templates are authored and hosted, onboarding a new engineer takes two minutes:</p>
 <pre><code class="language-bash"># 1. Install dex
 curl -sSf https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh
 
-# 2. Clone templates
-git clone https://github.com/acme/acme-dex-templates ~/acme-dex-templates
-
-# 3. Configure dex
+# 2. Point dex at the org templates (dex manages the clone)
+mkdir -p ~/.config/dex
 cat &gt;&gt; ~/.config/dex/config.toml &lt;&lt;'EOF'
-[templates]
-paths = ["~/acme-dex-templates"]
+[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"
 EOF
 
-# 4. Done — scaffold a project
+# 3. Done — scaffold a project
 dex init --template acme-etl --dir my_pipeline
 </code></pre>
 <hr>
@@ -435,6 +454,7 @@ dex init --template acme-etl --dir my_pipeline
 <li><a href="authoring.html">Template Authoring Guide</a> — full <code>template.toml</code> reference</li>
 <li><a href="built-in.html">Built-in Templates</a> — study the built-ins as worked examples</li>
 <li><a href="../usage/init.html">dex init</a> — all CLI flags including <code>--preset</code> and <code>--standards</code></li>
+<li><a href="../../examples/README.html"><code>examples/</code></a> — a runnable version of this entire setup</li>
 </ul>
 
                     </main>

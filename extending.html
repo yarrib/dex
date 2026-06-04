@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-1bb996e7.js";
+            window.path_to_searchindex_js = "searchindex-3acd0fc6.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-f1d93b5a.js"></script>
@@ -208,26 +208,39 @@ dex az account show                # → az account show
 <h2 id="custom-templates"><a class="header" href="#custom-templates">Custom templates</a></h2>
 <p>Add custom templates to a directory and tell dex where to find them.</p>
 <h3 id="per-user-global"><a class="header" href="#per-user-global">Per-user (global)</a></h3>
-<p>In <code>~/.config/dex/config.toml</code>:</p>
+<p>In <code>~/.config/dex/config.toml</code>, point at a local directory of templates
+(a single path string under <code>dir</code>):</p>
 <pre><code class="language-toml">[templates]
-paths = ["~/acme-dex-templates"]
+dir = "~/acme-dex-templates"
+</code></pre>
+<p>Or have dex clone and update one or more git repos for you:</p>
+<pre><code class="language-toml">[[templates.remotes]]
+name = "acme-templates"
+url  = "https://github.com/acme/acme-dex-templates.git"
+ref  = "v1.2.0"   # optional: branch, tag, or commit
 </code></pre>
 <h3 id="per-project"><a class="header" href="#per-project">Per-project</a></h3>
-<p>Place templates in a <code>templates/</code> directory at the project root. dex discovers
-them automatically alongside built-in templates.</p>
+<p>Keep templates inside a project (e.g. a monorepo) by opting in from that
+project’s <code>dex.toml</code>. dex does not auto-scan <code>./templates/</code>, so name the
+directory explicitly:</p>
 <pre><code>my-project/
-├── dex.toml
+├── dex.toml          # [templates] dir = "templates"
 └── templates/
     └── acme-etl/
         ├── template.toml
         └── files/
+</code></pre>
+<pre><code class="language-toml"># dex.toml
+[templates]
+dir = "templates"
 </code></pre>
 <p>Then use them like any built-in template:</p>
 <pre><code class="language-bash">dex init --template acme-etl --dir my_pipeline
 </code></pre>
 <p>See the <a href="templates/authoring.html">Template Authoring Guide</a> for the full template format,
 and <a href="templates/org-templates.html">Org Template Registries</a> for how to share templates
-across a team.</p>
+across a team. For a complete, runnable org setup — a sample templates repo plus
+config, standards, and presets files — see <a href="../examples/README.html"><code>examples/</code></a>.</p>
 <h2 id="org-wide-dextoml"><a class="header" href="#org-wide-dextoml">Org-wide dex.toml</a></h2>
 <p>For teams, check a <code>dex.toml</code> into your project repos with shared pass-throughs
 and task definitions:</p>
