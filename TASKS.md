@@ -30,6 +30,7 @@ _(nothing active)_
 - [x] Traits system — `dex add <trait>`, embedded `ci-github` and `docker` traits
 - [x] `notebook` built-in trait — `dex add notebook` adds a Databricks notebook (percent format)
 - [x] MCP server — `dex mcp serve`, `.mcp.json` wiring, full `scaffold_project`, `get_template_variables`, `list_templates` tools
+- [x] MCP client wiring — `dex mcp install` writes/merges config for claude-code, claude-desktop, cursor, vscode/copilot, codex, zed, antigravity; install.sh hook
 - [x] User config — `~/.config/dex/config.toml` + `dex.toml`, remote template sources, presets, standards
 - [x] Devcontainer + ai-dev-kit integration — profile-based skill setup, `scripts/setup_dev_kit.sh`
 - [x] GitHub Releases — `install.sh`, platform binaries (linux x86_64/aarch64, macos x86_64/aarch64)

@@ -7,6 +7,7 @@ pub mod apply_trait;
 pub mod config;
 pub mod context_map;
 pub mod error;
+pub mod mcp;
 pub mod scaffold;
 pub mod skills;
 pub mod template;
@@ -19,7 +20,8 @@ pub use config::{
     resolve_remote, resolve_skill_remote, save_answers, skills_cache_dir,
 };
 pub use context_map::{ContextMap, write_context_map};
-pub use error::{DexError, SkillError};
+pub use error::{DexError, McpError, SkillError};
+pub use mcp::{McpClient, McpInstallPlan, apply_mcp_plan, build_client_config, plan_mcp_client};
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use skills::{
     InstallResult, InstallTarget, SkillPack, SkillPackEntry, SkillSource, install_skills,

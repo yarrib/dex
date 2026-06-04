@@ -72,6 +72,13 @@ dex mcp serve
     Tools: list_templates, get_template_variables, scaffold_project,
     scaffold_agent.
 
+dex mcp install [--client <name>...] [--all] [--dir <path>]
+                [--command <path>] [--dry-run]
+    Wire the dex MCP server into AI coding assistants by writing/merging the
+    server entry into each client's config file (without disturbing other
+    servers). Clients: claude-code, claude-desktop, cursor, vscode, codex,
+    zed, antigravity. Omit --client/--all for an interactive picker.
+
 dex run <task> [-- <extra-args>]
     Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
     Extra args after -- are appended to the task command.

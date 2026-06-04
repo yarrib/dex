@@ -42,8 +42,46 @@ cargo install --path crates/dex-cli
 
 See [Installation](../installation.md) for full details.
 
-## Wiring into a client
+## Quick setup: `dex mcp install`
 
+The fastest way to wire dex into your editors is to let dex write the config for
+you. It merges a `dex` entry into each client's config file **without disturbing
+any servers you already have**.
+
+```bash
+# Interactive picker over all supported clients
+dex mcp install
+
+# Or target specific clients
+dex mcp install --client claude-code --client cursor
+
+# Or wire up everything
+dex mcp install --all
+
+# Preview the exact changes without writing anything
+dex mcp install --all --dry-run
+```
+
+Supported `--client` values: `claude-code`, `claude-desktop`, `cursor`, `vscode`
+(alias `copilot`), `codex`, `zed`, `antigravity`.
+
+Useful flags:
+
+| Flag | Purpose |
+|---|---|
+| `--all` | Wire up every supported client |
+| `--client <name>` | Target one client (repeatable) |
+| `--dir <path>` | Project dir for project-scoped clients (`claude-code`, `vscode`); defaults to `.` |
+| `--command <path>` | Executable the client launches; defaults to `dex`. Use an absolute path if dex isn't on the client's `PATH` |
+| `--dry-run` | Print the resulting config for each client without writing |
+
+After installing, **restart the client** (or reload its MCP servers) to pick up
+the change. The install script can also run this for you at the end of a binary
+install.
+
+## Wiring into a client manually
+
+Prefer to edit config by hand, or using a client `dex mcp install` doesn't cover?
 Every client launches the same command — `dex mcp serve` — over stdio. Only the
 config file location and its surrounding shape differ. The shapes you'll see are:
 
