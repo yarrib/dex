@@ -23,6 +23,8 @@ enum Cli {
     Templates(commands::templates::TemplatesArgs),
     /// Run a task defined in dex.toml.
     Run(commands::run::RunArgs),
+    /// Build the project-memory knowledge graph in .context/wiki/.
+    Context(commands::context::ContextArgs),
     /// Run a pass-through command defined in dex.toml.
     #[command(external_subcommand)]
     External(Vec<String>),
@@ -39,6 +41,7 @@ fn main() {
         Cli::Mcp(args) => commands::mcp::run(args),
         Cli::Templates(args) => commands::templates::run(args),
         Cli::Run(args) => commands::run::run(args),
+        Cli::Context(args) => commands::context::run(args),
         Cli::External(args) => commands::passthrough::run(args),
     };
 

@@ -83,6 +83,12 @@ dex run <task> [-- <extra-args>]
     Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
     Extra args after -- are appended to the task command.
 
+dex context sync [--dir <path>] [--rebuild] [--limit <n>]
+    Build/refresh the project-memory knowledge graph in .context/wiki/.
+    Reads git history, classifies commits ([Decision]/[Evolution]/[Stability]/
+    [Dependency]), stitches [[wikilink]] edges, and writes per-commit nodes +
+    INDEX.md + USER_MANUAL.md. Incremental by default; --rebuild regenerates all.
+
 dex add <component> [--dry-run]                              # future
     Bolt a component onto an existing project.
 

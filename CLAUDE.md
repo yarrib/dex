@@ -8,6 +8,16 @@ commands (dex.toml config). Distributed as a standalone binary.
 
 See `docs/SPEC.md` and `docs/ARCHITECTURE.md`.
 
+## Architectural History
+
+Before making non-trivial changes, consult `.context/wiki/INDEX.md` — a linked
+knowledge graph of every significant decision, feature, and fix, grouped by
+functional area, with cross-file coupling ("co-change") clusters. It explains
+*why* the code looks the way it does. Start at `.context/USER_MANUAL.md`.
+
+Refresh it with `dex context sync` (the deterministic Rust engine) or the
+`/project-memory-engine` skill.
+
 ## Build Commands
 
 ```bash

@@ -17,6 +17,9 @@ pub enum DexError {
     #[error(transparent)]
     Mcp(#[from] McpError),
 
+    #[error(transparent)]
+    Context(#[from] ContextError),
+
     #[error("render error: {0}")]
     Render(#[from] minijinja::Error),
 
@@ -25,6 +28,19 @@ pub enum DexError {
         path: PathBuf,
         source: std::io::Error,
     },
+}
+
+/// Errors related to building the project-memory knowledge graph.
+#[derive(Debug, thiserror::Error)]
+pub enum ContextError {
+    #[error("not a git repository (or git is unavailable): {0}")]
+    NotARepo(String),
+
+    #[error("git command failed: {0}")]
+    Git(String),
+
+    #[error("could not run git — is it installed and on PATH? ({0})")]
+    GitSpawn(String),
 }
 
 /// Errors related to configuration parsing and validation.

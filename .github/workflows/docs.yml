@@ -27,11 +27,6 @@ jobs:
         with:
           tool: mdbook
 
-      - name: Install mdbook-mermaid
-        uses: taiki-e/install-action@v2
-        with:
-          tool: mdbook-mermaid
-
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
         with:
@@ -41,12 +36,6 @@ jobs:
         run: git-cliff --output docs/changelog.md
         env:
           GITHUB_REPO: ${{ github.repository }}
-
-      - name: Generate knowledge graph
-        run: python3 scripts/gen_context_graph.py
-
-      - name: Install mermaid assets
-        run: mdbook-mermaid install .
 
       - name: Build docs
         run: mdbook build
