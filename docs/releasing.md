@@ -64,14 +64,19 @@ Go to **Actions → Release** on GitHub. The workflow:
    - Linux aarch64 (musl)
    - macOS Apple Silicon
    - macOS Intel
-4. Creates a GitHub Release with the binaries attached
+4. Creates the GitHub Release **as a draft** with the binaries attached
 
-### 5. Verify the release
+### 5. Review the draft, then publish
 
-- Check [GitHub Releases](https://github.com/yarrib/dex/releases) for the new release
-- Confirm binaries are attached for all platforms
-- Confirm the changelog looks correct
-- The docs site redeploys automatically (see below)
+The release is created as a **draft** — built and tagged automatically, but not
+yet public. This is the human checkpoint:
+
+- Open the draft under [Releases](https://github.com/yarrib/dex/releases)
+- Confirm binaries are attached for all platforms and the changelog looks right
+- Click **Publish release** to make it public
+
+The docs site redeploys automatically right after the tag is pushed (see below),
+so the changelog updates regardless of whether you've published the draft yet.
 
 ---
 
@@ -84,8 +89,10 @@ build artifact (gitignored); `docs.yml` regenerates it on each deploy.
 The docs site redeploys:
 
 - on every push to `main` (keeps the **Unreleased** section current), and
-- after the **Release** workflow completes (via `workflow_run`), so the
-  just-released commits move under their version heading once the tag exists.
+- on release — `tag-on-merge.yml` dispatches `docs.yml` right after pushing the
+  tag, so the just-released commits move under their version heading. (A tag or a
+  `GITHUB_TOKEN`-dispatched run can't trigger workflows on its own, so the deploy
+  is dispatched explicitly rather than chained off the tag or the Release run.)
 
 Use conventional commit prefixes so changes appear in the right section:
 

@@ -180,3 +180,6 @@ jobs:
           name: ${{ needs.prepare.outputs.tag }}
           files: dist/*
           body_path: CHANGELOG_RELEASE.md
+          # Publish as a draft: binaries + notes are built automatically, but a
+          # human reviews and clicks "Publish" before the release goes public.
+          draft: true
