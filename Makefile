@@ -21,6 +21,7 @@ help:
 	@echo ""
 	@echo "Releases"
 	@echo "  version      print current version"
+	@echo "  check-version verify version isn't behind the latest tag (CI enforces this)"
 	@echo "  bump-patch   branch off main, bump patch, push, open release PR"
 	@echo "  bump-minor   branch off main, bump minor, push, open release PR"
 	@echo "  bump-major   branch off main, bump major, push, open release PR"
@@ -65,6 +66,10 @@ clean:
 
 version:
 	@bash scripts/bump-version.sh
+
+# Verify the version isn't behind the latest tag (also enforced in CI).
+check-version:
+	@bash scripts/check-version.sh
 
 # Each bump target branches off main, bumps the version, pushes, and opens a PR.
 # Merging that PR fires .github/workflows/tag-on-merge.yml, which tags the
