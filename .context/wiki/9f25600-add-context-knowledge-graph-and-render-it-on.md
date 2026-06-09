@@ -1,6 +1,6 @@
 ---
-sha: 1b9c9ca1471b97a70e4fd00e2f8ad80504bec515
-short_sha: 1b9c9ca
+sha: 9f25600eca34d593b0fc8d54fab2249e66460c69
+short_sha: 9f25600
 author: Claude
 date: 2026-06-04
 class: [Dependency]
@@ -10,7 +10,7 @@ tags: [#dependency]
 
 # [Dependency] docs: add .context knowledge graph and render it on Pages
 
-**Commit:** `1b9c9ca` · **Author:** Claude · **Date:** 2026-06-04 · **Area:** Docs, CI & Release
+**Commit:** `9f25600` · **Author:** Claude · **Date:** 2026-06-04 · **Area:** Docs, CI & Release
 
 Introduce a hand-maintained `.context/` knowledge graph of the codebase:
 one markdown file per entity (crate, module, concept, artifact) with
@@ -53,7 +53,7 @@ every deploy so the published graph never drifts from `.context/`.
 
 ## Relationships
 
-- **implemented-in** → [[9013fda-dex-mcp-install-client-wiring-docs-55]]
+- **implemented-in** → [[ff57dbb-add-runnable-org-setup-examples-and-fix]]
 - **co-occurrence** → [[8f177a0-migrate-from-mkdocs-to-mdbook-23]] (3 shared files)
+- **co-occurrence** → [[e9af81b-release-v0-2-3-automated-tagging-version-gate]] (2 shared files)
 - **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (2 shared files)
-- **co-occurrence** → [[bacd088-add-dex-run-task-command-28]] (1 shared file)
