@@ -41,7 +41,7 @@ _No extended commit description._
 ## Relationships
 
 - **influenced-by** → [[6cbcd49-add-prd-for-ai-ready-scaffolding-context-map]] (Skills, Traits & Extensibility)
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (8 shared files)
-- **co-occurrence** → [[f085abb-remove-python-layer-and-expand-rust-test]] (6 shared files)
 - **co-occurrence** → [[6cbcd49-add-prd-for-ai-ready-scaffolding-context-map]] (5 shared files)
+- **co-occurrence** → [[30690b9-port-dex-to-pure-rust-single-binary-21]] (5 shared files)
+- **co-occurrence** → [[bacd088-add-dex-run-task-command-28]] (4 shared files)
 - **resolved-by** → `#36` _(this commit)_

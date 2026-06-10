@@ -46,8 +46,6 @@ theme
 
 ---------
 
-Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.gitignore`
@@ -67,5 +65,4 @@ Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 ## Relationships
 
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (7 shared files)
 - **resolved-by** → `#12` _(this commit)_

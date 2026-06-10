@@ -52,10 +52,6 @@ appears on TTY, default used when non-interactive
 - [ ] Run `dex skills sync` after setup — verify skills are distributed
 correctly
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.devcontainer/config.toml`

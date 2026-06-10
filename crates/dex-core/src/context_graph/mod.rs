@@ -224,6 +224,10 @@ pub struct SyncOptions {
     pub rebuild: bool,
     /// Cap history to the most recent `N` commits (first-run convenience).
     pub limit: Option<usize>,
+    /// Keep every commit. By default the [Dependency] class (releases, version
+    /// bumps, CI tweaks, docs plumbing) is filtered out so the graph is code
+    /// changes and major decisions only. Set to include the mechanical churn too.
+    pub include_all: bool,
 }
 
 /// Outcome of a sync run, for the CLI to render.
@@ -249,6 +253,7 @@ pub struct SyncReport {
 pub fn sync(root: &Path, opts: &SyncOptions) -> Result<SyncReport, DexError> {
     git::ensure_repo(root)?;
     let commits = git::log(root, opts.limit)?;
+    let commits = filter_commits(commits, opts.include_all);
     let nodes = build_nodes(&commits);
 
     let wiki_dir = root.join(".context").join("wiki");
@@ -266,6 +271,9 @@ pub struct ExportOptions {
     /// `SUMMARY.md` to inject a navigation section into (between markers). When
     /// `None`, no SUMMARY is touched.
     pub summary_path: Option<PathBuf>,
+    /// Keep every commit. Mirrors [`SyncOptions::include_all`]; defaults to the
+    /// same [Dependency]-class filter so the published graph matches the synced one.
+    pub include_all: bool,
 }
 
 /// Outcome of an export run.
@@ -285,6 +293,7 @@ pub struct ExportReport {
 pub fn export(root: &Path, opts: &ExportOptions) -> Result<ExportReport, DexError> {
     git::ensure_repo(root)?;
     let commits = git::log(root, None)?;
+    let commits = filter_commits(commits, opts.include_all);
     let nodes = build_nodes(&commits);
 
     let wiki_dir = root.join(".context").join("wiki");
@@ -603,6 +612,28 @@ fn is_noise(path: &str) -> bool {
         || p == "uv.lock"
 }
 
+/// Keep only *substantive* commits unless `include_all` is set: code changes
+/// ([Evolution]/[Stability]) and major decisions ([Decision]). The whole
+/// [Dependency] class — releases, version bumps, CI tweaks, and documentation
+/// plumbing — is dropped by default so the graph reads as the project's design
+/// history, not its mechanical churn. Design docs survive because they classify
+/// as [Decision], not [Dependency].
+#[must_use]
+fn filter_commits(commits: Vec<RawCommit>, include_all: bool) -> Vec<RawCommit> {
+    if include_all {
+        return commits;
+    }
+    commits.into_iter().filter(is_substantive).collect()
+}
+
+/// True unless the commit classifies as [Dependency] (the non-code,
+/// non-decision class: release/bump/CI/packaging/trivial-docs).
+#[must_use]
+fn is_substantive(c: &RawCommit) -> bool {
+    let signal: Vec<String> = c.files.iter().filter(|f| !is_noise(f)).cloned().collect();
+    classify(c, &signal) != NodeClass::Dependency
+}
+
 fn is_design_doc(path: &str) -> bool {
     let p = path.to_ascii_lowercase();
     if !p.starts_with("docs/") || !p.ends_with(".md") {
@@ -771,6 +802,54 @@ mod tests {
         assert!(is_noise("Cargo.lock"));
         assert!(is_noise("webapp/node_modules/x/y.js"));
         assert!(!is_noise("crates/dex-core/src/lib.rs"));
+    }
+
+    #[test]
+    fn dependency_class_is_filtered_by_default() {
+        // Dropped: the [Dependency] class — releases, bumps, CI, trivial docs.
+        let release = commit("d000000", "chore: release v0.2.1", "", &["Cargo.toml"]);
+        let bump = commit(
+            "d000001",
+            "chore: bump version to v0.3.0",
+            "",
+            &["Cargo.toml"],
+        );
+        let ci = commit(
+            "d000002",
+            "ci: add workflow_dispatch",
+            "",
+            &[".github/workflows/x.yml"],
+        );
+        let trivial_docs = commit("d000003", "docs: tweak readme", "", &["README.md"]);
+        // Kept: code and major decisions.
+        let feat = commit("c000000", "feat: x", "", &["crates/dex-core/src/lib.rs"]);
+        let fix = commit(
+            "c000001",
+            "fix: y",
+            "",
+            &["crates/dex-core/src/scaffold.rs"],
+        );
+        let design = commit("c000002", "docs: add PRD", "", &["docs/prd-graph.md"]);
+
+        assert!(!is_substantive(&release));
+        assert!(!is_substantive(&bump));
+        assert!(!is_substantive(&ci));
+        assert!(!is_substantive(&trivial_docs));
+        assert!(is_substantive(&feat));
+        assert!(is_substantive(&fix));
+        assert!(is_substantive(&design), "design docs are major decisions");
+
+        let all = vec![
+            release.clone(),
+            trivial_docs.clone(),
+            feat.clone(),
+            fix.clone(),
+            design.clone(),
+        ];
+        let kept = filter_commits(all.clone(), false);
+        assert_eq!(kept.len(), 3, "code + decisions survive the default filter");
+        // include_all keeps everything.
+        assert_eq!(filter_commits(all, true).len(), 5);
     }
 
     #[test]

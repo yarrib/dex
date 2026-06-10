@@ -32,8 +32,6 @@ The `gh-pages` branch is protected and blocking the Actions bot from
 pushing. Go to **Settings → Rules** and add GitHub Actions as a bypass
 actor for the `gh-pages` rule.
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
 ## Changed files
 
 - `.github/workflows/docs.yml`
@@ -43,5 +41,4 @@ actor for the `gh-pages` rule.
 - **modified-by** → [[d28c6c6-feat-user-config-14]]
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
 - **co-occurrence** → [[d28c6c6-feat-user-config-14]] (1 shared file)
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (1 shared file)
 - **resolved-by** → `#18` _(this commit)_

@@ -16,8 +16,6 @@ Version is already committed in pyproject.toml as part of the bump PR.
 Stamping from the tag is unnecessary and broke when the tag pointed to
 a commit before the bump-version.py idempotency fix.
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.github/workflows/release.yml`
@@ -27,5 +25,3 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 - **modified-by** → [[31c18f8-feat-documentation-12]]
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
 - **co-occurrence** → [[b5d760e-fix-bump-version-idempotency-and-replace-git]] (1 shared file)
-- **co-occurrence** → [[1f9f2e9-remove-auto-version-workflow-add-release-guide]] (1 shared file)
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (1 shared file)

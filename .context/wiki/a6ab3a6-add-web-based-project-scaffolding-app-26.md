@@ -42,6 +42,5 @@ _No extended commit description._
 
 - **implemented-in** → [[e3efd53-rewrite-all-docs-for-rust-binary-architecture-25]]
 - **co-occurrence** → [[bf5f8b5-add-regression-tests-for-embedded-template]] (1 shared file)
-- **co-occurrence** → [[00b3712-chore-release-v0-1-3-15]] (1 shared file)
 - **co-occurrence** → [[31c18f8-feat-documentation-12]] (1 shared file)
 - **resolved-by** → `#26` _(this commit)_
