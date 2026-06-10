@@ -9,6 +9,7 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use regex::Regex;
+use serde::Serialize;
 
 use crate::error::DexError;
 
@@ -341,6 +342,14 @@ pub fn write_export(
         pages_written += 1;
     }
 
+    // Interactive force-directed graph view (Obsidian-style). Mirrors the set
+    // of node pages present on disk so links always resolve.
+    write_file(
+        &opts.out_dir.join("graph.md"),
+        &render_graph_page(nodes, wiki_dir),
+    )?;
+    pages_written += 1;
+
     // Node pages — only those present on disk (mirrors the committed graph).
     for node in nodes {
         let src = wiki_dir.join(format!("{}.md", node.stem));
@@ -372,6 +381,186 @@ pub fn write_export(
     })
 }
 
+// --- Interactive graph view -------------------------------------------------
+
+/// CDN-hosted force-directed graph renderer (2D canvas, pan/zoom/drag). Pinned
+/// to the 1.x line. Loaded at view time by the visitor's browser, so the build
+/// itself needs no network access.
+const FORCE_GRAPH_SRC: &str = "https://cdn.jsdelivr.net/npm/force-graph@1/dist/force-graph.min.js";
+
+#[derive(Serialize)]
+struct GraphNode {
+    id: String,
+    label: String,
+    area: String,
+    color: String,
+    /// Relative node size — degree + 1 so isolated nodes are still visible.
+    val: usize,
+    /// Page to open on click (relative to the graph page, same folder).
+    url: String,
+}
+
+#[derive(Serialize)]
+struct GraphLink {
+    source: String,
+    target: String,
+    kind: String,
+}
+
+#[derive(Serialize)]
+struct GraphLegend {
+    title: String,
+    color: String,
+}
+
+#[derive(Serialize)]
+struct GraphData {
+    nodes: Vec<GraphNode>,
+    links: Vec<GraphLink>,
+    areas: Vec<GraphLegend>,
+}
+
+/// Build the node/edge payload for the interactive graph, restricted to nodes
+/// whose page exists on disk (so every click target resolves).
+fn build_graph_data(nodes: &[Node], wiki_dir: &Path) -> GraphData {
+    let present: std::collections::HashSet<&str> = nodes
+        .iter()
+        .filter(|n| wiki_dir.join(format!("{}.md", n.stem)).exists())
+        .map(|n| n.stem.as_str())
+        .collect();
+
+    // Links first (both endpoints must be present), then degree from links.
+    let mut links = Vec::new();
+    let mut degree: BTreeMap<String, usize> = BTreeMap::new();
+    for node in nodes {
+        if !present.contains(node.stem.as_str()) {
+            continue;
+        }
+        for e in &node.edges {
+            if node.stem == e.target_stem || !present.contains(e.target_stem.as_str()) {
+                continue;
+            }
+            *degree.entry(node.stem.clone()).or_insert(0) += 1;
+            *degree.entry(e.target_stem.clone()).or_insert(0) += 1;
+            links.push(GraphLink {
+                source: node.stem.clone(),
+                target: e.target_stem.clone(),
+                kind: e.kind.wikilink_label().to_string(),
+            });
+        }
+    }
+
+    let graph_nodes: Vec<GraphNode> = nodes
+        .iter()
+        .filter(|n| present.contains(n.stem.as_str()))
+        .map(|n| GraphNode {
+            id: n.stem.clone(),
+            label: format!(
+                "{} {} — {} · {}",
+                n.commit.short_sha,
+                n.class.label(),
+                n.commit.subject,
+                n.area.title()
+            ),
+            area: n.area.title().to_string(),
+            color: n.area.color().to_string(),
+            val: degree.get(&n.stem).copied().unwrap_or(0) + 1,
+            url: format!("{}.html", n.stem),
+        })
+        .collect();
+
+    // Legend: only areas that actually have nodes, in canonical order.
+    let areas: Vec<GraphLegend> = FunctionalArea::ALL
+        .iter()
+        .filter(|a| {
+            nodes
+                .iter()
+                .any(|n| n.area == **a && present.contains(n.stem.as_str()))
+        })
+        .map(|a| GraphLegend {
+            title: a.title().to_string(),
+            color: a.color().to_string(),
+        })
+        .collect();
+
+    GraphData {
+        nodes: graph_nodes,
+        links,
+        areas,
+    }
+}
+
+/// Render the `graph.md` page: a self-contained interactive force-directed
+/// graph with the data embedded inline as JSON (no fetch, no path juggling).
+fn render_graph_page(nodes: &[Node], wiki_dir: &Path) -> String {
+    let data = build_graph_data(nodes, wiki_dir);
+    // Serialization can't fail for these plain types; fall back to an empty
+    // graph rather than panicking if it somehow does.
+    let json = serde_json::to_string(&data)
+        .unwrap_or_else(|_| "{\"nodes\":[],\"links\":[],\"areas\":[]}".to_string());
+
+    format!(
+        r#"# Project Memory — Graph
+
+An interactive map of every significant commit, colored by functional area.
+**Drag** to pan, **scroll** to zoom, **click** a node to open its page.
+
+<div id="pm-graph" style="width:100%;height:70vh;border:1px solid rgba(128,128,128,0.4);border-radius:6px;overflow:hidden"></div>
+<div id="pm-graph-legend" style="margin-top:.75rem;font-size:.85em;line-height:1.9"></div>
+
+<script type="application/json" id="pm-graph-data">
+{json}
+</script>
+<script src="{src}"></script>
+<script>
+(function () {{
+  var el = document.getElementById('pm-graph');
+  var raw = document.getElementById('pm-graph-data');
+  if (!el || !raw) return;
+  var data;
+  try {{ data = JSON.parse(raw.textContent); }} catch (e) {{ return; }}
+
+  if (typeof ForceGraph === 'undefined') {{
+    el.innerHTML = '<p style="padding:1rem">The interactive graph needs JavaScript and ' +
+      'network access to load. Browse the <a href="INDEX.html">Knowledge Map</a> instead.</p>';
+    return;
+  }}
+
+  var legend = document.getElementById('pm-graph-legend');
+  if (legend && data.areas) {{
+    legend.innerHTML = data.areas.map(function (a) {{
+      return '<span style="display:inline-block;margin-right:1rem;white-space:nowrap">' +
+        '<span style="display:inline-block;width:.7em;height:.7em;border-radius:50%;vertical-align:middle;' +
+        'background:' + a.color + ';margin-right:.35em"></span>' + a.title + '</span>';
+    }}).join('');
+  }}
+
+  var graph = ForceGraph()(el)
+    .graphData({{ nodes: data.nodes, links: data.links }})
+    .nodeId('id')
+    .nodeLabel('label')
+    .nodeColor(function (n) {{ return n.color; }})
+    .nodeVal(function (n) {{ return n.val; }})
+    .nodeRelSize(4)
+    .linkColor(function () {{ return 'rgba(128,128,128,0.35)'; }})
+    .linkDirectionalArrowLength(2.5)
+    .linkDirectionalArrowRelPos(1)
+    .onNodeClick(function (n) {{ if (n.url) window.location.href = n.url; }})
+    .width(el.clientWidth)
+    .height(el.clientHeight);
+
+  graph.onEngineStop(function () {{ graph.zoomToFit(400, 40); }});
+  window.addEventListener('resize', function () {{
+    graph.width(el.clientWidth).height(el.clientHeight);
+  }});
+}}());
+</script>
+"#,
+        json = json,
+        src = FORCE_GRAPH_SRC,
+    )
+}
+
 /// Rewrite Obsidian `[[stem]]` / `[[stem|text]]` links into relative mdBook
 /// links (`[text](stem.md)`), since the export keeps every page in one folder.
 fn rewrite_links(content: &str) -> String {
@@ -392,6 +581,7 @@ fn build_summary_section(nodes: &[Node], wiki_dir: &Path, dir_name: &str) -> Str
     s.push_str(SUMMARY_START);
     s.push('\n');
     s.push_str("# Project Memory\n\n");
+    s.push_str(&format!("- [Graph view]({dir_name}/graph.md)\n"));
     s.push_str(&format!("- [How to read it]({dir_name}/USER_MANUAL.md)\n"));
     s.push_str(&format!("- [Knowledge Map]({dir_name}/INDEX.md)\n"));
 
@@ -475,6 +665,82 @@ mod tests {
     #[test]
     fn user_manual_is_embedded() {
         assert!(USER_MANUAL.contains("Project Memory"));
+    }
+
+    #[test]
+    fn graph_page_embeds_present_nodes_and_links() {
+        use super::super::build_nodes;
+        use crate::context_graph::git::RawCommit;
+
+        // Two commits touching a shared file → a co-occurrence edge between them.
+        let commits = vec![
+            RawCommit {
+                sha: "1111111111111111111111111111111111111111".into(),
+                short_sha: "1111111".into(),
+                author: "A".into(),
+                date: "2024-01-01".into(),
+                subject: "feat: add engine".into(),
+                body: String::new(),
+                files: vec!["crates/dex-core/src/engine.rs".into()],
+            },
+            RawCommit {
+                sha: "2222222222222222222222222222222222222222".into(),
+                short_sha: "2222222".into(),
+                author: "A".into(),
+                date: "2024-01-02".into(),
+                subject: "fix: engine bug".into(),
+                body: String::new(),
+                files: vec!["crates/dex-core/src/engine.rs".into()],
+            },
+        ];
+        let nodes = build_nodes(&commits);
+
+        // Pretend both node pages exist on disk so they're "present".
+        let dir = tempfile::tempdir().unwrap();
+        for n in &nodes {
+            std::fs::write(dir.path().join(format!("{}.md", n.stem)), "x").unwrap();
+        }
+
+        let data = build_graph_data(&nodes, dir.path());
+        assert_eq!(data.nodes.len(), 2, "both present nodes are included");
+        assert!(!data.links.is_empty(), "shared file yields an edge");
+        assert!(!data.areas.is_empty(), "legend lists active areas");
+        // Every link endpoint must be a real node id.
+        let ids: std::collections::HashSet<&str> =
+            data.nodes.iter().map(|n| n.id.as_str()).collect();
+        for l in &data.links {
+            assert!(ids.contains(l.source.as_str()));
+            assert!(ids.contains(l.target.as_str()));
+        }
+
+        let page = render_graph_page(&nodes, dir.path());
+        assert!(page.contains("id=\"pm-graph\""));
+        assert!(page.contains("force-graph"));
+        // Click targets point at the rendered .html pages.
+        assert!(page.contains(&format!("{}.html", nodes[0].stem)));
+    }
+
+    #[test]
+    fn graph_data_excludes_absent_nodes() {
+        use super::super::build_nodes;
+        use crate::context_graph::git::RawCommit;
+
+        let commits = vec![RawCommit {
+            sha: "3333333333333333333333333333333333333333".into(),
+            short_sha: "3333333".into(),
+            author: "A".into(),
+            date: "2024-01-03".into(),
+            subject: "feat: lonely".into(),
+            body: String::new(),
+            files: vec!["crates/dex-core/src/x.rs".into()],
+        }];
+        let nodes = build_nodes(&commits);
+
+        // Empty dir: no node page exists → nothing is present.
+        let dir = tempfile::tempdir().unwrap();
+        let data = build_graph_data(&nodes, dir.path());
+        assert!(data.nodes.is_empty());
+        assert!(data.links.is_empty());
     }
 
     #[test]
