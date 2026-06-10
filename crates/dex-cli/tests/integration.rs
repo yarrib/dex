@@ -538,3 +538,122 @@ fn mcp_install_dry_run_writes_nothing() {
         "dry-run must not write any files"
     );
 }
+
+// --- dex context sync -------------------------------------------------------
+
+/// Run a git command in `dir`, panicking on failure. Uses inline identity and
+/// disables commit signing so the test doesn't depend on global git config.
+fn git(dir: &std::path::Path, args: &[&str]) {
+    let status = std::process::Command::new("git")
+        .current_dir(dir)
+        .args(["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"])
+        .args(args)
+        .env("GIT_AUTHOR_NAME", "Test")
+        .env("GIT_AUTHOR_EMAIL", "test@example.com")
+        .env("GIT_COMMITTER_NAME", "Test")
+        .env("GIT_COMMITTER_EMAIL", "test@example.com")
+        .status()
+        .expect("failed to run git");
+    assert!(status.success(), "git {args:?} failed");
+}
+
+fn commit_file(dir: &std::path::Path, path: &str, contents: &str, message: &str) {
+    let full = dir.join(path);
+    if let Some(parent) = full.parent() {
+        std::fs::create_dir_all(parent).unwrap();
+    }
+    std::fs::write(&full, contents).unwrap();
+    git(dir, &["add", "."]);
+    git(dir, &["commit", "-q", "-m", message]);
+}
+
+#[test]
+fn context_sync_builds_graph_in_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    git(root, &["init", "-q"]);
+    commit_file(
+        root,
+        "crates/dex-cli/src/main.rs",
+        "fn main() {}",
+        "feat(cli): add main",
+    );
+    commit_file(
+        root,
+        "crates/dex-cli/src/main.rs",
+        "fn main() { /* fix */ }",
+        "fix(cli): handle edge case (#7)",
+    );
+
+    dex()
+        .args(["context", "sync", "--dir"])
+        .arg(root)
+        .assert()
+        .success();
+
+    let wiki = root.join(".context").join("wiki");
+    assert!(wiki.join("INDEX.md").exists(), "INDEX.md should be written");
+    assert!(
+        root.join(".context").join("USER_MANUAL.md").exists(),
+        "USER_MANUAL.md should be written"
+    );
+
+    // Two non-merge commits → two node files (plus INDEX.md).
+    let nodes: Vec<_> = std::fs::read_dir(&wiki)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name();
+            let n = n.to_string_lossy();
+            n.ends_with(".md") && n != "INDEX.md"
+        })
+        .collect();
+    assert_eq!(nodes.len(), 2, "expected one node per commit");
+
+    let index = std::fs::read_to_string(wiki.join("INDEX.md")).unwrap();
+    assert!(index.contains("Project Memory"));
+    assert!(index.contains("CLI & Interfaces"));
+}
+
+#[test]
+fn context_sync_is_incremental() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    git(root, &["init", "-q"]);
+    commit_file(root, "a.rs", "// a", "feat: first");
+
+    dex()
+        .args(["context", "sync", "--dir"])
+        .arg(root)
+        .assert()
+        .success();
+    commit_file(root, "b.rs", "// b", "feat: second");
+    // Second sync should add the new node without erroring on the existing one.
+    dex()
+        .args(["context", "sync", "--dir"])
+        .arg(root)
+        .assert()
+        .success();
+
+    let wiki = root.join(".context").join("wiki");
+    let count = std::fs::read_dir(&wiki)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            let n = e.file_name();
+            let n = n.to_string_lossy();
+            n.ends_with(".md") && n != "INDEX.md"
+        })
+        .count();
+    assert_eq!(count, 2, "incremental run should leave two nodes");
+}
+
+#[test]
+fn context_sync_outside_git_repo_fails() {
+    let dir = tempfile::tempdir().unwrap();
+    dex()
+        .args(["context", "sync", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .failure();
+}

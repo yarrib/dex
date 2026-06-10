@@ -14,6 +14,18 @@ Desktop, or any MCP client) through three surfaces:
 
 ---
 
+## Architectural History (read before non-trivial changes)
+
+This repo keeps a **project-memory knowledge graph** in `.context/wiki/`: one
+node per significant commit, classed `[Decision] / [Evolution] / [Stability] /
+[Dependency]`, linked with `[[wikilinks]]` and grouped by functional area in
+`.context/wiki/INDEX.md`. It is the fastest way to learn *why* the code is shaped
+the way it is and which files move together. Start at `.context/USER_MANUAL.md`.
+
+Build/refresh it with `dex context sync` or the `/project-memory-engine` skill.
+
+---
+
 ## Quick Start (any coding assistant)
 
 Skills are authored once as plain markdown and installed into whichever tools

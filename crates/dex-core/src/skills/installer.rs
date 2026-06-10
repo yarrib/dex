@@ -105,8 +105,13 @@ fn install_claude(
         };
 
         let (subdir, filename) = match skill.skill_type {
-            SkillType::Command => (".claude/commands", format!("{}.md", skill.name)),
-            SkillType::Agent => (".claude/agents", format!("{}.md", skill.name)),
+            SkillType::Command => (".claude/commands".to_string(), format!("{}.md", skill.name)),
+            SkillType::Agent => (".claude/agents".to_string(), format!("{}.md", skill.name)),
+            // Native Agent Skill: a folder named after the skill, holding SKILL.md.
+            SkillType::Skill => (
+                format!(".claude/skills/{}", skill.name),
+                "SKILL.md".to_string(),
+            ),
         };
 
         let dest = project_dir.join(subdir).join(&filename);
@@ -128,10 +133,12 @@ fn install_cursor(
             continue;
         };
 
-        // Cursor .mdc format: YAML frontmatter + markdown body.
+        // Cursor .mdc format: YAML frontmatter + markdown body. Strip a native
+        // skill's own SKILL.md frontmatter so we don't emit two blocks.
         let mdc_content = format!(
             "---\ndescription: {}\n---\n\n{}",
-            skill.description, content
+            skill.description,
+            skill_body(skill, content)
         );
 
         let filename = format!("{}.mdc", skill.name);
@@ -156,7 +163,9 @@ fn install_copilot(
         if let Some(content) = pack.files.get(&skill.file) {
             section.push_str(&format!(
                 "### {} ({})\n\n{}\n\n",
-                skill.name, skill.skill_type, content
+                skill.name,
+                skill.skill_type,
+                skill_body(skill, content)
             ));
         }
     }
@@ -187,12 +196,18 @@ fn install_generic(
             continue;
         };
 
-        let subdir = match skill.skill_type {
-            SkillType::Command => ".ai-skills/commands",
-            SkillType::Agent => ".ai-skills/agents",
+        let dest = match skill.skill_type {
+            SkillType::Command => project_dir
+                .join(".ai-skills/commands")
+                .join(format!("{}.md", skill.name)),
+            SkillType::Agent => project_dir
+                .join(".ai-skills/agents")
+                .join(format!("{}.md", skill.name)),
+            SkillType::Skill => project_dir
+                .join(".ai-skills/skills")
+                .join(&skill.name)
+                .join("SKILL.md"),
         };
-
-        let dest = project_dir.join(subdir).join(format!("{}.md", skill.name));
         write_file(&dest, content)?;
         written.push(dest);
     }
@@ -202,6 +217,27 @@ fn install_generic(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Body of a skill for targets that wrap it in their own frontmatter/section.
+/// Native Agent Skills carry a `SKILL.md` YAML frontmatter block; strip it so
+/// non-Claude targets don't end up with a doubled or stray frontmatter.
+fn skill_body<'a>(skill: &crate::skills::manifest::SkillSpec, content: &'a str) -> &'a str {
+    if skill.skill_type == SkillType::Skill {
+        strip_frontmatter(content)
+    } else {
+        content
+    }
+}
+
+/// Drop a leading `---\n … \n---\n` YAML frontmatter block, if present.
+fn strip_frontmatter(content: &str) -> &str {
+    if let Some(rest) = content.strip_prefix("---\n")
+        && let Some(end) = rest.find("\n---\n")
+    {
+        return rest[end + "\n---\n".len()..].trim_start();
+    }
+    content
+}
 
 fn write_file(path: &Path, content: &str) -> Result<(), DexError> {
     if let Some(parent) = path.parent() {
@@ -291,5 +327,58 @@ mod tests {
         assert!(mdc.exists());
         let content = std::fs::read_to_string(&mdc).unwrap();
         assert!(content.starts_with("---\ndescription: Architecture review\n---"));
+    }
+
+    #[test]
+    fn install_native_skill_writes_skill_md_folder() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let skill = SkillSpec {
+            name: "project-memory-engine".to_string(),
+            skill_type: SkillType::Skill,
+            file: "skills/project-memory-engine/SKILL.md".to_string(),
+            description: "Build the project-memory graph".to_string(),
+        };
+
+        let mut files = HashMap::new();
+        files.insert(
+            "skills/project-memory-engine/SKILL.md".to_string(),
+            "---\nname: project-memory-engine\ndescription: x\n---\n\n# Body\n".to_string(),
+        );
+
+        let pack = make_pack(vec![skill], files);
+        install_skills(
+            &pack,
+            dir.path(),
+            &[InstallTarget::Claude, InstallTarget::Cursor],
+        )
+        .unwrap();
+
+        // Claude: native Agent Skill folder, frontmatter preserved.
+        let claude = dir
+            .path()
+            .join(".claude/skills/project-memory-engine/SKILL.md");
+        assert!(claude.exists());
+        assert!(
+            std::fs::read_to_string(&claude)
+                .unwrap()
+                .contains("name: project-memory-engine")
+        );
+
+        // Cursor: single frontmatter block (the skill's own is stripped).
+        let mdc = dir.path().join(".cursor/rules/project-memory-engine.mdc");
+        let content = std::fs::read_to_string(&mdc).unwrap();
+        assert!(content.starts_with("---\ndescription: Build the project-memory graph\n---"));
+        assert!(content.contains("# Body"));
+        assert!(
+            !content.contains("name: project-memory-engine"),
+            "inner frontmatter must be stripped"
+        );
+    }
+
+    #[test]
+    fn strip_frontmatter_removes_leading_block() {
+        assert_eq!(strip_frontmatter("---\na: b\n---\n\nbody"), "body");
+        assert_eq!(strip_frontmatter("no frontmatter"), "no frontmatter");
     }
 }

@@ -32,10 +32,21 @@ jobs:
         with:
           tool: git-cliff
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Generate changelog
         run: git-cliff --output docs/changelog.md
         env:
           GITHUB_REPO: ${{ github.repository }}
+
+      - name: Build dex
+        run: cargo build -p dex-cli --release
+
+      - name: Refresh and export project-memory graph
+        run: |
+          ./target/release/dex context sync
+          ./target/release/dex context export
 
       - name: Build docs
         run: mdbook build

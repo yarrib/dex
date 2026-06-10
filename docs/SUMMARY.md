@@ -26,3 +26,7 @@
 - [Contributing](contributing.md)
 - [Releasing](releasing.md)
 - [Changelog](changelog.md)
+
+<!-- project-memory:start -->
+<!-- project-memory:end -->
+

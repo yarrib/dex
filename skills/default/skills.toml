@@ -10,6 +10,12 @@ file        = "commands/build.md"
 description = "Build the project"
 
 [[skills]]
+name        = "project-memory-engine"
+type        = "skill"
+file        = "skills/project-memory-engine/SKILL.md"
+description = "Build/refresh the project-memory knowledge graph in .context/wiki/"
+
+[[skills]]
 name        = "test"
 type        = "command"
 file        = "commands/test.md"
