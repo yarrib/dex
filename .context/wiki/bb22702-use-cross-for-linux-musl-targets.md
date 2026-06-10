@@ -35,8 +35,6 @@ handles both cases
 Delete and re-push the `v0.1.1` tag, or trigger via **Actions → Release
 → Run workflow → `0.1.1`**.
 
-https://claude.ai/code/session_01FJhH5ED2UEauXPZgA8WatD
-
 ## Changed files
 
 - `.github/workflows/release.yml`
@@ -47,4 +45,4 @@ https://claude.ai/code/session_01FJhH5ED2UEauXPZgA8WatD
 - **implemented-in** → [[bacd088-add-dex-run-task-command-28]]
 - **co-occurrence** → [[5da5907-support-workflow-dispatch-and-fix-first-release]] (1 shared file)
 - **co-occurrence** → [[a378387-align-install-sh-artifact-names-with-release]] (1 shared file)
-- **co-occurrence** → [[8f177a0-migrate-from-mkdocs-to-mdbook-23]] (1 shared file)
+- **co-occurrence** → [[18f3db6-remove-redundant-version-stamp-step-in-build]] (1 shared file)

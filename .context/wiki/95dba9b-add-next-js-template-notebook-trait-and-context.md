@@ -43,6 +43,6 @@ _No extended commit description._
 - **influenced-by** → [[7062c81-add-scope-md-product-scope-guardrails-and]] (Templates & Built-in Content)
 - **implemented-in** → [[a1dda0c-add-scaffolding-differentiation-prd-46]]
 - **co-occurrence** → [[2f1e593-add-dex-skills-system-agent-skill-pack]] (4 shared files)
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (4 shared files)
 - **co-occurrence** → [[2239358-add-databricks-app-streamlit-template-42]] (3 shared files)
+- **co-occurrence** → [[b8fa631-add-prd-for-snowflake-templates-35]] (3 shared files)
 - **resolved-by** → `#47` _(this commit)_

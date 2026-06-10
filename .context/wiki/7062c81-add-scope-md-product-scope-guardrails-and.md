@@ -42,5 +42,5 @@ _No extended commit description._
 
 - **co-occurrence** → [[2f1e593-add-dex-skills-system-agent-skill-pack]] (4 shared files)
 - **co-occurrence** → [[30690b9-port-dex-to-pure-rust-single-binary-21]] (4 shared files)
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (4 shared files)
+- **co-occurrence** → [[6cbcd49-add-prd-for-ai-ready-scaffolding-context-map]] (3 shared files)
 - **resolved-by** → `#44` _(this commit)_

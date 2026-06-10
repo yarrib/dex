@@ -42,6 +42,12 @@ pub struct SyncArgs {
     /// Only consider the most recent N commits (useful for a first run).
     #[arg(long, value_name = "N")]
     limit: Option<usize>,
+
+    /// Include every commit. By default the [Dependency] class (releases,
+    /// version bumps, CI tweaks, docs plumbing) is filtered out so the graph is
+    /// code changes and major decisions only.
+    #[arg(long)]
+    all: bool,
 }
 
 #[derive(Args)]
@@ -57,6 +63,10 @@ pub struct ExportArgs {
     /// SUMMARY.md to inject a navigation section into (pass "" to skip).
     #[arg(long, default_value = "docs/SUMMARY.md")]
     summary: String,
+
+    /// Include every commit (default: [Dependency]-class filtered, matching `sync`).
+    #[arg(long)]
+    all: bool,
 }
 
 pub fn run(args: ContextArgs) -> Result<(), DexError> {
@@ -76,6 +86,7 @@ fn run_export(args: ExportArgs) -> Result<(), DexError> {
     let opts = ExportOptions {
         out_dir: root.join(&args.out),
         summary_path,
+        include_all: args.all,
     };
 
     println!("\n{}\n", style("dex context export").bold());
@@ -100,6 +111,7 @@ fn run_sync(args: SyncArgs) -> Result<(), DexError> {
     let opts = SyncOptions {
         rebuild: args.rebuild,
         limit: args.limit,
+        include_all: args.all,
     };
 
     println!(

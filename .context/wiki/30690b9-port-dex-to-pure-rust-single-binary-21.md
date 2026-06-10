@@ -26,10 +26,6 @@ support
 Dependencies added: clap, dialoguer, console, indicatif, dirs,
 shellexpand
 
-https://claude.ai/code/session_018DhTR7Sg2N5iyPDAi4vggq
-
-Co-authored-by: Claude <noreply@anthropic.com>
-
 ## Changed files
 
 - `CLAUDE.md`
@@ -48,7 +44,7 @@ Co-authored-by: Claude <noreply@anthropic.com>
 ## Relationships
 
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (5 shared files)
 - **co-occurrence** → [[7719579-inline-variables-format-order-field-and]] (2 shared files)
-- **co-occurrence** → [[7b9ade0-release-v0-1-0-17]] (1 shared file)
+- **co-occurrence** → [[d28c6c6-feat-user-config-14]] (1 shared file)
+- **co-occurrence** → [[31c18f8-feat-documentation-12]] (1 shared file)
 - **resolved-by** → `#21` _(this commit)_

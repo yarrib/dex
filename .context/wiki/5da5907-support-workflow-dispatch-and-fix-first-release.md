@@ -23,6 +23,6 @@ _No extended commit description._
 - **modified-by** → [[e3efd53-rewrite-all-docs-for-rust-binary-architecture-25]]
 - **implemented-in** → [[bacd088-add-dex-run-task-command-28]]
 - **co-occurrence** → [[a378387-align-install-sh-artifact-names-with-release]] (1 shared file)
-- **co-occurrence** → [[8f177a0-migrate-from-mkdocs-to-mdbook-23]] (1 shared file)
-- **co-occurrence** → [[f085abb-remove-python-layer-and-expand-rust-test]] (1 shared file)
+- **co-occurrence** → [[18f3db6-remove-redundant-version-stamp-step-in-build]] (1 shared file)
+- **co-occurrence** → [[b5d760e-fix-bump-version-idempotency-and-replace-git]] (1 shared file)
 - **resolved-by** → `#31` _(this commit)_

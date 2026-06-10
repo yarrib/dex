@@ -17,8 +17,6 @@ tags: [#stability]
 - release.yml: replace orhun/git-cliff-action (Docker, fragile) with
   taiki-e/install-action + direct git-cliff invocation
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.github/workflows/release.yml`
@@ -28,5 +26,3 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 - **modified-by** → [[31c18f8-feat-documentation-12]]
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (2 shared files)
-- **co-occurrence** → [[1f9f2e9-remove-auto-version-workflow-add-release-guide]] (1 shared file)

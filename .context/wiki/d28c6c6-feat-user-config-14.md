@@ -51,8 +51,6 @@ Summary
 
 ---------
 
-Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.github/workflows/ci.yml`
@@ -73,7 +71,5 @@ Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 ## Relationships
 
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (11 shared files)
-- **co-occurrence** → [[1f9f2e9-remove-auto-version-workflow-add-release-guide]] (2 shared files)
 - **co-occurrence** → [[31c18f8-feat-documentation-12]] (2 shared files)
 - **resolved-by** → `#14` _(this commit)_

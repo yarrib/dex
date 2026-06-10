@@ -36,8 +36,6 @@ https://raw.githubusercontent.com/yarrib/dex/main/install.sh | sh` —
 should install successfully
 - [ ] Check docs changelog page shows v0.1.1 entries
 
-https://claude.ai/code/session_01FJhH5ED2UEauXPZgA8WatD
-
 ## Changed files
 
 _No tracked source files (vendored/lock changes only)._

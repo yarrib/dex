@@ -52,11 +52,7 @@ Template: dabs-ml
     ...
 ```
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
 ---------
-
-Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 ## Changed files
 

@@ -31,7 +31,7 @@ _No extended commit description._
 
 ## Relationships
 
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (7 shared files)
 - **co-occurrence** → [[31c18f8-feat-documentation-12]] (3 shared files)
 - **co-occurrence** → [[6cbcd49-add-prd-for-ai-ready-scaffolding-context-map]] (2 shared files)
+- **co-occurrence** → [[7719579-inline-variables-format-order-field-and]] (2 shared files)
 - **resolved-by** → `#35` _(this commit)_

@@ -61,10 +61,6 @@ order
 - [ ] Manual: `dex init --template default --standards standards.toml` —
 verify pre-filled vars skip prompts
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
-
 ## Changed files
 
 - `.github/workflows/docs.yml`
@@ -83,7 +79,7 @@ Co-authored-by: Claude Sonnet 4.6 <noreply@anthropic.com>
 ## Relationships
 
 - **implemented-in** → [[31c18f8-feat-documentation-12]]
-- **co-occurrence** → [[0e067c2-add-workflow-dispatch-to-docs-deploy-workflow]] (11 shared files)
 - **co-occurrence** → [[d28c6c6-feat-user-config-14]] (4 shared files)
 - **co-occurrence** → [[bfeb2a5-move-no-mkdocs-2-warning-to-job-level-delete]] (1 shared file)
+- **co-occurrence** → [[0dcf505-suppress-mkdocs-2-0-compatibility-warning]] (1 shared file)
 - **resolved-by** → `#20` _(this commit)_

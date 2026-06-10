@@ -83,17 +83,24 @@ dex run <task> [-- <extra-args>]
     Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
     Extra args after -- are appended to the task command.
 
-dex context sync [--dir <path>] [--rebuild] [--limit <n>]
+dex context sync [--dir <path>] [--rebuild] [--limit <n>] [--all]
     Build/refresh the project-memory knowledge graph in .context/wiki/.
     Reads git history, classifies commits ([Decision]/[Evolution]/[Stability]/
     [Dependency]), stitches [[wikilink]] edges, and writes per-commit nodes +
     INDEX.md + USER_MANUAL.md. Incremental by default; --rebuild regenerates all.
+    Commit bodies are cleaned of AI-assistant attribution (Co-authored-by,
+    "Generated with Claude Code" footers, claude.ai links). The [Dependency]
+    class (releases, version bumps, CI tweaks, docs plumbing) is filtered out by
+    default so the graph is code changes and major decisions only; design docs
+    (PRD/SPEC/ARCHITECTURE/SCOPE) are kept (they classify as [Decision]). Pass
+    --all to include every commit.
 
-dex context export [--dir <path>] [--out <dir>] [--summary <file>]
+dex context export [--dir <path>] [--out <dir>] [--summary <file>] [--all]
     Render the graph into mdBook-ready pages (default docs/wiki/), rewriting
     [[wikilinks]] to relative links and injecting a SUMMARY.md nav section.
     Also emits graph.md: an interactive, Obsidian-style force-directed graph
-    (pan/zoom/drag, click a node to open its page), coloured by functional area.
+    (pan/zoom/drag; tap a node for details, again to open), coloured by area.
+    Applies the same [Dependency]-class filter as sync (--all to include all).
     Used by the docs-deploy workflow to publish the graph to GitHub Pages.
 
 dex add <component> [--dry-run]                              # future
