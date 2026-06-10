@@ -26,6 +26,9 @@ book/
 # Generated changelog (produced from git history by git-cliff at build/deploy time)
 docs/changelog.md
 
+# Generated project-memory pages (produced by `dex context export` at deploy time)
+docs/wiki/
+
 # uv
 uv.lock
 

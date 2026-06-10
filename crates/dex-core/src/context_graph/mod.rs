@@ -242,6 +242,41 @@ pub fn sync(root: &Path, opts: &SyncOptions) -> Result<SyncReport, DexError> {
     render::write_graph(&wiki_dir, &manual_path, &index_path, &nodes, opts)
 }
 
+/// Options controlling an mdBook export.
+#[derive(Debug, Clone)]
+pub struct ExportOptions {
+    /// Directory to write mdBook-ready pages into (e.g. `docs/wiki`).
+    pub out_dir: PathBuf,
+    /// `SUMMARY.md` to inject a navigation section into (between markers). When
+    /// `None`, no SUMMARY is touched.
+    pub summary_path: Option<PathBuf>,
+}
+
+/// Outcome of an export run.
+#[derive(Debug, Clone)]
+pub struct ExportReport {
+    pub out_dir: PathBuf,
+    pub pages_written: usize,
+    pub summary_updated: bool,
+}
+
+/// Render the committed `.context/wiki/` into mdBook-compatible pages.
+///
+/// Copies the index, manual, and node files into `opts.out_dir`, rewriting
+/// `[[wikilinks]]` into relative mdBook links, and optionally injects a
+/// navigation section into a `SUMMARY.md`. The graph in `.context/wiki/`
+/// remains the editable source of truth; this is a derived view for the website.
+pub fn export(root: &Path, opts: &ExportOptions) -> Result<ExportReport, DexError> {
+    git::ensure_repo(root)?;
+    let commits = git::log(root, None)?;
+    let nodes = build_nodes(&commits);
+
+    let wiki_dir = root.join(".context").join("wiki");
+    let manual_path = root.join(".context").join("USER_MANUAL.md");
+
+    render::write_export(&wiki_dir, &manual_path, &nodes, opts)
+}
+
 /// Turn raw commits into classified, edge-stitched nodes.
 ///
 /// Exposed for testing; `sync` is the normal entry point.

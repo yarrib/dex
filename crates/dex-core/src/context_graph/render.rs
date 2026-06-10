@@ -6,10 +6,13 @@
 
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::OnceLock;
+
+use regex::Regex;
 
 use crate::error::DexError;
 
-use super::{EdgeKind, FunctionalArea, Node, SyncOptions, SyncReport};
+use super::{EdgeKind, ExportOptions, ExportReport, FunctionalArea, Node, SyncOptions, SyncReport};
 
 /// Write the whole graph: nodes (incremental), INDEX.md, and USER_MANUAL.md.
 pub fn write_graph(
@@ -306,6 +309,151 @@ fn is_node_filename(name: &str) -> bool {
     sha.len() == 7 && sha.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+// --- mdBook export ----------------------------------------------------------
+
+const SUMMARY_START: &str = "<!-- project-memory:start -->";
+const SUMMARY_END: &str = "<!-- project-memory:end -->";
+
+/// Render the committed wiki into mdBook-ready pages under `opts.out_dir` and
+/// optionally inject a navigation section into a `SUMMARY.md`.
+pub fn write_export(
+    wiki_dir: &Path,
+    manual_path: &Path,
+    nodes: &[Node],
+    opts: &ExportOptions,
+) -> Result<ExportReport, DexError> {
+    mkdir(&opts.out_dir)?;
+    let mut pages_written = 0usize;
+
+    // Index (rewrite the manual link to sit alongside in the export dir).
+    if let Some(index) = read_opt(&wiki_dir.join("INDEX.md"))? {
+        let body = rewrite_links(&index).replace("](../USER_MANUAL.md)", "](USER_MANUAL.md)");
+        write_file(&opts.out_dir.join("INDEX.md"), &body)?;
+        pages_written += 1;
+    }
+
+    // Manual.
+    if let Some(manual) = read_opt(manual_path)? {
+        write_file(
+            &opts.out_dir.join("USER_MANUAL.md"),
+            &rewrite_links(&manual),
+        )?;
+        pages_written += 1;
+    }
+
+    // Node pages — only those present on disk (mirrors the committed graph).
+    for node in nodes {
+        let src = wiki_dir.join(format!("{}.md", node.stem));
+        if let Some(content) = read_opt(&src)? {
+            write_file(
+                &opts.out_dir.join(format!("{}.md", node.stem)),
+                &rewrite_links(&content),
+            )?;
+            pages_written += 1;
+        }
+    }
+
+    let summary_updated = if let Some(summary) = &opts.summary_path {
+        let dir_name = opts
+            .out_dir
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "wiki".to_string());
+        inject_summary(summary, &build_summary_section(nodes, wiki_dir, &dir_name))?;
+        true
+    } else {
+        false
+    };
+
+    Ok(ExportReport {
+        out_dir: opts.out_dir.clone(),
+        pages_written,
+        summary_updated,
+    })
+}
+
+/// Rewrite Obsidian `[[stem]]` / `[[stem|text]]` links into relative mdBook
+/// links (`[text](stem.md)`), since the export keeps every page in one folder.
+fn rewrite_links(content: &str) -> String {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    let re = RE.get_or_init(|| Regex::new(r"\[\[([^\]|]+?)(?:\|([^\]]+))?\]\]").unwrap());
+    re.replace_all(content, |caps: &regex::Captures| {
+        let target = caps[1].trim();
+        let text = caps.get(2).map(|m| m.as_str().trim()).unwrap_or(target);
+        format!("[{text}]({target}.md)")
+    })
+    .into_owned()
+}
+
+/// Build the `SUMMARY.md` section (between markers): manual + index + node pages
+/// grouped by functional area, newest-first.
+fn build_summary_section(nodes: &[Node], wiki_dir: &Path, dir_name: &str) -> String {
+    let mut s = String::new();
+    s.push_str(SUMMARY_START);
+    s.push('\n');
+    s.push_str("# Project Memory\n\n");
+    s.push_str(&format!("- [How to read it]({dir_name}/USER_MANUAL.md)\n"));
+    s.push_str(&format!("- [Knowledge Map]({dir_name}/INDEX.md)\n"));
+
+    for area in FunctionalArea::ALL {
+        let mut in_area: Vec<&Node> = nodes
+            .iter()
+            .filter(|n| n.area == area && wiki_dir.join(format!("{}.md", n.stem)).exists())
+            .collect();
+        if in_area.is_empty() {
+            continue;
+        }
+        in_area.reverse(); // newest first
+        // Draft chapter (empty link) acts as a non-clickable group header.
+        s.push_str(&format!("  - [{}]()\n", area.title()));
+        for n in in_area {
+            s.push_str(&format!(
+                "    - [`{}` {}]({}/{}.md)\n",
+                n.commit.short_sha,
+                link_text(&n.commit.subject),
+                dir_name,
+                n.stem
+            ));
+        }
+    }
+
+    s.push_str(SUMMARY_END);
+    s
+}
+
+/// Replace markers in `summary_path` with `section`. If markers are absent,
+/// append the section (with a leading blank line) to the end of the file.
+fn inject_summary(summary_path: &Path, section: &str) -> Result<(), DexError> {
+    let existing = read_opt(summary_path)?.unwrap_or_default();
+
+    let new = if let (Some(start), Some(end)) =
+        (existing.find(SUMMARY_START), existing.find(SUMMARY_END))
+    {
+        let end = end + SUMMARY_END.len();
+        format!("{}{}{}", &existing[..start], section, &existing[end..])
+    } else {
+        format!("{}\n\n{}\n", existing.trim_end(), section)
+    };
+
+    write_file(summary_path, &new)
+}
+
+/// Sanitize a commit subject for use as Markdown link text.
+fn link_text(subject: &str) -> String {
+    subject.replace(['[', ']'], "")
+}
+
+fn read_opt(path: &Path) -> Result<Option<String>, DexError> {
+    match std::fs::read_to_string(path) {
+        Ok(s) => Ok(Some(s)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(source) => Err(DexError::Io {
+            path: path.to_path_buf(),
+            source,
+        }),
+    }
+}
+
 // --- Static user manual -----------------------------------------------------
 
 /// The `.context/USER_MANUAL.md` content. Adapted for dex from the
@@ -327,5 +475,40 @@ mod tests {
     #[test]
     fn user_manual_is_embedded() {
         assert!(USER_MANUAL.contains("Project Memory"));
+    }
+
+    #[test]
+    fn rewrite_links_converts_wikilinks() {
+        assert_eq!(
+            rewrite_links("see [[abc1234-add-thing]] now"),
+            "see [abc1234-add-thing](abc1234-add-thing.md) now"
+        );
+        assert_eq!(
+            rewrite_links("see [[abc1234-add-thing|the change]]"),
+            "see [the change](abc1234-add-thing.md)"
+        );
+        assert_eq!(rewrite_links("no links here"), "no links here");
+    }
+
+    #[test]
+    fn inject_summary_replaces_between_markers() {
+        let dir = tempfile::tempdir().unwrap();
+        let summary = dir.path().join("SUMMARY.md");
+        std::fs::write(
+            &summary,
+            format!("# Summary\n\n- [Home](index.md)\n\n{SUMMARY_START}\n{SUMMARY_END}\n"),
+        )
+        .unwrap();
+
+        inject_summary(
+            &summary,
+            &format!("{SUMMARY_START}\n# Project Memory\n{SUMMARY_END}"),
+        )
+        .unwrap();
+        let out = std::fs::read_to_string(&summary).unwrap();
+        assert!(out.contains("- [Home](index.md)"));
+        assert!(out.contains("# Project Memory"));
+        // Markers must not be duplicated.
+        assert_eq!(out.matches(SUMMARY_START).count(), 1);
     }
 }

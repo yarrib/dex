@@ -21,8 +21,8 @@ pub use config::{
     resolve_remote, resolve_skill_remote, save_answers, skills_cache_dir,
 };
 pub use context_graph::{
-    Edge, EdgeKind, FunctionalArea, Node, NodeClass, SyncOptions, SyncReport,
-    sync as sync_context_graph,
+    Edge, EdgeKind, ExportOptions, ExportReport, FunctionalArea, Node, NodeClass, SyncOptions,
+    SyncReport, export as export_context_graph, sync as sync_context_graph,
 };
 pub use context_map::{ContextMap, write_context_map};
 pub use error::{ContextError, DexError, McpError, SkillError};
