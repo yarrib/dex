@@ -1,6 +1,6 @@
 [package]
 name = "dex-cli"
-version = "0.2.3"
+version = "0.3.0"
 description = "dex — extensible CLI for data project operations"
 edition.workspace = true
 license.workspace = true
