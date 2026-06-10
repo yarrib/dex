@@ -92,6 +92,8 @@ dex context sync [--dir <path>] [--rebuild] [--limit <n>]
 dex context export [--dir <path>] [--out <dir>] [--summary <file>]
     Render the graph into mdBook-ready pages (default docs/wiki/), rewriting
     [[wikilinks]] to relative links and injecting a SUMMARY.md nav section.
+    Also emits graph.md: an interactive, Obsidian-style force-directed graph
+    (pan/zoom/drag, click a node to open its page), coloured by functional area.
     Used by the docs-deploy workflow to publish the graph to GitHub Pages.
 
 dex add <component> [--dry-run]                              # future

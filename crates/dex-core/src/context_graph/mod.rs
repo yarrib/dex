@@ -107,6 +107,22 @@ impl FunctionalArea {
         }
     }
 
+    /// Distinct color (hex) for this area, used by the interactive graph view.
+    /// Chosen to stay legible on both the light and dark mdBook themes.
+    #[must_use]
+    pub fn color(self) -> &'static str {
+        match self {
+            FunctionalArea::Foundation => "#e6194b",
+            FunctionalArea::TemplateEngine => "#3cb44b",
+            FunctionalArea::Scaffolding => "#4363d8",
+            FunctionalArea::Cli => "#f58231",
+            FunctionalArea::SkillsTraits => "#911eb4",
+            FunctionalArea::McpAi => "#22b8cf",
+            FunctionalArea::Templates => "#f032e6",
+            FunctionalArea::DocsCiRelease => "#9a6324",
+        }
+    }
+
     /// Map a single repo-relative path to its functional area.
     #[must_use]
     pub fn of_path(path: &str) -> FunctionalArea {
