@@ -31,7 +31,7 @@ pub struct SkillSpec {
     pub description: String,
 }
 
-/// Whether a skill is a slash command or an agent persona.
+/// Whether a skill is a slash command, an agent persona, or a native Agent Skill.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SkillType {
@@ -39,6 +39,9 @@ pub enum SkillType {
     Command,
     /// Agent persona — installed to `.claude/agents/` or equivalent.
     Agent,
+    /// Native Agent Skill (a folder with `SKILL.md`) — installed to
+    /// `.claude/skills/<name>/SKILL.md` or equivalent.
+    Skill,
 }
 
 impl std::fmt::Display for SkillType {
@@ -46,6 +49,7 @@ impl std::fmt::Display for SkillType {
         match self {
             SkillType::Command => write!(f, "command"),
             SkillType::Agent => write!(f, "agent"),
+            SkillType::Skill => write!(f, "skill"),
         }
     }
 }
