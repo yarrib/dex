@@ -1,0 +1,18 @@
+# Seed resource — an example the agent extends. Replace or delete as your
+# platform grows. The agent writes new resources into sibling *.tf files and
+# proposes them via pull request.
+{% if manage_databricks_provider %}
+resource "databricks_schema" "example" {
+  catalog_name = var.catalog
+  name         = "${var.environment}_example"
+  comment      = "Managed by {{ project_name }}."
+}
+{% else %}
+# No databricks provider selected. Add your first managed resource here.
+# locals {
+#   tags = {
+#     managed_by  = "{{ project_name }}"
+#     environment = var.environment
+#   }
+# }
+{% endif %}

@@ -1,0 +1,53 @@
+"""Offline tests for {{ project_name }} — form parsing and guardrail tools.
+
+These do not call a model or a git host, so they run in CI without credentials.
+"""
+
+from {{ project_name }}.forms import build_form, unfilled_fields
+from {{ project_name }}.tools import ToolResult
+from {{ project_name }}.tools.change_request import parse_change_request
+from {{ project_name }}.tools.plan_reader import summarize_plan
+
+
+def test_tool_result_helpers():
+    assert ToolResult.ok(1).success is True
+    assert ToolResult.fail("x").error == "x"
+
+
+def test_form_autopopulates_from_request():
+    form = build_form("add a databricks_schema named analytics in prod")
+    fields = form["fields"]
+    assert fields["resource_type"]["value"] == "databricks_schema"
+    assert fields["name"]["value"] == "analytics"
+    assert fields["environment"]["value"] == "prod"
+    assert form["complete"] is True
+    assert unfilled_fields(form) == []
+
+
+def test_form_defaults_environment_to_dev_not_prod():
+    form = build_form("create a databricks_schema named scratch")
+    assert form["fields"]["environment"]["value"] == "dev"
+
+
+def test_underspecified_request_is_incomplete():
+    parsed = parse_change_request("do the usual thing")
+    assert parsed.success is True
+    assert parsed.data["complete"] is False
+    assert "resource_type" in parsed.data["unfilled"]
+    assert "name" in parsed.data["unfilled"]
+
+
+def test_empty_request_fails():
+    assert parse_change_request("   ").success is False
+
+
+def test_summarize_plan_extracts_actions():
+    plan = (
+        "Terraform will perform the following actions:\n"
+        "  # databricks_schema.analytics will be created\n"
+        "  # databricks_grant.x will be updated in-place\n"
+    )
+    result = summarize_plan(plan)
+    assert result.success is True
+    resources = {a["resource"] for a in result.data["actions"]}
+    assert "databricks_schema.analytics" in resources

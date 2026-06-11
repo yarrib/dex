@@ -1,0 +1,159 @@
+"""{{ project_name }} — {{ description }}
+
+Entry point. Implements the agentic IaC loop:
+
+    1. Parse   — turn the change request into an auto-populated form.
+    2. Read    — load the existing Terraform under ``{{ tf_dir }}/`` for context.
+    3. Draft   — ask the model to write or edit the HCL.
+    4. Validate— ``terraform validate``{% if run_terraform_plan %} + ``terraform plan``{% endif %}.
+    5. Propose — open a pull request{% if autonomous %} (automatically){% else %} (after confirmation){% endif %}. Never applies.
+
+Run locally:
+    python -m {{ project_name }}.agent --dry-run "add a unity catalog schema named analytics"
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+from pathlib import Path
+
+import mlflow
+
+from {{ project_name }}.config import settings
+from {{ project_name }} import git_host, llm, terraform
+from {{ project_name }}.tools.change_request import parse_change_request
+from {{ project_name }}.tools.plan_reader import summarize_plan
+
+logger = logging.getLogger(__name__)
+
+
+def _read_existing_tf() -> str:
+    """Concatenate the current Terraform under the configured tf_dir."""
+    tf_dir = Path(settings.tf_dir)
+    if not tf_dir.is_dir():
+        return ""
+    parts = []
+    for path in sorted(tf_dir.glob("*.tf")):
+        parts.append(f"# --- {path.name} ---\n{path.read_text()}")
+    return "\n\n".join(parts)
+
+
+def _slug(text: str) -> str:
+    safe = "".join(c if c.isalnum() else "-" for c in text.lower()).strip("-")
+    return (safe[:40] or "change").rstrip("-")
+
+
+def run(change_request: str, dry_run: bool = False) -> dict:
+    """Run the agent end-to-end. Returns a result dict (also logged to MLflow)."""
+    mlflow.set_experiment("{{ project_name }}")
+
+    with mlflow.start_run():
+        mlflow.log_param("dry_run", dry_run)
+        mlflow.log_param("git_host", settings.git_host)
+        logger.info("change_request=%r dry_run=%s", change_request, dry_run)
+
+        # 1. Parse into the dynamic form.
+        existing_tf = _read_existing_tf()
+        parsed = parse_change_request(change_request, existing_tf)
+        if not parsed.success:
+            return {"ok": False, "error": parsed.error}
+        if not parsed.data["complete"]:
+            # Missing required attributes — surface them rather than guessing.
+            return {
+                "ok": False,
+                "needs_input": parsed.data["unfilled"],
+                "form": parsed.data["form"],
+            }
+        mlflow.log_dict(parsed.data["form"], "change_form.json")
+
+        # 2 + 3. Draft the Terraform.
+        drafted = llm.draft_terraform(change_request, existing_tf)
+        if not drafted.success:
+            return {"ok": False, "error": drafted.error}
+        hcl = drafted.data
+        mlflow.log_text(hcl, "drafted.tf")
+
+        # 4. Validate locally (and plan) before proposing anything.
+        change_path = f"{settings.tf_dir}/{_slug(change_request)}.tf"
+        Path(settings.tf_dir).mkdir(parents=True, exist_ok=True)
+        Path(change_path).write_text(hcl if hcl.endswith("\n") else hcl + "\n")
+
+        validation = terraform.validate()
+        if not validation.success:
+            mlflow.log_text(validation.error or "", "validate_error.txt")
+            return {"ok": False, "error": f"terraform validate failed: {validation.error}"}
+
+        plan_text = ""
+{%- if run_terraform_plan %}
+        plan = terraform.plan()
+        if plan.success:
+            plan_text = summarize_plan(plan.data["output"]).data["raw"]
+            mlflow.log_text(plan_text, "plan.txt")
+        else:
+            logger.warning("terraform plan failed (continuing): %s", plan.error)
+{%- endif %}
+
+        if dry_run:
+            logger.info("dry run — not opening a pull request")
+            return {"ok": True, "dry_run": True, "path": change_path, "plan": plan_text}
+
+        # 5. Propose via pull request. Never applies.
+        branch = f"{{ project_name }}/{_slug(change_request)}"
+        title = f"terraform: {change_request[:60]}"
+        body = _pr_body(change_request, plan_text)
+
+        git_host.create_branch(branch)
+        git_host.put_file(branch, change_path, Path(change_path).read_text(), title)
+        url = git_host.open_pull_request(branch, title, body)
+        mlflow.log_param("pull_request_url", url)
+        logger.info("opened pull request: %s", url)
+        return {"ok": True, "pull_request": url, "path": change_path}
+
+
+def _pr_body(change_request: str, plan_text: str) -> str:
+    body = [
+        "## Proposed Terraform change",
+        "",
+        f"**Request:** {change_request}",
+        "",
+        "Drafted by the {{ project_name }} agent. **Review before merging — this PR is",
+        "never applied automatically.**",
+    ]
+    if plan_text:
+        body += ["", "<details><summary>terraform plan</summary>", "", "```", plan_text, "```", "</details>"]
+    return "\n".join(body)
+
+
+def _coerce_bool(value: str | None) -> bool:
+    return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def main() -> None:
+    """CLI / job entry point."""
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    parser = argparse.ArgumentParser(description="{{ description }}")
+    parser.add_argument("request", nargs="?", help="The change request (free text).")
+    parser.add_argument("--change-request", dest="change_request", help="Change request (job param).")
+    parser.add_argument("--dry-run", action="store_true", help="Draft + validate only; open no PR.")
+    parser.add_argument(
+        "--dry-run-flag", dest="dry_run_flag", default=None,
+        help="Truthy string form of --dry-run (for Databricks job params).",
+    )
+    args = parser.parse_args()
+
+    change_request = args.change_request or args.request
+    if not change_request:
+        parser.error("provide a change request (positional or --change-request)")
+
+    dry_run = args.dry_run or _coerce_bool(args.dry_run_flag)
+    result = run(change_request, dry_run=dry_run)
+    print(json.dumps(result, indent=2))
+    if not result.get("ok"):
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

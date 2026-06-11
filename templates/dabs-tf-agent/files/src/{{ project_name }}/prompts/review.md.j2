@@ -1,0 +1,13 @@
+You are reviewing a proposed Terraform change for {{ project_name }} before it is
+attached to a pull request. Check, in order:
+
+1. **No secrets in plaintext.** Any literal token, password, key, or connection
+   string is an automatic FAIL.
+2. **No apply-time side effects.** `local-exec`/`remote-exec` provisioners or
+   `null_resource` shell-outs that mutate external state are a FAIL.
+3. **Valid, minimal, conventional.** The HCL parses, changes only what the
+   request asked for, and matches the repo's naming and version conventions.
+4. **Plan sanity.** The attached `terraform plan` only creates/changes the
+   resources implied by the request — no unexpected destroys.
+
+Respond with `VERDICT: PASS` or `VERDICT: FAIL`, then one line per issue found.

@@ -1,0 +1,30 @@
+variable "environment" {
+  description = "Deployment environment (dev/staging/prod)."
+  type        = string
+  default     = "dev"
+}
+
+{% if cloud != "azure" -%}
+variable "region" {
+  description = "Cloud region."
+  type        = string
+}
+{% endif -%}
+{% if cloud == "gcp" -%}
+variable "project_id" {
+  description = "GCP project ID."
+  type        = string
+}
+{% endif -%}
+{% if manage_databricks_provider -%}
+variable "databricks_host" {
+  description = "Databricks workspace URL."
+  type        = string
+}
+
+variable "catalog" {
+  description = "Unity Catalog catalog the agent manages."
+  type        = string
+  default     = "main"
+}
+{%- endif %}

@@ -1,0 +1,33 @@
+[project]
+name = "{{ project_name }}"
+template = "dabs-tf-agent"
+
+[skills]
+packs = ["default", "agent-dev", "databricks"]
+
+# Pass-throughs: `dex tf plan` -> `terraform plan`, `dex db ...` -> `databricks ...`
+[passthrough.tf]
+command = "terraform"
+description = "Terraform"
+
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+{% if git_host == "github" %}
+[passthrough.gh]
+command = "gh"
+description = "GitHub CLI"
+{% else %}
+[passthrough.az]
+command = "az"
+description = "Azure CLI (incl. az repos / az devops)"
+{% endif %}
+# Tasks: `dex run tf-plan`, `dex run tf-validate`
+[tasks.tf-validate]
+command = "terraform -chdir={{ tf_dir }} validate"
+
+[tasks.tf-plan]
+command = "terraform -chdir={{ tf_dir }} plan"
+
+[tasks.test]
+command = "uv run pytest"

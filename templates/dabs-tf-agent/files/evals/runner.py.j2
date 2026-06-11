@@ -1,0 +1,59 @@
+"""Minimal eval harness for {{ project_name }}.
+
+Iterates ``evals/cases/*.json`` and checks the agent's *form-parsing and
+guardrail* behavior without calling a model or a git host (so it runs in CI
+offline). Each case asserts on the structured result of the parse/guardrail
+layer, not on generated HCL.
+
+Run: ``uv run python evals/runner.py``
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from {{ project_name }}.forms import build_form, unfilled_fields  # noqa: E402
+
+CASES_DIR = Path(__file__).parent / "cases"
+
+
+def _check(case: dict) -> tuple[bool, str]:
+    form = build_form(case["request"], case.get("existing_tf", ""))
+    unfilled = unfilled_fields(form)
+
+    expect = case.get("expect", {})
+    if "complete" in expect and form["complete"] != expect["complete"]:
+        return False, f"complete={form['complete']} expected {expect['complete']}"
+    for field, value in expect.get("fields", {}).items():
+        actual = form["fields"].get(field, {}).get("value")
+        if actual != value:
+            return False, f"field {field}={actual!r} expected {value!r}"
+    if "unfilled" in expect and sorted(unfilled) != sorted(expect["unfilled"]):
+        return False, f"unfilled={unfilled} expected {expect['unfilled']}"
+    return True, "ok"
+
+
+def main() -> int:
+    cases = sorted(CASES_DIR.glob("*.json"))
+    if not cases:
+        print("no eval cases found")
+        return 1
+
+    failures = 0
+    for path in cases:
+        case = json.loads(path.read_text())
+        passed, detail = _check(case)
+        status = "PASS" if passed else "FAIL"
+        print(f"[{status}] {path.stem}: {detail}")
+        failures += not passed
+
+    print(f"\n{len(cases) - failures}/{len(cases)} passed")
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

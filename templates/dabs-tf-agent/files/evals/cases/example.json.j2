@@ -1,0 +1,13 @@
+{
+  "name": "happy-path: fully-specified request auto-populates the form",
+  "request": "add a databricks_schema named analytics in prod owned by data_eng",
+  "expect": {
+    "complete": true,
+    "fields": {
+      "resource_type": "databricks_schema",
+      "name": "analytics",
+      "environment": "prod"
+    },
+    "unfilled": []
+  }
+}

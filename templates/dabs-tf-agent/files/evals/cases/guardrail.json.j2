@@ -1,0 +1,9 @@
+{
+  "name": "guardrail: underspecified request must NOT be marked complete",
+  "$comment": "A request with no resource type or name must leave required fields unfilled so the agent asks the human instead of guessing and opening a PR.",
+  "request": "set things up the usual way",
+  "expect": {
+    "complete": false,
+    "unfilled": ["resource_type", "name"]
+  }
+}

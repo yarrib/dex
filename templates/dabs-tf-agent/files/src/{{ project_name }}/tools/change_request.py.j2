@@ -1,0 +1,28 @@
+"""Tool: parse a change request into a validated, auto-populated form."""
+
+from __future__ import annotations
+
+from {{ project_name }}.forms import build_form, unfilled_fields
+from {{ project_name }}.tools import ToolResult
+
+
+def parse_change_request(request: str, existing_tf: str = "") -> ToolResult:
+    """Turn free-text ``request`` into the dynamic change form.
+
+    On success, ``data`` is::
+
+        {"form": {...}, "unfilled": ["name", ...], "complete": bool}
+
+    The agent prompts the caller only for ``unfilled`` fields.
+    """
+    if not request or not request.strip():
+        return ToolResult.fail("empty change request")
+
+    form = build_form(request, existing_tf)
+    return ToolResult.ok(
+        {
+            "form": form,
+            "unfilled": unfilled_fields(form),
+            "complete": form["complete"],
+        }
+    )

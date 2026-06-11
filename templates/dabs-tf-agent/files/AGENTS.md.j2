@@ -1,0 +1,133 @@
+# AGENTS.md — {{ project_name }}
+
+> Canonical orientation doc for any AI coding assistant working on this project
+> (Claude Code, Codex, Cursor, Copilot, Claude Desktop, or any MCP client).
+> Read this first before touching code.
+
+## Purpose
+
+{{ description }}
+
+This is a **Databricks Asset Bundle** whose deployed workload is an agent that
+**creates and updates Terraform**. The agent:
+
+1. Receives a change request (free text, or a structured form).
+2. Reads the existing Terraform under `{{ tf_dir }}/` for context.
+3. Auto-populates a **dynamic form** of the attributes the change needs and asks
+   the caller only for what it could not infer.
+4. Drafts or edits the Terraform.
+{% if run_terraform_plan %}5. Runs `terraform validate` + `terraform plan` and captures the output.
+{% endif %}6. Opens a **pull request** on {% if git_host == "github" %}GitHub (`{{ github_owner }}/{{ github_repo }}`){% else %}Azure DevOps (`{{ ado_org }}/{{ ado_project }}/{{ ado_repo }}`){% endif %} with the diff{% if run_terraform_plan %} and plan attached{% endif %}.
+
+## Behavior contract
+
+- **Mode:** {% if autonomous %}Autonomous — opens the PR without a confirmation step.{% else %}Confirm before opening the PR.{% endif %}
+- **Never applies Terraform.** The agent proposes; humans (or CI) apply via PR
+  merge. There is no `terraform apply` path in this codebase. Do not add one.
+- **Reads:** existing Terraform in `{{ tf_dir }}/`, the change request, repo state.
+- **Writes:** a branch + pull request only. Never a direct push to `{{ default_branch }}`.
+{% if allow_auto_merge %}- **Auto-merge:** allowed to enable auto-merge once required checks pass.{% else %}- **Auto-merge:** disabled. A human merges.{% endif %}
+- **Secrets never land in Terraform or PRs.** Tokens come from env / the
+  `{{ secret_scope }}` secret scope / OBO — never hard-coded, never logged.
+
+## Auth model
+
+`src/{{ project_name }}/auth.py` resolves identity:
+
+| Context | Identity | How |
+|---|---|---|
+| Interactive | {% if enable_obo %}OBO — the calling user{% else %}user PAT{% endif %} | {% if enable_obo %}Databricks SDK OBO / `DATABRICKS_TOKEN`{% else %}`DATABRICKS_TOKEN`{% endif %} |
+| Headless (job) | {{ headless_auth | replace('_', ' ') }} | {% if headless_auth == "managed_identity" %}cloud managed identity / workspace credentials{% elif headless_auth == "service_principal" %}service principal via `databricks.yml` `run_as`{% else %}OIDC workload-identity federation{% endif %} |
+
+Git token (push + PR) resolution order: env var
+({% if git_host == "github" %}`GITHUB_TOKEN`{% else %}`AZURE_DEVOPS_TOKEN`{% endif %}) →
+secret scope `{{ secret_scope }}` (`git_token`) → OBO token.
+
+## Architecture
+
+```
+src/{{ project_name }}/
+├── agent.py        # plan -> draft -> validate -> open PR
+├── config.py       # Settings (cloud={{ cloud }}, git_host={{ git_host }}, tf_dir={{ tf_dir }})
+├── auth.py         # OBO / {{ headless_auth }} identity + git token
+├── git_host.py     # {{ git_host }} branch + PR client (REST)
+├── terraform.py    # fmt / validate / plan
+├── llm.py          # model call that drafts/edits HCL
+├── forms.py        # builds + auto-populates the change form
+├── prompts/        # system / generate / review
+└── tools/          # change_request, plan_reader -> ToolResult(success, data, error)
+```
+
+## The dynamic form
+
+`forms/change_request.schema.json` declares the attributes a change can need
+(resource type, name, environment, owner, etc.). `forms.build_form()`
+**pre-fills** every field it can infer from the existing Terraform and repo
+context, then marks the rest as `prompt: true`. The agent (or the CLI) only asks
+the human for the unfilled fields. When you add a new managed resource type,
+extend the schema — don't hard-code prompts in the agent.
+
+## Skills installed in this project
+
+Packs: `default`, `agent-dev`, `databricks`. Installed into the surfaces chosen
+by `ai_tools` at scaffold time:
+
+{% if 'claude' in ai_tools -%}
+- `.claude/commands/` and `.claude/agents/` — Claude Code.
+{% endif -%}
+{% if 'cursor' in ai_tools -%}
+- `.cursor/rules/*.mdc` — Cursor.
+{% endif -%}
+{% if 'copilot' in ai_tools -%}
+- `.github/copilot-instructions.md` — GitHub Copilot.
+{% endif -%}
+{% if 'generic' in ai_tools -%}
+- `.ai-skills/commands/` and `.ai-skills/agents/` — generic / any MCP client.
+{% endif %}
+Re-install or add a target:
+
+```bash
+dex skills sync
+dex skills init --yes --packs default,agent-dev,databricks --targets cursor
+```
+
+### Slash commands
+
+| Command | What it does |
+|---|---|
+| `/build` | Install deps (`uv sync`). |
+| `/test` | Run the pytest suite. |
+| `/lint` | Run linters and formatters. |
+| `/deploy-bundle` | Deploy the DAB to Databricks. |
+| `/run-job` | Run the agent job on Databricks. |
+
+Pass-throughs (from `dex.toml`): `dex tf plan`, `dex db bundle deploy`,
+{% if git_host == "github" %}`dex gh pr list`{% else %}`dex az repos pr list`{% endif %}.
+
+## Codex / non-MCP agentic tools
+
+This repo is tool-agnostic. Codex (or any agentic CLI) can drive the same loop:
+read `prompts/system.md`, edit Terraform under `{{ tf_dir }}/`, then run
+`uv run python -m {{ project_name }}.agent --from-worktree` to validate and open
+the PR using whatever git token is on the environment.
+
+## Dev loop
+
+```bash
+uv sync
+uv run pytest
+uv run python -m {{ project_name }}.agent --dry-run "describe the change"
+```
+
+## Non-negotiables for any AI assistant working here
+
+1. **No `terraform apply`.** Propose via PR only.
+2. **No direct pushes to `{{ default_branch }}`.** Always a feature branch + PR.
+3. **No secrets in HCL, logs, or PR bodies.** Resolve via `auth.py`.
+4. Every tool returns `ToolResult(success, data, error)` — no bare returns, no
+   exceptions bubbling out of the tool layer.
+5. All agent runs are MLflow-traced. Do not disable tracing.
+6. The guardrail eval (`evals/cases/guardrail.json`) must always pass — the agent
+   must refuse to embed plaintext secrets or to apply state.
+{% if not autonomous %}7. This agent is NOT autonomous — never open a PR without the confirmation step.
+{% endif %}

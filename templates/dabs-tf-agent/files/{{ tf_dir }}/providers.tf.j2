@@ -1,0 +1,46 @@
+terraform {
+  required_providers {
+{%- if manage_databricks_provider %}
+    databricks = {
+      source  = "databricks/databricks"
+      version = "~> 1.50"
+    }
+{%- endif %}
+{%- if cloud == "azure" %}
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 4.0"
+    }
+{%- elif cloud == "aws" %}
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+{%- elif cloud == "gcp" %}
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 6.0"
+    }
+{%- endif %}
+  }
+}
+
+{% if cloud == "azure" -%}
+provider "azurerm" {
+  features {}
+}
+{%- elif cloud == "aws" -%}
+provider "aws" {
+  region = var.region
+}
+{%- elif cloud == "gcp" -%}
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+{%- endif %}
+{% if manage_databricks_provider %}
+provider "databricks" {
+  host = var.databricks_host
+}
+{% endif %}
