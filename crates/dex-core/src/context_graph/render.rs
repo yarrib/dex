@@ -13,7 +13,9 @@ use serde::Serialize;
 
 use crate::error::DexError;
 
-use super::{EdgeKind, ExportOptions, ExportReport, FunctionalArea, Node, SyncOptions, SyncReport};
+use super::{
+    EdgeKind, ExportOptions, ExportReport, FunctionalArea, Node, NodeClass, SyncOptions, SyncReport,
+};
 
 /// Write the whole graph: nodes (incremental), INDEX.md, and USER_MANUAL.md.
 pub fn write_graph(
@@ -451,6 +453,10 @@ struct GraphNode {
     val: usize,
     /// Page to open on click (relative to the graph page, same folder).
     url: String,
+    /// De-emphasized in the view (rendered faded + smaller): peripheral history
+    /// now that dex is a pure-Rust binary — the legacy Python bindings, and
+    /// documentation/CI plumbing that isn't an architectural decision.
+    muted: bool,
 }
 
 #[derive(Serialize)]
@@ -519,6 +525,7 @@ fn build_graph_data(nodes: &[Node], wiki_dir: &Path) -> GraphData {
             color: n.area.color().to_string(),
             val: degree.get(&n.stem).copied().unwrap_or(0) + 1,
             url: format!("{}.html", n.stem),
+            muted: is_muted(n),
         })
         .collect();
 
@@ -543,6 +550,62 @@ fn build_graph_data(nodes: &[Node], wiki_dir: &Path) -> GraphData {
     }
 }
 
+/// Whether a node should be de-emphasized ("muted") in the graph view. dex is a
+/// pure-Rust binary now, so two kinds of history are real but no longer central
+/// and read better faded into the background:
+///
+/// - the **legacy Python** layer (the `dex-py` PyO3 bindings and any pre-port
+///   Python sources), and
+/// - **documentation / CI plumbing** that isn't an architectural decision
+///   (release fixes, docs-site tweaks) — the `[Decision]` design docs stay
+///   full-strength so the product's actual pivots remain prominent.
+///
+/// A node carrying real Rust source (`crates/**/src/*.rs`) is never muted on the
+/// docs/CI rule: that catches core-code features whose file-majority happened to
+/// route them into the docs area (e.g. a feature that also commits generated
+/// `.context/` pages), keeping them bright where they belong.
+fn is_muted(n: &Node) -> bool {
+    is_python_legacy(&n.signal_files)
+        || (n.area == FunctionalArea::DocsCiRelease
+            && n.class != NodeClass::Decision
+            && !touches_rust_source(&n.signal_files))
+}
+
+/// Whether any changed file is hand-written Rust crate source.
+fn touches_rust_source(signal_files: &[String]) -> bool {
+    signal_files.iter().any(|f| {
+        let p = f.replace('\\', "/");
+        p.starts_with("crates/") && p.contains("/src/") && p.ends_with(".rs")
+    })
+}
+
+/// True when a path belongs to dex's own Python layer (not a Python *template*,
+/// which is project content rendered for users).
+fn is_python_file(path: &str) -> bool {
+    let p = path.replace('\\', "/");
+    if p.starts_with("templates/") {
+        return false;
+    }
+    p.starts_with("crates/dex-py/")
+        || p.starts_with("python/")
+        || p == "pyproject.toml"
+        || p.ends_with("/pyproject.toml")
+        || p.ends_with(".py")
+        || p.ends_with(".pyi")
+}
+
+/// A commit is "legacy Python" when its tracked changes are *predominantly* the
+/// Python layer. The majority test keeps the pivotal "port to pure Rust" commit
+/// bright (it adds far more Rust than the Python it removes) while fading commits
+/// that only maintained the bindings.
+fn is_python_legacy(signal_files: &[String]) -> bool {
+    if signal_files.is_empty() {
+        return false;
+    }
+    let py = signal_files.iter().filter(|f| is_python_file(f)).count();
+    py * 2 > signal_files.len()
+}
+
 /// Render the `graph.md` page: a self-contained interactive force-directed
 /// graph with the data embedded inline as JSON (no fetch, no path juggling).
 fn render_graph_page(nodes: &[Node], wiki_dir: &Path) -> String {
@@ -562,6 +625,7 @@ An interactive map of every significant commit, colored by functional area.
 <div id="pm-graph" style="width:100%;height:70vh;border:1px solid rgba(128,128,128,0.4);border-radius:6px;overflow:hidden"></div>
 <div id="pm-graph-info" style="margin-top:.6rem;font-size:.9em;min-height:1.6em;line-height:1.5"></div>
 <div id="pm-graph-legend" style="margin-top:.5rem;font-size:.85em;line-height:1.9"></div>
+<p style="margin-top:.4rem;font-size:.8em;opacity:.65">Faded nodes are de-emphasized history — the legacy Python bindings and documentation/CI plumbing — kept for the record but no longer central now that dex is a pure-Rust binary.</p>
 
 <script type="application/json" id="pm-graph-data">
 {json}
@@ -585,6 +649,14 @@ An interactive map of every significant commit, colored by functional area.
     return String(s).replace(/[&<>"]/g, function (c) {{
       return {{ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }}[c];
     }});
+  }}
+
+  // Render a `#rrggbb` area color at low opacity so muted nodes recede.
+  function fade(hex) {{
+    var m = /^#?([0-9a-f]{{2}})([0-9a-f]{{2}})([0-9a-f]{{2}})$/i.exec(hex);
+    if (!m) return hex;
+    return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' +
+      parseInt(m[3], 16) + ',0.22)';
   }}
 
   var info = document.getElementById('pm-graph-info');
@@ -612,8 +684,8 @@ An interactive map of every significant commit, colored by functional area.
     .graphData({{ nodes: data.nodes, links: data.links }})
     .nodeId('id')
     .nodeLabel('label')
-    .nodeColor(function (n) {{ return n.color; }})
-    .nodeVal(function (n) {{ return n.val; }})
+    .nodeColor(function (n) {{ return n.muted ? fade(n.color) : n.color; }})
+    .nodeVal(function (n) {{ return n.muted ? Math.max(1, n.val * 0.5) : n.val; }})
     .nodeRelSize(4)
     .linkColor(function () {{ return 'rgba(128,128,128,0.35)'; }})
     .linkDirectionalArrowLength(2.5)
@@ -800,6 +872,78 @@ mod tests {
         assert!(page.contains("force-graph"));
         // Click targets point at the rendered .html pages.
         assert!(page.contains(&format!("{}.html", nodes[0].stem)));
+    }
+
+    #[test]
+    fn muting_fades_python_and_docs_churn_only() {
+        // Legacy Python (majority .py / dex-py) → muted.
+        assert!(is_python_legacy(&[
+            "crates/dex-py/src/lib.rs".into(),
+            "python/dex/cli.py".into(),
+            "pyproject.toml".into(),
+        ]));
+        // A Rust-majority commit that merely touches a .py is NOT legacy Python
+        // (keeps the "port to pure Rust" pivot bright).
+        assert!(!is_python_legacy(&[
+            "crates/dex-core/src/lib.rs".into(),
+            "crates/dex-cli/src/main.rs".into(),
+            "old/cli.py".into(),
+        ]));
+        // Python *templates* are user content, not dex's Python layer.
+        assert!(!is_python_legacy(&[
+            "templates/python-package/main.py".into()
+        ]));
+
+        use super::super::build_nodes;
+        use crate::context_graph::git::RawCommit;
+        let raw = |sha: &str, subject: &str, files: &[&str]| RawCommit {
+            sha: format!("{sha}0000000000000000000000000000000000"),
+            short_sha: sha.into(),
+            author: "A".into(),
+            date: "2026-01-01".into(),
+            subject: subject.into(),
+            body: String::new(),
+            files: files.iter().map(|s| s.to_string()).collect(),
+        };
+        let nodes = build_nodes(&[
+            raw(
+                "aaaaaaa",
+                "fix(release): tweak workflow",
+                &[".github/workflows/release.yml"],
+            ),
+            raw("bbbbbbb", "docs: add PRD for X", &["docs/prd-x.md"]),
+            raw(
+                "ccccccc",
+                "feat(core): add scaffold",
+                &["crates/dex-core/src/scaffold.rs"],
+            ),
+            // A core-code feature whose docs/.context file-majority routes it
+            // into the docs area — must stay bright (carries Rust source).
+            raw(
+                "ddddddd",
+                "feat(context): engine",
+                &[
+                    "crates/dex-core/src/context_graph/mod.rs",
+                    "docs/SPEC.md",
+                    ".github/workflows/pages.yml",
+                    ".context/wiki/INDEX.md",
+                ],
+            ),
+        ]);
+        let by = |sub: &str| nodes.iter().find(|n| n.commit.subject == sub).unwrap();
+
+        // Docs/CI plumbing that isn't a decision → muted.
+        assert!(is_muted(by("fix(release): tweak workflow")));
+        // A design-doc decision stays bright.
+        assert!(!is_muted(by("docs: add PRD for X")));
+        // Core Rust code stays bright.
+        assert!(!is_muted(by("feat(core): add scaffold")));
+        // Misrouted core-code feature stays bright (carries Rust source).
+        assert_eq!(
+            by("feat(context): engine").area,
+            FunctionalArea::DocsCiRelease
+        );
+        assert!(!is_muted(by("feat(context): engine")));
     }
 
     #[test]
