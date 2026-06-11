@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "dex-cli"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -189,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "dex-core"
-version = "0.3.0"
+version = "0.3.2"
 dependencies = [
  "dirs",
  "include_dir",
