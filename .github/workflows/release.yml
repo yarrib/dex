@@ -78,6 +78,11 @@ jobs:
         run: git-cliff --latest --strip header --output CHANGELOG_RELEASE.md
         env:
           GITHUB_REPO: ${{ github.repository }}
+          # git-cliff's GitHub integration (enabled by GITHUB_REPO) enriches the
+          # changelog with PR/author metadata via the GitHub API. Without a token
+          # those calls are unauthenticated and hit the 60 req/hr rate limit,
+          # which surfaces as an HTTP 403 and a hard panic. Authenticate them.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote lightweight tag to annotated with changelog
         run: |
