@@ -1,0 +1,27 @@
+resources:
+  jobs:
+    {{ project_name }}:
+      name: {{ project_name }}
+      tags:
+        purpose: terraform-agent
+      parameters:
+        - name: change_request
+          default: ""
+        - name: dry_run
+          default: "false"
+      tasks:
+        - task_key: propose_terraform_change
+          python_wheel_task:
+            package_name: {{ project_name }}
+            entry_point: {{ project_name }}
+            parameters:
+              - "--change-request"
+              - "{{ '{{job.parameters.change_request}}' }}"
+              - "--dry-run-flag"
+              - "{{ '{{job.parameters.dry_run}}' }}"
+          libraries:
+            - whl: ../dist/*.whl
+{%- if headless_auth == "service_principal" %}
+      run_as:
+        service_principal_name: ${var.service_principal_id}
+{%- endif %}

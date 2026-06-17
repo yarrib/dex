@@ -1,0 +1,97 @@
+"""Dynamic change-request form for {{ project_name }}.
+
+A change request needs a handful of attributes (what kind of resource, its name,
+the target environment, etc.). Rather than interrogate the caller for all of
+them, ``build_form`` loads the field schema from ``forms/change_request.schema.json``
+and **auto-populates** everything it can infer from the existing Terraform and
+the request text — then marks only the unfilled fields as ``prompt: true``.
+
+The agent (or a CLI front-end) asks the human only for the unfilled fields.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+from {{ project_name }}.config import settings
+
+# forms/change_request.schema.json lives at the project root, two levels up from
+# src/{{ project_name }}/forms.py.
+_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "forms" / "change_request.schema.json"
+
+
+def _load_schema() -> dict:
+    return json.loads(_SCHEMA_PATH.read_text())
+
+
+def _infer(field: str, request: str, existing_tf: str) -> str | None:
+    """Best-effort inference of a single field from context."""
+    request_l = request.lower()
+
+    if field == "environment":
+        for env in ("prod", "staging", "dev"):
+            if env in request_l:
+                return env
+        return "dev"  # safe default — never default to prod
+
+    if field == "resource_type":
+        # Look for "<provider>_<resource>" tokens in the request.
+        match = re.search(r"\b([a-z][a-z0-9]+_[a-z0-9_]+)\b", request_l)
+        if match:
+            return match.group(1)
+        return None
+
+    if field == "name":
+        # "named X" / "called X" → X
+        match = re.search(r"\b(?:named|called)\s+([a-z][a-z0-9_-]*)", request_l)
+        return match.group(1) if match else None
+
+    if field == "tf_dir":
+        return settings.tf_dir
+
+    if field == "cloud":
+        return settings.cloud
+
+    return None
+
+
+def build_form(request: str, existing_tf: str = "") -> dict:
+    """Return the change form with as many fields pre-filled as possible.
+
+    Shape::
+
+        {
+          "fields": {
+            "resource_type": {"value": "databricks_schema", "prompt": false, ...},
+            "name":          {"value": null,                "prompt": true,  ...},
+            ...
+          },
+          "complete": false   # true when no field still needs prompting
+        }
+    """
+    schema = _load_schema()
+    fields: dict[str, dict] = {}
+    complete = True
+
+    for name, spec in schema.get("fields", {}).items():
+        inferred = _infer(name, request, existing_tf)
+        if inferred is None and spec.get("default") is not None:
+            inferred = spec["default"]
+        needs_prompt = inferred is None and spec.get("required", False)
+        if needs_prompt:
+            complete = False
+        fields[name] = {
+            "value": inferred,
+            "prompt": needs_prompt,
+            "description": spec.get("description", ""),
+            "required": spec.get("required", False),
+        }
+
+    return {"fields": fields, "complete": complete}
+
+
+def unfilled_fields(form: dict) -> list[str]:
+    """Names of fields the human still needs to provide."""
+    return [name for name, f in form["fields"].items() if f["prompt"]]

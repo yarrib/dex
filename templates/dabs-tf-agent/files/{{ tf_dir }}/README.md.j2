@@ -1,0 +1,18 @@
+# {{ tf_dir }}/ — managed Terraform
+
+This is the Terraform root that **{{ project_name }}** maintains. The agent reads
+these files for context and conventions, writes new or edited resources into
+sibling `*.tf` files, and proposes every change as a pull request.
+
+- `backend.tf` — {{ tf_backend }} state backend (configure via `-backend-config`).
+- `providers.tf` — provider requirements ({{ cloud }}{% if manage_databricks_provider %} + databricks{% endif %}).
+- `variables.tf` — shared inputs.
+- `main.tf` — seed resource; replace with your real platform.
+
+The agent **never** runs `terraform apply` here. Apply happens after a human
+merges the PR — via your CI pipeline or a reviewer running:
+
+```bash
+terraform -chdir={{ tf_dir }} init
+terraform -chdir={{ tf_dir }} apply
+```

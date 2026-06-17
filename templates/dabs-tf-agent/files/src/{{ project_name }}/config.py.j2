@@ -1,0 +1,62 @@
+"""Settings for {{ project_name }}.
+
+Values are baked from the scaffold answers and can be overridden by environment
+variables at runtime. No secrets live here — see ``auth.py``.
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class Settings:
+    """Static configuration resolved at import time."""
+
+    project_name: str = "{{ project_name }}"
+    cloud: str = "{{ cloud }}"
+    git_host: str = "{{ git_host }}"
+    tf_dir: str = field(default_factory=lambda: os.environ.get("TF_DIR", "{{ tf_dir }}"))
+    tf_backend: str = "{{ tf_backend }}"
+    default_branch: str = field(
+        default_factory=lambda: os.environ.get("DEFAULT_BRANCH", "{{ default_branch }}")
+    )
+    secret_scope: str = field(
+        default_factory=lambda: os.environ.get("GIT_SECRET_SCOPE", "{{ secret_scope }}")
+    )
+    enable_obo: bool = {{ "True" if enable_obo else "False" }}
+    headless_auth: str = "{{ headless_auth }}"
+    autonomous: bool = {{ "True" if autonomous else "False" }}
+    allow_auto_merge: bool = {{ "True" if allow_auto_merge else "False" }}
+    run_terraform_plan: bool = {{ "True" if run_terraform_plan else "False" }}
+    llm_provider: str = "{{ llm_provider }}"
+    llm_endpoint: str = field(
+        default_factory=lambda: os.environ.get("LLM_ENDPOINT", "databricks-claude-opus-4")
+    )
+
+{% if git_host == "github" -%}
+    # GitHub coordinates.
+    github_owner: str = field(
+        default_factory=lambda: os.environ.get("GITHUB_OWNER", "{{ github_owner }}")
+    )
+    github_repo: str = field(
+        default_factory=lambda: os.environ.get("GITHUB_REPO", "{{ github_repo }}")
+    )
+    github_api: str = field(
+        default_factory=lambda: os.environ.get("GITHUB_API", "https://api.github.com")
+    )
+{%- else -%}
+    # Azure DevOps coordinates.
+    ado_org: str = field(default_factory=lambda: os.environ.get("ADO_ORG", "{{ ado_org }}"))
+    ado_project: str = field(
+        default_factory=lambda: os.environ.get("ADO_PROJECT", "{{ ado_project }}")
+    )
+    ado_repo: str = field(default_factory=lambda: os.environ.get("ADO_REPO", "{{ ado_repo }}"))
+    ado_api: str = field(
+        default_factory=lambda: os.environ.get("ADO_API", "https://dev.azure.com")
+    )
+{%- endif %}
+
+
+settings = Settings()

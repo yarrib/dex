@@ -1,0 +1,114 @@
+"""Identity + git-token resolution for {{ project_name }}.
+
+Two runtime contexts:
+
+* **Interactive** — a user invokes the agent.{% if enable_obo %} We run *on behalf of*
+  that user (OBO): the calling user's Databricks token is used, so every action
+  is attributed to them and bound by their permissions.{% endif %}
+* **Headless** — a scheduled job runs with no user present. We use a
+  {{ headless_auth | replace('_', ' ') }} identity.
+
+The git token used to push branches and open pull requests is resolved
+independently, in priority order:
+
+1. Environment variable ({% if git_host == "github" %}``GITHUB_TOKEN``{% else %}``AZURE_DEVOPS_TOKEN``{% endif %}).
+2. Databricks secret scope ``{{ secret_scope }}`` / key ``git_token``.
+3. The OBO Databricks token (last-resort; only works if the git host accepts it,
+   e.g. an Azure DevOps repo fronted by the same Entra identity).
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+from dataclasses import dataclass
+
+from {{ project_name }}.config import settings
+
+logger = logging.getLogger(__name__)
+
+{% if git_host == "github" %}_GIT_TOKEN_ENV = "GITHUB_TOKEN"{% else %}_GIT_TOKEN_ENV = "AZURE_DEVOPS_TOKEN"{% endif %}
+
+
+@dataclass
+class Identity:
+    """Resolved identity for a run."""
+
+    principal: str
+    is_headless: bool
+    obo: bool
+
+
+def _is_headless() -> bool:
+    """Heuristic: a Databricks job run sets DB_JOB_ID / DATABRICKS_JOB_RUN_ID."""
+    return bool(
+        os.environ.get("DATABRICKS_JOB_RUN_ID")
+        or os.environ.get("DB_JOB_ID")
+        or os.environ.get("HEADLESS")
+    )
+
+
+def workspace_client():
+    """Return an authenticated Databricks ``WorkspaceClient``.
+
+    Uses the default credential chain, which transparently picks up:
+    * the calling user's token in interactive notebooks/CLI{% if enable_obo %} (OBO){% endif %},
+    * the {{ headless_auth | replace('_', ' ') }} on a job cluster.
+    """
+    from databricks.sdk import WorkspaceClient
+
+    return WorkspaceClient()
+
+
+def resolve_identity() -> Identity:
+    """Resolve who we are acting as for this run."""
+    headless = _is_headless()
+    try:
+        me = workspace_client().current_user.me()
+        principal = me.user_name or me.display_name or "unknown"
+    except Exception as exc:  # noqa: BLE001 - identity is best-effort metadata.
+        logger.warning("could not resolve current user: %s", exc)
+        principal = "unknown"
+
+    obo = settings.enable_obo and not headless
+    logger.info("identity principal=%s headless=%s obo=%s", principal, headless, obo)
+    return Identity(principal=principal, is_headless=headless, obo=obo)
+
+
+def _secret(scope: str, key: str) -> str | None:
+    try:
+        return workspace_client().secrets.get_secret(scope=scope, key=key).value
+    except Exception as exc:  # noqa: BLE001 - missing secret is an expected fallthrough.
+        logger.debug("secret %s/%s not available: %s", scope, key, exc)
+        return None
+
+
+def git_token() -> str:
+    """Resolve the git token for push + PR operations.
+
+    Raises:
+        RuntimeError: if no token can be found through any source.
+    """
+    env = os.environ.get(_GIT_TOKEN_ENV)
+    if env:
+        logger.info("git token: from $%s", _GIT_TOKEN_ENV)
+        return env
+
+    secret = _secret(settings.secret_scope, "git_token")
+    if secret:
+        logger.info("git token: from secret scope %s", settings.secret_scope)
+        return secret
+
+    if settings.enable_obo:
+        try:
+            cfg = workspace_client().config
+            if cfg.token:
+                logger.info("git token: falling back to OBO Databricks token")
+                return cfg.token
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("OBO token unavailable: %s", exc)
+
+    raise RuntimeError(
+        f"No git token found. Set ${_GIT_TOKEN_ENV} or put it in the "
+        f"'{settings.secret_scope}' secret scope under key 'git_token'."
+    )

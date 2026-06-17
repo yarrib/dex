@@ -1,0 +1,29 @@
+terraform {
+  required_version = ">= 1.6.0"
+
+{%- if tf_backend == "azurerm" %}
+  backend "azurerm" {
+    # Configure via -backend-config or a backend.hcl file. Do not hard-code secrets.
+    # resource_group_name  = "..."
+    # storage_account_name = "..."
+    # container_name       = "tfstate"
+    # key                  = "{{ project_name }}.tfstate"
+  }
+{%- elif tf_backend == "s3" %}
+  backend "s3" {
+    # bucket = "..."
+    # key    = "{{ project_name }}/terraform.tfstate"
+    # region = "us-east-1"
+    # dynamodb_table = "terraform-locks"
+  }
+{%- elif tf_backend == "gcs" %}
+  backend "gcs" {
+    # bucket = "..."
+    # prefix = "{{ project_name }}"
+  }
+{%- else %}
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+{%- endif %}
+}

@@ -1,0 +1,69 @@
+# {{ project_name }}
+
+> {{ description }}
+
+A full-stack Databricks solution whose job is to **create and update Terraform
+agentically**. It runs as a Databricks Asset Bundle (DAB), authenticates as the
+calling user{% if enable_obo %} (on-behalf-of){% endif %} for interactive runs and as a
+{{ headless_auth | replace('_', ' ') }} for headless/scheduled runs, drafts or
+edits Terraform under `{{ tf_dir }}/`, {% if run_terraform_plan %}runs `terraform plan`, {% endif %}and
+opens a pull request against the
+{% if git_host == "github" %}GitHub repo `{{ github_owner }}/{{ github_repo }}`{% else %}Azure DevOps repo `{{ ado_org }}/{{ ado_project }}/{{ ado_repo }}`{% endif %}.
+
+It **never applies** Terraform directly — every change is proposed as a reviewable
+pull request.
+
+## Layout
+
+```
+{{ project_name }}/
+├── AGENTS.md                       # Read this first (vendor-neutral agent doc).
+├── CLAUDE.md                       # Pointer to AGENTS.md for Claude Code.
+├── dex.toml                        # Project config: skills, passthroughs, tasks.
+├── databricks.yml                  # DAB root.
+├── resources/                      # DAB job{% if deploy_serving %} + serving endpoint{% endif %} definitions.
+├── terraform/                      # Seed Terraform the agent maintains.
+├── forms/
+│   └── change_request.schema.json  # Dynamic form: attributes a change needs.
+├── src/{{ project_name }}/
+│   ├── agent.py                    # Entry point: plan -> draft -> validate -> PR.
+│   ├── config.py                   # Settings from env + Databricks secrets.
+│   ├── auth.py                     # OBO user / managed-identity resolution.
+│   ├── git_host.py                 # Branch + PR client ({{ git_host }}).
+│   ├── terraform.py                # fmt / validate / plan wrappers.
+│   ├── llm.py                      # Model call that drafts Terraform.
+│   ├── forms.py                    # Builds & auto-populates the change form.
+│   ├── prompts/                    # system / generate / review prompts.
+│   └── tools/                      # change_request, plan_reader (ToolResult).
+├── evals/                          # Eval harness + cases (incl. a guardrail).
+└── tests/                          # pytest unit tests.
+```
+
+## Quickstart
+
+```bash
+uv sync
+uv run pytest
+
+# Dry run — drafts the change locally, prints the diff and plan, opens no PR:
+uv run python -m {{ project_name }}.agent --dry-run \
+  "add a unity catalog schema named analytics with owner data_eng"
+```
+
+## Auth
+
+| Mode | Used when | Identity |
+|---|---|---|
+| Interactive | a user invokes the agent | {% if enable_obo %}OBO — the calling user's token{% else %}user PAT{% endif %} |
+| Headless | scheduled / job run | {{ headless_auth | replace('_', ' ') }} |
+
+The git token used to push branches and open PRs is resolved in this order:
+environment variable → Databricks secret scope `{{ secret_scope }}` → OBO token.
+See `src/{{ project_name }}/auth.py`.
+
+## Deploy
+
+```bash
+databricks bundle deploy --target dev
+databricks bundle run {{ project_name }} --target dev
+```

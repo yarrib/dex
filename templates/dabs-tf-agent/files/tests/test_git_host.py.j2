@@ -1,0 +1,18 @@
+"""Smoke tests for the {{ git_host }} client surface and config wiring."""
+
+from {{ project_name }} import git_host
+from {{ project_name }}.config import settings
+
+
+def test_config_reflects_scaffold_choices():
+    assert settings.git_host == "{{ git_host }}"
+    assert settings.cloud == "{{ cloud }}"
+    assert settings.default_branch == "{{ default_branch }}"
+
+
+def test_git_host_client_exposes_the_proposal_surface():
+    # The agent only ever proposes — branch + file + PR. No apply/merge surface.
+    assert hasattr(git_host, "create_branch")
+    assert hasattr(git_host, "put_file")
+    assert hasattr(git_host, "open_pull_request")
+    assert issubclass(git_host.GitHostError, RuntimeError)

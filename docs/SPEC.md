@@ -435,6 +435,57 @@ differs in how the primary model is called:
 | Output schema | untyped string | untyped string | typed via BAML class |
 | Planner/Reviewer | direct SDK calls | direct SDK calls | typed BAML functions (`b.Plan`, `b.Review`) |
 
+### 8.5. Terraform Agent Template (`dabs-tf-agent`)
+
+A distinct agent template for **agentic Infrastructure-as-Code**. Unlike the
+plan→act→review chat agents above, the deployed workload here drafts and edits
+**Terraform** and proposes every change as a **pull request** — it never runs
+`terraform apply`.
+
+```
+dex init --template dabs-tf-agent
+```
+
+Key differences from the chat-agent templates:
+
+| Aspect | `agent-*` templates | `dabs-tf-agent` |
+|---|---|---|
+| Deliverable | text response | a Terraform PR (GitHub or Azure DevOps) |
+| Side effects | none / tool calls | branch + pull request only — never applies |
+| Auth | API key | OBO user (interactive) / managed identity (headless) |
+| Dynamic form | scaffold-time prompts | scaffold-time **plus** a runtime change-request form that auto-populates from existing Terraform |
+| Model backend | Anthropic / OpenAI / BAML | Databricks Foundation Model endpoint or Anthropic SDK |
+
+Host-specific behavior is selected by the `git_host` choice (`github` /
+`azure_devops`); only the relevant org/repo variables are prompted (via the
+`when` field), and the single `git_host.py` client renders the correct REST
+calls through Jinja. The runtime "dynamic form"
+(`forms/change_request.schema.json` + `forms.py`) infers as many attributes as
+it can from the repo and request, prompting the human only for what's missing.
+Skills follow the agent convention: `[skills] packs = ["default", "agent-dev",
+"databricks"]`, installed into the surfaces chosen by `ai_tools`.
+
+Generated structure:
+
+```
+my-tf-agent/
+├── AGENTS.md / CLAUDE.md / .mcp.json   # assistant orientation + MCP
+├── databricks.yml                      # DAB root
+├── resources/                          # job (+ optional serving) defs
+├── terraform/                          # seed Terraform the agent maintains
+├── forms/change_request.schema.json    # dynamic runtime form schema
+├── src/my_tf_agent/
+│   ├── agent.py        # parse → draft → validate → open PR (never applies)
+│   ├── auth.py         # OBO / managed-identity + git-token resolution
+│   ├── git_host.py     # GitHub or Azure DevOps branch + PR client
+│   ├── terraform.py    # fmt / validate / plan (no apply)
+│   ├── llm.py          # HCL drafting (Databricks FM endpoint or Anthropic)
+│   ├── forms.py        # builds + auto-populates the change form
+│   └── tools/          # change_request, plan_reader -> ToolResult
+├── evals/              # offline form/guardrail eval harness
+└── tests/
+```
+
 ## 9. Skills System (`dex skills`)
 
 ### 9.1. Overview

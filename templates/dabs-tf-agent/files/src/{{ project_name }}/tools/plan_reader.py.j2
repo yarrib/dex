@@ -1,0 +1,28 @@
+"""Tool: summarize a ``terraform plan`` for the pull-request body."""
+
+from __future__ import annotations
+
+import re
+
+from {{ project_name }}.tools import ToolResult
+
+# Lines like:  # databricks_schema.analytics will be created
+_ACTION_RE = re.compile(r"^\s*#\s+(\S+)\s+will be (\w[\w ]*)", re.MULTILINE)
+
+
+def summarize_plan(plan_output: str) -> ToolResult:
+    """Extract the resource-action summary from raw ``terraform plan`` text.
+
+    ``data`` is::
+
+        {"actions": [{"resource": "...", "action": "created"}, ...],
+         "raw": "<the plan text, for the PR body>"}
+    """
+    if not plan_output:
+        return ToolResult.fail("empty plan output")
+
+    actions = [
+        {"resource": m.group(1), "action": m.group(2).strip()}
+        for m in _ACTION_RE.finditer(plan_output)
+    ]
+    return ToolResult.ok({"actions": actions, "raw": plan_output})

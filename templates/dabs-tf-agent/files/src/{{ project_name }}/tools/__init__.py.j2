@@ -1,0 +1,34 @@
+"""Tools for {{ project_name }}.
+
+Every tool returns a :class:`ToolResult`. Tools never raise out of their public
+surface and never return bare values — this keeps the agent loop's error
+handling uniform and traceable.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass
+class ToolResult:
+    """Uniform return type for every tool.
+
+    Attributes:
+        success: Whether the tool completed its job.
+        data: The tool's payload on success (any JSON-serializable value).
+        error: A human-readable error string on failure, else None.
+    """
+
+    success: bool
+    data: Any = None
+    error: str | None = None
+
+    @classmethod
+    def ok(cls, data: Any = None) -> "ToolResult":
+        return cls(success=True, data=data)
+
+    @classmethod
+    def fail(cls, error: str) -> "ToolResult":
+        return cls(success=False, error=error)

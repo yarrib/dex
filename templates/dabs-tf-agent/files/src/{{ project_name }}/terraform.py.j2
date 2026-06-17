@@ -1,0 +1,74 @@
+"""Thin wrappers around the Terraform CLI for {{ project_name }}.
+
+These functions are read-only / proposal-only: ``fmt``, ``validate``, and
+``plan``. There is intentionally **no** ``apply`` — this agent proposes changes
+via pull request and lets CI or a human apply them after review.
+"""
+
+from __future__ import annotations
+
+import logging
+import shutil
+import subprocess
+from pathlib import Path
+
+from {{ project_name }}.config import settings
+from {{ project_name }}.tools import ToolResult
+
+logger = logging.getLogger(__name__)
+
+_TIMEOUT = 300
+
+
+def _run(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    if shutil.which("terraform") is None:
+        raise FileNotFoundError("terraform CLI not found on PATH")
+    logger.info("terraform %s (cwd=%s)", " ".join(args), cwd)
+    return subprocess.run(
+        ["terraform", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        timeout=_TIMEOUT,
+        check=False,
+    )
+
+
+def fmt(tf_dir: str | None = None) -> ToolResult:
+    """Format HCL in place. Returns the list of changed files."""
+    cwd = Path(tf_dir or settings.tf_dir)
+    proc = _run(["fmt", "-list=true"], cwd)
+    if proc.returncode != 0:
+        return ToolResult.fail(proc.stderr.strip() or "terraform fmt failed")
+    changed = [line for line in proc.stdout.splitlines() if line.strip()]
+    return ToolResult.ok({"changed": changed})
+
+
+def validate(tf_dir: str | None = None) -> ToolResult:
+    """Run ``terraform validate`` (after a no-backend init)."""
+    cwd = Path(tf_dir or settings.tf_dir)
+    init = _run(["init", "-backend=false", "-input=false", "-no-color"], cwd)
+    if init.returncode != 0:
+        return ToolResult.fail(f"terraform init failed:\n{init.stderr.strip()}")
+    proc = _run(["validate", "-no-color"], cwd)
+    if proc.returncode != 0:
+        return ToolResult.fail(proc.stdout.strip() + "\n" + proc.stderr.strip())
+    return ToolResult.ok({"output": proc.stdout.strip()})
+
+
+def plan(tf_dir: str | None = None) -> ToolResult:
+    """Run ``terraform plan`` and return the human-readable plan text.
+
+    The plan is what gets attached to the pull request so reviewers can see the
+    exact set of changes before anyone applies.
+    """
+    if not settings.run_terraform_plan:
+        return ToolResult.ok({"output": "(terraform plan disabled for this project)"})
+    cwd = Path(tf_dir or settings.tf_dir)
+    init = _run(["init", "-input=false", "-no-color"], cwd)
+    if init.returncode != 0:
+        return ToolResult.fail(f"terraform init failed:\n{init.stderr.strip()}")
+    proc = _run(["plan", "-no-color", "-input=false", "-lock=false"], cwd)
+    if proc.returncode not in (0, 2):  # 2 = changes present, still success
+        return ToolResult.fail(proc.stdout.strip() + "\n" + proc.stderr.strip())
+    return ToolResult.ok({"output": proc.stdout.strip()})

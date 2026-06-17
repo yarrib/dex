@@ -1,0 +1,33 @@
+{
+  "$comment": "Dynamic change-request form for {{ project_name }}. forms.build_form() auto-populates every field it can infer from the existing Terraform and the request text; only fields left null + required are prompted to the human.",
+  "fields": {
+    "resource_type": {
+      "description": "Terraform resource type to create or change (e.g. databricks_schema, {{ cloud }}_storage_account).",
+      "required": true
+    },
+    "name": {
+      "description": "Name/identifier for the resource.",
+      "required": true
+    },
+    "environment": {
+      "description": "Target environment.",
+      "required": true,
+      "enum": ["dev", "staging", "prod"],
+      "default": "dev"
+    },
+    "cloud": {
+      "description": "Cloud provider.",
+      "required": false,
+      "default": "{{ cloud }}"
+    },
+    "tf_dir": {
+      "description": "Terraform root the change is written to.",
+      "required": false,
+      "default": "{{ tf_dir }}"
+    },
+    "owner": {
+      "description": "Owner/team for tagging and access (optional).",
+      "required": false
+    }
+  }
+}
