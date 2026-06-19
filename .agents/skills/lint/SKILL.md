@@ -1,3 +1,8 @@
+---
+name: lint
+description: "Run all linters: Rust clippy and Python ruff"
+---
+
 Run all linters: Rust clippy and Python ruff.
 
 ```bash

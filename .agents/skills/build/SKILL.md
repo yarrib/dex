@@ -1,3 +1,8 @@
+---
+name: build
+description: "Run the full build: Rust and Python extension"
+---
+
 Run the full build: Rust and Python extension.
 
 ```bash

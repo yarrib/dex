@@ -1,3 +1,8 @@
+---
+name: agent-new
+description: Scaffold a new AI agent using `dex agent new`
+---
+
 Scaffold a new AI agent using `dex agent new`.
 
 Usage:

@@ -1,3 +1,8 @@
+---
+name: new-user
+description: Help a new user get from zero to hero with dex
+---
+
 You are helping a new user get from zero to hero with dex.
 
 **First, ask:** What is your role?
