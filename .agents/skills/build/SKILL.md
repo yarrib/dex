@@ -1,18 +1,22 @@
 ---
 name: build
-description: "Run the full build: Rust and Python extension"
+description: Build dex — the Rust workspace and release binary
 ---
 
-Run the full build: Rust and Python extension.
+Build dex. It is 100% Rust — a single binary, no Python runtime required.
 
 ```bash
-make build
+cargo build              # debug build of the whole workspace
+cargo build --release    # release binary at target/release/dex
 ```
 
-This runs `cargo build` followed by `maturin develop` to compile the Rust extension
-and install it into the current virtual environment.
+To install the binary onto your PATH:
+
+```bash
+cargo install --path crates/dex-cli
+```
 
 If the build fails:
-1. Check `cargo build` errors first — Rust errors are the most common root cause.
-2. If `maturin develop` fails, ensure you have an active Python 3.12+ virtual environment.
-3. Run `uv sync` to ensure Python deps are installed before `maturin develop`.
+1. Read the first `cargo build` error — it is usually the root cause; later errors often cascade from it.
+2. Confirm your toolchain is current (`rustup update`); dex targets stable Rust, Edition 2024.
+3. If a dependency fails to resolve, check `Cargo.lock` is committed and run `cargo fetch`.
