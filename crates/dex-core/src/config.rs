@@ -60,6 +60,12 @@ pub struct TaskSpec {
     pub description: Option<String>,
     #[serde(default)]
     pub depends_on: Vec<String>,
+    /// Shell commands to run before the task. A failing hook aborts the task.
+    #[serde(default)]
+    pub pre: Vec<String>,
+    /// Shell commands to run after the task succeeds.
+    #[serde(default)]
+    pub post: Vec<String>,
 }
 
 /// Environment profile from `[profiles.*]` section.
@@ -745,6 +751,29 @@ workspace_url = "https://etl.cloud.databricks.com"
             matches!(result, Err(DexError::Config(ConfigError::NotFound(_)))),
             "expected ConfigError::NotFound for missing file"
         );
+    }
+
+    #[test]
+    fn parse_task_hooks() {
+        let toml_str = r#"
+            [project]
+            name = "my-project"
+
+            [tasks.deploy]
+            command = "databricks bundle deploy"
+            pre = ["echo 'pre-deploy'", "./scripts/check-auth.sh"]
+            post = ["echo 'post-deploy'"]
+
+            [tasks.simple]
+            command = "echo simple"
+        "#;
+        let config: ProjectConfig = toml::from_str(toml_str).unwrap();
+        let deploy = &config.tasks["deploy"];
+        assert_eq!(deploy.pre, vec!["echo 'pre-deploy'", "./scripts/check-auth.sh"]);
+        assert_eq!(deploy.post, vec!["echo 'post-deploy'"]);
+        let simple = &config.tasks["simple"];
+        assert!(simple.pre.is_empty());
+        assert!(simple.post.is_empty());
     }
 
     #[test]

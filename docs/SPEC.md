@@ -81,7 +81,8 @@ dex mcp install [--client <name>...] [--all] [--dir <path>]
 
 dex run <task> [-- <extra-args>]
     Run a task defined in [tasks.*] in dex.toml. Respects depends_on ordering.
-    Extra args after -- are appended to the task command.
+    Extra args after -- are appended to the task command. Runs pre hooks before
+    the task and post hooks after it succeeds. A failing pre hook aborts the task.
 
 dex context sync [--dir <path>] [--rebuild] [--limit <n>] [--all]
     Build/refresh the project-memory knowledge graph in .context/wiki/.
@@ -156,6 +157,8 @@ description = "Databricks CLI"
 [tasks.test]
 command = "pytest tests/"
 description = "Run tests"
+pre = ["pip install -r requirements-test.txt"]
+post = ["echo 'tests passed'"]
 
 [tasks.lint]
 command = "ruff check ."
