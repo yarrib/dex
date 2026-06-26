@@ -1,3 +1,8 @@
+---
+name: test
+description: "Run the full test suite: Rust unit tests and Python integration tests"
+---
+
 Run the full test suite: Rust unit tests and Python integration tests.
 
 ```bash

@@ -1,3 +1,8 @@
+---
+name: release
+description: Manage versioning and releases for dex
+---
+
 Manage versioning and releases for dex.
 
 Releases are **tag-driven**: a `vX.Y.Z` tag on `main` triggers the `release.yml`

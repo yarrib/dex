@@ -1,3 +1,8 @@
+---
+name: scaffold
+description: Scaffold a new dex project using `dex init`
+---
+
 Scaffold a new dex project using `dex init`.
 
 Usage:
