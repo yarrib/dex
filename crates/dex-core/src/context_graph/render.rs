@@ -77,8 +77,7 @@ fn render_node(node: &Node) -> String {
 
     // Frontmatter — useful in Obsidian/Dataview and for the skill to parse.
     s.push_str("---\n");
-    s.push_str(&format!("sha: {}\n", c.sha));
-    s.push_str(&format!("short_sha: {}\n", c.short_sha));
+    s.push_str(&format!("sha: {}\n", c.short_sha));
     s.push_str(&format!("author: {}\n", c.author));
     s.push_str(&format!("date: {}\n", c.date));
     s.push_str(&format!("class: {}\n", node.class.label()));
