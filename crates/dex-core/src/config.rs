@@ -769,7 +769,10 @@ workspace_url = "https://etl.cloud.databricks.com"
         "#;
         let config: ProjectConfig = toml::from_str(toml_str).unwrap();
         let deploy = &config.tasks["deploy"];
-        assert_eq!(deploy.pre, vec!["echo 'pre-deploy'", "./scripts/check-auth.sh"]);
+        assert_eq!(
+            deploy.pre,
+            vec!["echo 'pre-deploy'", "./scripts/check-auth.sh"]
+        );
         assert_eq!(deploy.post, vec!["echo 'post-deploy'"]);
         let simple = &config.tasks["simple"];
         assert!(simple.pre.is_empty());
