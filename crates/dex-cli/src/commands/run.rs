@@ -104,19 +104,34 @@ fn resolve_order(
     Ok(order)
 }
 
-/// Execute a single task, appending any extra args to its command.
+/// Execute a single task: run pre-hooks, main command, then post-hooks (on success).
 fn run_task(name: &str, spec: &TaskSpec, extra: &[String]) -> Result<(), DexError> {
+    for hook in &spec.pre {
+        exec_shell("pre", hook, &format!("pre-hook for task '{name}'"))?;
+    }
+
     let mut full_command = spec.command.clone();
     if !extra.is_empty() {
         full_command.push(' ');
         full_command.push_str(&extra.join(" "));
     }
+    exec_shell("$", &full_command, &format!("task '{name}'"))?;
 
-    println!("{} {}", style("$").dim(), style(&full_command).bold());
+    for hook in &spec.post {
+        exec_shell("post", hook, &format!("post-hook for task '{name}'"))?;
+    }
+
+    Ok(())
+}
+
+/// Run a shell command, printing `<prefix> $ <cmd>` before execution.
+/// Exits the process with the command's exit code on failure.
+fn exec_shell(prefix: &str, cmd: &str, error_context: &str) -> Result<(), DexError> {
+    println!("{} {}", style(prefix).dim(), style(cmd).bold());
 
     #[cfg(windows)]
     let status = Command::new("cmd")
-        .args(["/C", &full_command])
+        .args(["/C", cmd])
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
@@ -128,7 +143,7 @@ fn run_task(name: &str, spec: &TaskSpec, extra: &[String]) -> Result<(), DexErro
 
     #[cfg(not(windows))]
     let status = Command::new("sh")
-        .args(["-c", &full_command])
+        .args(["-c", cmd])
         .stdin(std::process::Stdio::inherit())
         .stdout(std::process::Stdio::inherit())
         .stderr(std::process::Stdio::inherit())
@@ -140,7 +155,7 @@ fn run_task(name: &str, spec: &TaskSpec, extra: &[String]) -> Result<(), DexErro
 
     if !status.success() {
         output::print_error(&format!(
-            "task '{name}' failed (exit {})",
+            "{error_context} failed (exit {})",
             status.code().unwrap_or(1)
         ));
         std::process::exit(status.code().unwrap_or(1));
@@ -166,6 +181,8 @@ mod tests {
                     command: cmd.to_string(),
                     description: None,
                     depends_on: deps.iter().map(|s| s.to_string()).collect(),
+                    pre: vec![],
+                    post: vec![],
                 },
             );
         }
