@@ -1,0 +1,59 @@
+# {{ project_name }}
+
+A Databricks Asset Bundle scaffolded by [dex](https://github.com/yarrib/dex) from the
+`dabs-platform` template (profile: `{{ profile }}`).
+
+## Setup
+
+```bash
+uv sync
+{% if include_react %}(cd frontend && npm install)
+{% endif %}```
+
+> Setup is manual — dex runs `uv sync` on scaffold, but re-run it after editing
+> dependencies.{% if include_react %} The React frontend needs `npm install` separately.{% endif %}
+
+## Configure
+
+Edit workspace hosts and catalog in `databricks.yml` (targets `dev`, `staging`, `prod`)
+before deploying.
+
+## Develop
+
+```bash
+dex run test        # uv run pytest
+dex run lint        # uv run ruff check .
+dex run typecheck   # uv run ty check
+dex run validate    # databricks bundle validate
+```
+
+## Deploy
+
+```bash
+dex run deploy                        # dev (default target)
+databricks bundle deploy -t staging
+databricks bundle deploy -t prod
+```
+
+## Components in this project
+
+| Component | Included |
+|---|---|
+| Base job (`resources/`) | always |
+| Lakeflow/DLT pipeline (`pipeline/`) | {% if include_pipeline %}yes{% else %}no{% endif %} |
+| MLflow experiment + model (`ml/`) | {% if include_experiment %}yes{% else %}no{% endif %} |
+| Realtime serving (`serving_rt/`) | {% if include_realtime %}yes{% else %}no{% endif %} |
+| Batch inference (`serving_batch/`) | {% if include_batch %}yes{% else %}no{% endif %} |
+| Quality monitor (`observability/`) | {% if include_observability %}yes{% else %}no{% endif %} |
+| Agent wrapper + eval (`agent/`) | {% if include_agent %}yes{% else %}no{% endif %} |
+| Databricks App (`app/`) | {% if include_app %}yes{% else %}no{% endif %} |
+| Lakebase (`lakebase/`) | {% if include_lakebase %}yes{% else %}no{% endif %} |
+| React frontend (`frontend/`) | {% if include_react %}yes{% else %}no{% endif %} |
+
+{% if shared_code_source != "none" %}
+## Shared code
+
+This project consumes shared code via `shared_code_source = "{{ shared_code_source }}"`
+(see `[tool.uv.sources]` in `pyproject.toml`). It expects to live inside the monorepo /
+uv workspace that provides the `shared` package.
+{% endif %}

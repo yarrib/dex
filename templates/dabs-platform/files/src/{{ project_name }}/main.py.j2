@@ -1,0 +1,16 @@
+"""Entry point for the {{ project_name }} bundle job."""
+
+import argparse
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="{{ project_name }} job")
+    parser.add_argument("--catalog", required=True)
+    parser.add_argument("--schema", required=True)
+    args = parser.parse_args()
+
+    print(f"Running {{ project_name }} against {args.catalog}.{args.schema}")
+
+
+if __name__ == "__main__":
+    main()

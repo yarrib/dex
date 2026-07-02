@@ -1,0 +1,11 @@
+resources:
+  experiments:
+    {{ project_name }}_experiment:
+      name: /Shared/{{ project_name }}/${bundle.target}
+
+  registered_models:
+    {{ project_name }}_model:
+      name: ${var.catalog}.${var.schema}.{{ project_name }}
+      catalog_name: ${var.catalog}
+      schema_name: ${var.schema}
+      comment: "Registered model for {{ project_name }} ({{ profile }})"

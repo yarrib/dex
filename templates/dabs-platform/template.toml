@@ -1,0 +1,214 @@
+[template]
+name = "dabs-platform"
+description = "Databricks Asset Bundle platform template — one profile-driven bundle for data engineering, MLOps, and agent workloads (use with --preset)"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+# ---------------------------------------------------------------------------
+# Identity / stamping
+# ---------------------------------------------------------------------------
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "profile"
+prompt = "Deployment profile (stamped for traceability; does not gate anything)"
+type = "string"
+default = "data_eng_eus2_azure"
+required = false
+
+# ---------------------------------------------------------------------------
+# Tier 1 — org constants (usually pre-filled from standards.toml / preset)
+# ---------------------------------------------------------------------------
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "author"
+prompt = "Author / owner"
+type = "string"
+default = "data-platform"
+required = false
+
+[[variables]]
+name = "team_group"
+prompt = "Owning team group (Databricks group / GitHub team)"
+type = "string"
+default = "data-platform"
+required = false
+
+[[variables]]
+name = "central_ci_ref"
+prompt = "Central reusable CI workflow (owner/repo/.github/workflows/ci.yml@ref)"
+type = "string"
+default = "your-org/central-workflows/.github/workflows/ci.yml@main"
+required = false
+
+[[variables]]
+name = "central_cd_ref"
+prompt = "Central reusable CD workflow (owner/repo/.github/workflows/cd.yml@ref)"
+type = "string"
+default = "your-org/central-workflows/.github/workflows/cd.yml@main"
+required = false
+
+# ---------------------------------------------------------------------------
+# Workspace set (per preset)
+# ---------------------------------------------------------------------------
+[[variables]]
+name = "catalog"
+prompt = "Unity Catalog catalog name"
+type = "string"
+default = "eng_eus2"
+required = false
+
+[[variables]]
+name = "workspace_host_dev"
+prompt = "Databricks workspace host (dev/staging)"
+type = "string"
+default = "https://adb-0000000000000000.0.dev-eus2.azuredatabricks.net"
+required = false
+
+[[variables]]
+name = "workspace_host_prod"
+prompt = "Databricks workspace host (prod)"
+type = "string"
+default = "https://adb-0000000000000000.0.prod-eus2.azuredatabricks.net"
+required = false
+
+[[variables]]
+name = "use_serverless"
+prompt = "Use serverless compute for jobs?"
+type = "bool"
+default = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Gating bools — ALL default to false. Presets set only the ones they want on.
+# (A preset value of "false" would be a truthy string in the engine, so presets
+#  must OMIT false bools and let these defaults apply.)
+# ---------------------------------------------------------------------------
+[[variables]]
+name = "include_pipeline"
+prompt = "Include a Lakeflow/DLT pipeline?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_experiment"
+prompt = "Include an MLflow experiment + registered model?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_realtime"
+prompt = "Include a realtime model serving endpoint?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_batch"
+prompt = "Include a scheduled batch inference job?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_observability"
+prompt = "Include a quality monitor (observability)?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_agent"
+prompt = "Include an agent wrapper + eval job?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_app"
+prompt = "Include a Databricks App?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_lakebase"
+prompt = "Include Lakebase (Postgres) resources?"
+type = "bool"
+default = false
+required = false
+
+[[variables]]
+name = "include_react"
+prompt = "Include a React (Vite) frontend?"
+type = "bool"
+default = false
+required = false
+
+# ---------------------------------------------------------------------------
+# Variant
+# ---------------------------------------------------------------------------
+[[variables]]
+name = "shared_code_source"
+prompt = "Shared code source (monorepo coupling)"
+type = "choice"
+choices = ["none", "workspace", "path", "wheel"]
+default = "none"
+required = false
+
+# ---------------------------------------------------------------------------
+# Conditional file inclusion — one rule per gated directory.
+# ---------------------------------------------------------------------------
+[[files]]
+src = "pipeline/"
+condition = "include_pipeline"
+
+[[files]]
+src = "ml/"
+condition = "include_experiment"
+
+[[files]]
+src = "serving_rt/"
+condition = "include_realtime"
+
+[[files]]
+src = "serving_batch/"
+condition = "include_batch"
+
+[[files]]
+src = "observability/"
+condition = "include_observability"
+
+[[files]]
+src = "agent/"
+condition = "include_agent"
+
+[[files]]
+src = "app/"
+condition = "include_app"
+
+[[files]]
+src = "lakebase/"
+condition = "include_lakebase"
+
+[[files]]
+src = "frontend/"
+condition = "include_react"
+
+[on_success]
+run = "uv sync"
+message = "Bundle scaffolded. Next: `dex run validate` then `dex run deploy` (dev target). Edit workspace hosts in databricks.yml first."

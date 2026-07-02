@@ -1,0 +1,28 @@
+[project]
+name = "{{ project_name }}"
+template = "dabs-platform"
+profile = "{{ profile }}"
+
+[skills]
+packs = ["default", "databricks"{% if include_agent %}, "agent-dev"{% endif %}]
+
+# Pass-throughs: `dex db ...` -> `databricks ...`
+[passthrough.db]
+command = "databricks"
+description = "Databricks CLI"
+
+# Tasks: `dex run <name>`
+[tasks.validate]
+command = "databricks bundle validate"
+
+[tasks.deploy]
+command = "databricks bundle deploy"
+
+[tasks.test]
+command = "uv run pytest"
+
+[tasks.lint]
+command = "uv run ruff check ."
+
+[tasks.typecheck]
+command = "uv run ty check"

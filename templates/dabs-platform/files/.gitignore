@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+
+# uv
+uv.lock
+
+# Databricks
+.databricks/
+.databricks-login.json
+
+# Node / Vite
+node_modules/
+frontend/dist/
+
+# Env
+.env

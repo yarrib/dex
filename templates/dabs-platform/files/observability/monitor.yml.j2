@@ -1,0 +1,29 @@
+resources:
+  quality_monitors:
+    {{ project_name }}_monitor:
+{% if include_realtime or include_experiment or include_agent %}
+      # Inference-quality monitor over the auto-captured serving table.
+      table_name: ${var.catalog}.${var.schema}.{{ project_name }}_inference_payload
+      output_schema_name: ${var.catalog}.${var.schema}
+      assets_dir: /Shared/{{ project_name }}/monitoring
+      inference_log:
+        granularities:
+          - "1 day"
+        timestamp_col: timestamp
+        model_id_col: model_id
+        prediction_col: prediction
+        label_col: label
+        problem_type: PROBLEM_TYPE_CLASSIFICATION
+      schedule:
+        quartz_cron_expression: "0 0 7 * * ?"
+        timezone_id: UTC
+{% else %}
+      # Data-quality (snapshot) monitor over the primary output table.
+      table_name: ${var.catalog}.${var.schema}.{{ project_name }}
+      output_schema_name: ${var.catalog}.${var.schema}
+      assets_dir: /Shared/{{ project_name }}/monitoring
+      snapshot: {}
+      schedule:
+        quartz_cron_expression: "0 0 7 * * ?"
+        timezone_id: UTC
+{% endif %}

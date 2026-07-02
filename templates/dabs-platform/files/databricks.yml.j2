@@ -1,0 +1,57 @@
+bundle:
+  name: {{ project_name }}
+
+artifacts:
+  {{ project_name }}_whl:
+    type: whl
+    build: uv build
+
+workspace:
+  host: ${var.workspace_host}
+
+variables:
+  workspace_host:
+    description: Databricks workspace host for the active target
+  catalog:
+    description: Unity Catalog catalog name
+    default: {{ catalog }}
+  schema:
+    description: Unity Catalog schema name
+    default: {{ project_name }}
+  team_group:
+    description: Owning team group
+    default: {{ team_group }}
+
+include:
+  - resources/*.yml
+{% if include_pipeline %}  - pipeline/*.yml
+{% endif %}{% if include_experiment %}  - ml/*.yml
+{% endif %}{% if include_realtime %}  - serving_rt/*.yml
+{% endif %}{% if include_batch %}  - serving_batch/*.yml
+{% endif %}{% if include_observability %}  - observability/*.yml
+{% endif %}{% if include_agent %}  - agent/*.yml
+{% endif %}{% if include_app %}  - app/*.yml
+{% endif %}{% if include_lakebase %}  - lakebase/*.yml
+{% endif %}
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      workspace_host: {{ workspace_host_dev }}
+      catalog: {{ catalog }}
+      schema: {{ project_name }}_dev
+
+  staging:
+    mode: development
+    variables:
+      workspace_host: {{ workspace_host_dev }}
+      catalog: {{ catalog }}
+      schema: {{ project_name }}_staging
+
+  prod:
+    mode: production
+    variables:
+      workspace_host: {{ workspace_host_prod }}
+      catalog: {{ catalog }}
+      schema: {{ project_name }}

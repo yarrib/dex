@@ -1,0 +1,29 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Delegates to the org's central reusable deploy workflow, once per target.
+jobs:
+  deploy-dev:
+    uses: {{ central_cd_ref }}
+    secrets: inherit
+    with:
+      target: dev
+
+  deploy-staging:
+    needs: deploy-dev
+    uses: {{ central_cd_ref }}
+    secrets: inherit
+    with:
+      target: staging
+
+  deploy-prod:
+    needs: deploy-staging
+    uses: {{ central_cd_ref }}
+    secrets: inherit
+    with:
+      target: prod
+      environment: prod

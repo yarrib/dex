@@ -22,6 +22,7 @@ _(nothing active)_
 
 - [x] Initial Rust core — template engine, config, file I/O (`dex-core`)
 - [x] Native binary CLI (`dex-cli`) — `dex init`, `dex add`, `dex skills`, `dex templates`, `dex mcp`, `dex run`
+- [x] `dabs-platform` — profile-driven Databricks Asset Bundle template (presets: `data_eng`, `mlops`, `agents`, `extraction_agents`); supersedes `dabs-package`/`dabs-etl`/`dabs-ml`/`dabs-aiagent`
 - [x] `default`, `python-package`, `dabs-package`, `dabs-etl`, `dabs-ml`, `dabs-aiagent` templates
 - [x] Multi-variable scaffolding — all manifest variables prompted interactively
 - [x] `dex.toml` written by `dex init` (unblocks `dex add`)
