@@ -45,13 +45,18 @@ Without `--preset`/`--no-prompt`, dex prompts for every variable (power-user pat
 `include_app`, `include_lakebase`, and `include_react` are wired and testable but not
 enabled by any of these four profiles (they belong to a future user-facing-agent profile).
 
-### Gating gotcha
+### Gating style
 
 `[[files]]` conditions and `{% raw %}{% if %}{% endraw %}` blocks test a variable for
-truthiness. A preset value is applied as a **string**, and any non-empty string —
-including `"false"` — is truthy. So each preset lists only the bools it wants **on** (as
-`"true"`) and omits the rest; omitted bools fall back to the template default `false` via
-`--no-prompt`, which is the correct off state. Never put `include_x = "false"` in a preset.
+truthiness. Each preset lists only the bools it wants **on** (as `"true"`) and omits the
+rest; omitted bools fall back to the template default `false`, which is the correct off
+state.
+
+> Historically a preset value was applied as a raw string, and any non-empty string —
+> including `"false"` — was truthy, so a `"false"` bool would wrongly *enable* its
+> component. **dex ≥ 0.6 coerces typed pre-fills**, so an explicit `include_x = "false"`
+> now gates OFF correctly too. Omission is still the recommended style — it keeps presets
+> minimal — but `"false"` is no longer a footgun.
 
 ## Org distribution
 

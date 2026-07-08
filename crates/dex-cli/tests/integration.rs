@@ -277,6 +277,49 @@ fn dabs_platform_no_preset_has_baseline_only() {
     assert_gated_dirs(&project_dir, &[]);
 }
 
+#[test]
+fn dabs_platform_preset_explicit_false_bool_gates_off() {
+    // Regression for typed pre-fill coercion: a preset bool of "false" must gate its
+    // dir OFF. Before the fix, "false" was inserted as a raw (truthy) string and the
+    // gated dir was wrongly included.
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("proj_falsebool");
+    std::fs::create_dir(&project_dir).unwrap();
+
+    let presets_file = base.path().join("presets.toml");
+    std::fs::write(
+        &presets_file,
+        "[profiles.mix]\ninclude_pipeline = \"true\"\ninclude_experiment = \"false\"\n",
+    )
+    .unwrap();
+
+    dex()
+        .env("PATH", "")
+        .args([
+            "init",
+            "--template",
+            "dabs-platform",
+            "--no-prompt",
+            "--preset",
+            "mix",
+            "--presets-file",
+        ])
+        .arg(&presets_file)
+        .arg("--dir")
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    assert!(
+        project_dir.join("pipeline").is_dir(),
+        "include_pipeline=\"true\" should include pipeline/"
+    );
+    assert!(
+        !project_dir.join("ml").is_dir(),
+        "include_experiment=\"false\" should exclude ml/"
+    );
+}
+
 // --- MCP server integration tests ---
 
 #[test]

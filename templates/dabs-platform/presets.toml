@@ -7,11 +7,11 @@
 # Copy this file to ~/.config/dex/presets.toml (or your org registry) so `--preset`
 # resolves without `--presets-file`.
 #
-# IMPORTANT — gating bools:
-#   Each profile lists ONLY the include_* bools it wants ON (as "true"). A preset
-#   value is applied as a string, and a non-empty string is truthy, so a bool set to
-#   "false" would wrongly ENABLE its component. Omitted bools fall back to the
-#   template default (false) via --no-prompt, which is the correct off state.
+# Gating bools:
+#   Each profile lists ONLY the include_* bools it wants ON (as "true"); omitted
+#   bools fall back to the template default (false). dex >= 0.6 coerces typed
+#   pre-fills, so an explicit `include_x = "false"` also correctly gates OFF — but
+#   omission keeps these profiles minimal and is the recommended style.
 
 [profiles.data_eng]
 profile = "data_eng_eus2_azure"
