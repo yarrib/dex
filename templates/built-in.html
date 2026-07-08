@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-5e17f7c6.js";
+            window.path_to_searchindex_js = "../searchindex-736fb53a.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-6c6f2bef.js"></script>
+        <script src="../toc-c6c7f024.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -181,7 +181,7 @@
                 <div id="mdbook-content" class="content">
                     <main>
                         <h1 id="built-in-templates"><a class="header" href="#built-in-templates">Built-in Templates</a></h1>
-<p>dex ships five built-in templates, embedded in the binary at compile time. All support <code>--no-prompt</code> for CI/scripting use.</p>
+<p>dex ships a family of built-in templates, embedded in the binary at compile time. All support <code>--no-prompt</code> for CI/scripting use.</p>
 <h2 id="choosing-a-template"><a class="header" href="#choosing-a-template">Choosing a template</a></h2>
 <div class="table-wrapper">
 <table>
@@ -190,13 +190,54 @@
 </thead>
 <tbody>
 <tr><td><code>default</code></td><td>Starting a plain Python package or prototyping</td></tr>
-<tr><td><code>dabs-package</code></td><td>Building a production Databricks job in Python</td></tr>
-<tr><td><code>dabs-etl</code></td><td>Building a DLT pipeline with Autoloader ingestion</td></tr>
-<tr><td><code>dabs-ml</code></td><td>Training a model with MLflow and optionally serving it</td></tr>
-<tr><td><code>dabs-aiagent</code></td><td>Deploying an AI agent via mlflow.pyfunc + model serving</td></tr>
+<tr><td><strong><code>dabs-platform</code></strong></td><td><strong>Any Databricks Asset Bundle project — one profile-driven template covering data engineering, MLOps, and agent workloads (use with <code>--preset</code>)</strong></td></tr>
+<tr><td><code>dabs-package</code></td><td><em>(Deprecated — use <code>dabs-platform</code>)</em> Databricks job in Python</td></tr>
+<tr><td><code>dabs-etl</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset data_eng</code>)</em> DLT pipeline</td></tr>
+<tr><td><code>dabs-ml</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset mlops</code>)</em> MLflow training + serving</td></tr>
+<tr><td><code>dabs-aiagent</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset agents</code>)</em> AI agent serving</td></tr>
 </tbody>
 </table>
 </div>
+<p>The four focused <code>dabs-*</code> templates below are <strong>superseded by <code>dabs-platform</code></strong>, which
+consolidates their baseline into a single template to avoid drift. They remain available
+for backwards compatibility.</p>
+<hr>
+<h2 id="dabs-platform"><a class="header" href="#dabs-platform">dabs-platform</a></h2>
+<p>A single Databricks Asset Bundle template, driven by <strong>profiles = presets</strong>. One baseline
+(uv, ruff, ty, pytest, dev/staging/prod targets, a base job, CI/CD callers) plus optional
+components gated by boolean variables. Pick a profile with <code>--preset</code>; interactive prompting
+is the power-user path.</p>
+<pre><code class="language-bash">dex init -t dabs-platform --preset data_eng \
+    --presets-file templates/dabs-platform/presets.toml --dir my_bundle
+</code></pre>
+<p><strong>Profiles</strong> (from <code>presets.toml</code>):</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Profile</th><th>Components enabled</th></tr>
+</thead>
+<tbody>
+<tr><td><code>data_eng</code></td><td>pipeline, observability (data quality)</td></tr>
+<tr><td><code>mlops</code></td><td>experiment + model, realtime serving, observability (inference)</td></tr>
+<tr><td><code>agents</code></td><td>experiment + model, realtime serving, observability, agent wrapper + eval</td></tr>
+<tr><td><code>extraction_agents</code></td><td>agents + batch inference, <code>shared_code_source = workspace</code> (monorepo)</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Gating variables</strong> (all default <code>false</code>; presets turn on only what they need):
+<code>include_pipeline</code>, <code>include_experiment</code>, <code>include_realtime</code>, <code>include_batch</code>,
+<code>include_observability</code>, <code>include_agent</code>, <code>include_app</code>, <code>include_lakebase</code>,
+<code>include_react</code>, plus <code>shared_code_source</code> (<code>none</code>/<code>workspace</code>/<code>path</code>/<code>wheel</code>).</p>
+<p><strong>Generated files:</strong> always emits <code>pyproject.toml</code>, <code>databricks.yml</code> (dev/staging/prod),
+<code>dex.toml</code>, a base job, <code>src/</code>, <code>tests/</code>, and <code>.github/workflows/{ci,cd}.yml</code> that call
+your org’s central reusable workflows (<code>central_ci_ref</code> / <code>central_cd_ref</code>). Each enabled
+component adds its own gated directory (<code>pipeline/</code>, <code>ml/</code>, <code>serving_rt/</code>, <code>serving_batch/</code>,
+<code>observability/</code>, <code>agent/</code>, <code>app/</code>, <code>lakebase/</code>, <code>frontend/</code>).</p>
+<blockquote>
+<p><strong>Distribution:</strong> point an org registry at this template with <code>[[templates.remotes]]</code>
+in <code>~/.config/dex/config.toml</code>, and ship org constants via <code>standards.toml</code>. See the
+template’s own README (<code>templates/dabs-platform/README.md</code>).</p>
+</blockquote>
 <hr>
 <h2 id="default"><a class="header" href="#default">default</a></h2>
 <p>A minimal Python package for general-purpose development.</p>
@@ -231,6 +272,9 @@ README.md
 </code></pre>
 <hr>
 <h2 id="dabs-package"><a class="header" href="#dabs-package">dabs-package</a></h2>
+<blockquote>
+<p><strong>Deprecated — superseded by <code>dabs-platform</code>.</strong> Retained for backwards compatibility.</p>
+</blockquote>
 <p>A full Databricks Asset Bundle Python package. The go-to template for production Databricks jobs.</p>
 <p><strong>When to use:</strong> Any Databricks job that runs Python code — ETL scripts, batch jobs, data quality checks. Includes multi-target deploy config (dev/staging/prod) out of the box.</p>
 <pre><code class="language-bash">dex init --template dabs-package --dir my_project
@@ -268,6 +312,9 @@ README.md
 </code></pre>
 <hr>
 <h2 id="dabs-etl"><a class="header" href="#dabs-etl">dabs-etl</a></h2>
+<blockquote>
+<p><strong>Deprecated — superseded by <code>dabs-platform</code> (<code>--preset data_eng</code>).</strong> Retained for backwards compatibility.</p>
+</blockquote>
 <p>A DLT (Delta Live Tables) pipeline project with Autoloader ingestion.</p>
 <p><strong>When to use:</strong> Streaming or batch ingestion pipelines where data arrives in cloud storage and needs to be loaded into Delta tables. Autoloader handles schema inference and file tracking automatically.</p>
 <pre><code class="language-bash">dex init --template dabs-etl --dir my_pipeline
@@ -305,6 +352,9 @@ README.md
 </code></pre>
 <hr>
 <h2 id="dabs-ml"><a class="header" href="#dabs-ml">dabs-ml</a></h2>
+<blockquote>
+<p><strong>Deprecated — superseded by <code>dabs-platform</code> (<code>--preset mlops</code>).</strong> Retained for backwards compatibility.</p>
+</blockquote>
 <p>An MLflow training project with model registry integration and optional model serving.</p>
 <p><strong>When to use:</strong> Supervised ML workflows — feature engineering, training, evaluation, and registration to Unity Catalog model registry. Optionally deploys a real-time serving endpoint.</p>
 <pre><code class="language-bash">dex init --template dabs-ml --dir my_model
@@ -344,6 +394,9 @@ README.md
 </code></pre>
 <hr>
 <h2 id="dabs-aiagent"><a class="header" href="#dabs-aiagent">dabs-aiagent</a></h2>
+<blockquote>
+<p><strong>Deprecated — superseded by <code>dabs-platform</code> (<code>--preset agents</code>).</strong> Retained for backwards compatibility.</p>
+</blockquote>
 <p>An AI agent project using <code>mlflow.pyfunc</code> for packaging and Databricks model serving for deployment.</p>
 <p><strong>When to use:</strong> Building a custom AI agent or LLM-powered application that needs to be deployed as a Databricks model serving endpoint. Optionally includes a vector search retriever for RAG patterns.</p>
 <pre><code class="language-bash">dex init --template dabs-aiagent --dir my_agent
