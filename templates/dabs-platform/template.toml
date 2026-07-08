@@ -92,9 +92,9 @@ default = false
 required = false
 
 # ---------------------------------------------------------------------------
-# Gating bools — ALL default to false. Presets set only the ones they want on.
-# (A preset value of "false" would be a truthy string in the engine, so presets
-#  must OMIT false bools and let these defaults apply.)
+# Gating bools — ALL default to false. Presets set only the ones they want on
+# (omitted bools fall back to these defaults; dex >= 0.6 also coerces an explicit
+#  "false" pre-fill correctly).
 # ---------------------------------------------------------------------------
 [[variables]]
 name = "include_pipeline"

@@ -152,7 +152,7 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
 
         // Pre-fill: preset or standards value skips the prompt entirely.
         if let Some(val) = prefills.get(&spec.name) {
-            variables.insert(spec.name.clone(), minijinja::Value::from(val.clone()));
+            variables.insert(spec.name.clone(), prefill_to_value(&spec.var_type, val));
             continue;
         }
 
@@ -554,6 +554,22 @@ fn toml_val_to_minijinja(v: &toml::Value) -> minijinja::Value {
     }
 }
 
+/// Coerce a pre-fill string (from a preset or standards file) into a typed
+/// minijinja value according to the variable's declared type.
+///
+/// Preset and standards values always arrive as strings. Without this coercion a
+/// `bool` pre-filled as `"false"` becomes a non-empty — and therefore *truthy* —
+/// minijinja string, silently enabling the `[[files]]` conditions and `{% if %}`
+/// blocks that gate on it. Bools are parsed with the same empty-or-`"true"`
+/// convention used for defaults; choice/multi/string values stay strings, which
+/// is how the rest of the prompt loop represents them.
+fn prefill_to_value(var_type: &VariableType, raw: &str) -> minijinja::Value {
+    match var_type {
+        VariableType::Bool => minijinja::Value::from(raw.is_empty() || raw == "true"),
+        _ => minijinja::Value::from(raw.to_string()),
+    }
+}
+
 fn toml_value_to_string(v: &toml::Value) -> String {
     match v {
         toml::Value::String(s) => s.clone(),
@@ -632,4 +648,43 @@ fn evaluate_when(expr: &str, vars: &HashMap<String, minijinja::Value>) -> bool {
     let source = format!("{{% if {expr} %}}true{{% else %}}false{{% endif %}}");
     env.render_str(&source, vars)
         .is_ok_and(|r| r.trim() == "true")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prefill_bool_false_is_not_truthy() {
+        // Regression: a preset/standards bool set to "false" must gate OFF, not on.
+        assert!(!prefill_to_value(&VariableType::Bool, "false").is_true());
+    }
+
+    #[test]
+    fn prefill_bool_true_is_truthy() {
+        assert!(prefill_to_value(&VariableType::Bool, "true").is_true());
+    }
+
+    #[test]
+    fn prefill_bool_empty_defaults_to_true() {
+        // Matches the empty-or-"true" convention used elsewhere for bool defaults.
+        assert!(prefill_to_value(&VariableType::Bool, "").is_true());
+    }
+
+    #[test]
+    fn prefill_bool_arbitrary_string_is_not_truthy() {
+        assert!(!prefill_to_value(&VariableType::Bool, "nope").is_true());
+    }
+
+    #[test]
+    fn prefill_choice_stays_string() {
+        let v = prefill_to_value(&VariableType::Choice, "workspace");
+        assert_eq!(v.as_str(), Some("workspace"));
+    }
+
+    #[test]
+    fn prefill_string_stays_string() {
+        let v = prefill_to_value(&VariableType::String, "eng_eus2");
+        assert_eq!(v.as_str(), Some("eng_eus2"));
+    }
 }
