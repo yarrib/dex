@@ -7,6 +7,7 @@ interface Props {
 
 const TEMPLATE_ICONS: Record<string, string> = {
   default: "P",
+  "dabs-platform": "DB",
   "dabs-ml": "ML",
   "dabs-etl": "E",
   "dabs-package": "Pk",

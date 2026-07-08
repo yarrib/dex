@@ -1,0 +1,33 @@
+{% if shared_code_source != "none" -%}
+"""Agent wrapper for {{ project_name }}.
+
+Imports shared extraction/agent logic from the monorepo `shared` package
+(shared_code_source = "{{ shared_code_source }}").
+"""
+
+from shared import build_agent  # provided by the monorepo workspace
+
+
+def get_agent():
+    """Entry point used by serving / eval jobs."""
+    return build_agent()
+{% else -%}
+"""Agent wrapper for {{ project_name }}.
+
+Self-contained agent starter (no shared-code dependency).
+"""
+
+
+def build_agent():
+    """Return a minimal callable agent. Replace with real logic."""
+
+    def _agent(prompt: str) -> str:
+        return f"[{{ project_name }}] echo: {prompt}"
+
+    return _agent
+
+
+def get_agent():
+    """Entry point used by serving / eval jobs."""
+    return build_agent()
+{% endif -%}

@@ -142,6 +142,141 @@ fn init_default_template_no_prompt_creates_files() {
     );
 }
 
+// --- dabs-platform preset matrix tests ---
+
+/// Path to the shipped `dabs-platform` presets file (guards the real presets).
+fn dabs_platform_presets() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../templates/dabs-platform/presets.toml")
+}
+
+/// Scaffold `dabs-platform` with a preset into a fresh dir and return that dir.
+///
+/// `PATH` is cleared so the template's `[on_success] run = "uv sync"` hook is a
+/// no-op (the hook is non-fatal when the command is missing), keeping the test
+/// hermetic and fast — we only assert on the gated directory layout.
+fn scaffold_dabs_preset(preset: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join(format!("proj_{preset}"));
+    std::fs::create_dir(&project_dir).unwrap();
+
+    dex()
+        .env("PATH", "")
+        .args([
+            "init",
+            "--template",
+            "dabs-platform",
+            "--no-prompt",
+            "--preset",
+            preset,
+            "--presets-file",
+        ])
+        .arg(dabs_platform_presets())
+        .arg("--dir")
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    (base, project_dir)
+}
+
+/// Assert the set of gated top-level directories present in a scaffolded project.
+fn assert_gated_dirs(project_dir: &std::path::Path, expected_present: &[&str]) {
+    let all_gated = [
+        "pipeline",
+        "ml",
+        "serving_rt",
+        "serving_batch",
+        "observability",
+        "agent",
+        "app",
+        "lakebase",
+        "frontend",
+    ];
+    for dir in all_gated {
+        let exists = project_dir.join(dir).is_dir();
+        let should = expected_present.contains(&dir);
+        assert_eq!(
+            exists, should,
+            "gated dir `{dir}` presence mismatch in {project_dir:?} (expected present={should})"
+        );
+    }
+    // The always-on baseline must exist regardless of preset.
+    assert!(project_dir.join("databricks.yml").is_file());
+    assert!(project_dir.join("resources").is_dir());
+    assert!(project_dir.join(".github/workflows/ci.yml").is_file());
+}
+
+#[test]
+fn dabs_platform_data_eng_preset_matches_matrix() {
+    let (_base, dir) = scaffold_dabs_preset("data_eng");
+    assert_gated_dirs(&dir, &["pipeline", "observability"]);
+}
+
+#[test]
+fn dabs_platform_mlops_preset_matches_matrix() {
+    let (_base, dir) = scaffold_dabs_preset("mlops");
+    assert_gated_dirs(&dir, &["ml", "serving_rt", "observability"]);
+}
+
+#[test]
+fn dabs_platform_agents_preset_matches_matrix() {
+    let (_base, dir) = scaffold_dabs_preset("agents");
+    assert_gated_dirs(&dir, &["ml", "serving_rt", "observability", "agent"]);
+}
+
+#[test]
+fn dabs_platform_extraction_agents_preset_matches_matrix() {
+    let (_base, dir) = scaffold_dabs_preset("extraction_agents");
+    assert_gated_dirs(
+        &dir,
+        &[
+            "ml",
+            "serving_rt",
+            "serving_batch",
+            "observability",
+            "agent",
+        ],
+    );
+
+    // extraction_agents couples to a monorepo: the shared lib is a uv workspace source
+    // and the agent wrapper imports it.
+    let pyproject = std::fs::read_to_string(dir.join("pyproject.toml")).unwrap();
+    assert!(
+        pyproject.contains("[tool.uv.sources]")
+            && pyproject.contains("shared = { workspace = true }"),
+        "extraction_agents pyproject should declare `shared` as a uv workspace source"
+    );
+    let wrapper = std::fs::read_to_string(dir.join("agent/agent_wrapper.py")).unwrap();
+    assert!(
+        wrapper.contains("from shared import"),
+        "extraction_agents agent wrapper should import the shared package"
+    );
+}
+
+#[test]
+fn dabs_platform_no_preset_has_baseline_only() {
+    // With no preset and --no-prompt, all gating bools default to false.
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("proj_bare");
+    std::fs::create_dir(&project_dir).unwrap();
+
+    dex()
+        .env("PATH", "")
+        .args([
+            "init",
+            "--template",
+            "dabs-platform",
+            "--no-prompt",
+            "--dir",
+        ])
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    assert_gated_dirs(&project_dir, &[]);
+}
+
 // --- MCP server integration tests ---
 
 #[test]

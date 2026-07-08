@@ -17,8 +17,8 @@ Auto-detects your platform and downloads the right binary from GitHub Releases.
 ## Quick Start
 
 ```bash
-# Scaffold a new project
-dex init --template dabs-package --dir my_project
+# Scaffold a new Databricks Asset Bundle (profile-driven)
+dex init --template dabs-platform --preset data_eng --dir my_project
 
 # Add pass-throughs and custom templates via dex.toml
 cat dex.toml

@@ -1,0 +1,53 @@
+# Presets for the dabs-platform template.
+#
+# Usage:
+#   dex init -t dabs-platform --preset <profile> \
+#       --presets-file templates/dabs-platform/presets.toml --dir <path>
+#
+# Copy this file to ~/.config/dex/presets.toml (or your org registry) so `--preset`
+# resolves without `--presets-file`.
+#
+# IMPORTANT — gating bools:
+#   Each profile lists ONLY the include_* bools it wants ON (as "true"). A preset
+#   value is applied as a string, and a non-empty string is truthy, so a bool set to
+#   "false" would wrongly ENABLE its component. Omitted bools fall back to the
+#   template default (false) via --no-prompt, which is the correct off state.
+
+[profiles.data_eng]
+profile = "data_eng_eus2_azure"
+catalog = "eng_eus2"
+workspace_host_dev = "https://adb-0000000000000000.0.dev-eus2.azuredatabricks.net"
+workspace_host_prod = "https://adb-0000000000000000.0.prod-eus2.azuredatabricks.net"
+include_pipeline = "true"
+include_observability = "true"
+
+[profiles.mlops]
+profile = "mlops_eus2_azure"
+catalog = "ml_eus2"
+workspace_host_dev = "https://adb-0000000000000000.0.dev-eus2.azuredatabricks.net"
+workspace_host_prod = "https://adb-0000000000000000.0.prod-eus2.azuredatabricks.net"
+include_experiment = "true"
+include_realtime = "true"
+include_observability = "true"
+
+[profiles.agents]
+profile = "agents_eus2_azure"
+catalog = "ml_eus2"
+workspace_host_dev = "https://adb-0000000000000000.0.dev-eus2.azuredatabricks.net"
+workspace_host_prod = "https://adb-0000000000000000.0.prod-eus2.azuredatabricks.net"
+include_experiment = "true"
+include_realtime = "true"
+include_observability = "true"
+include_agent = "true"
+
+[profiles.extraction_agents]
+profile = "extraction_agents_eus2_azure"
+catalog = "ml_eus2"
+workspace_host_dev = "https://adb-0000000000000000.0.dev-eus2.azuredatabricks.net"
+workspace_host_prod = "https://adb-0000000000000000.0.prod-eus2.azuredatabricks.net"
+include_experiment = "true"
+include_realtime = "true"
+include_batch = "true"
+include_observability = "true"
+include_agent = "true"
+shared_code_source = "workspace"

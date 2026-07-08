@@ -1,6 +1,6 @@
 [template]
 name = "dabs-ml"
-description = "Databricks Asset Bundle ML project with MLflow training, model registry, and optional serving"
+description = "[Deprecated — use dabs-platform --preset mlops] Databricks Asset Bundle ML project with MLflow training, model registry, and optional serving"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 

@@ -1,0 +1,6 @@
+resources:
+  apps:
+    {{ project_name }}_app:
+      name: ${bundle.target}-{{ project_name }}-app
+      description: "{{ project_name }} Databricks App ({{ profile }})"
+      source_code_path: ./app

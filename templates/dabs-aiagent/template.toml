@@ -1,6 +1,6 @@
 [template]
 name = "dabs-aiagent"
-description = "Databricks Asset Bundle AI agent — plain Python, mlflow.pyfunc, model serving via DABs job"
+description = "[Deprecated — use dabs-platform --preset agents] Databricks Asset Bundle AI agent — plain Python, mlflow.pyfunc, model serving via DABs job"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 

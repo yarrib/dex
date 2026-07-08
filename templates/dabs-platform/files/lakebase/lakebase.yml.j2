@@ -1,0 +1,18 @@
+# Lakebase (Postgres) resources. Parent -> child ordering matters.
+# NOTE: `databricks bundle destroy` does NOT tear down Lakebase projects — delete
+# them via the CLI. Requires databricks CLI >= 0.287.0.
+resources:
+  postgres_projects:
+    {{ project_name }}_pg:
+      name: ${bundle.target}-{{ project_name }}
+
+  postgres_branches:
+    {{ project_name }}_pg_main:
+      project_id: ${resources.postgres_projects.{{ project_name }}_pg.id}
+      name: main
+
+  postgres_endpoints:
+    {{ project_name }}_pg_endpoint:
+      project_id: ${resources.postgres_projects.{{ project_name }}_pg.id}
+      branch_id: ${resources.postgres_branches.{{ project_name }}_pg_main.id}
+      type: READ_WRITE

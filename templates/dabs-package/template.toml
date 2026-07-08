@@ -1,6 +1,6 @@
 [template]
 name = "dabs-package"
-description = "Databricks Asset Bundle Python package project"
+description = "[Deprecated — use dabs-platform] Databricks Asset Bundle Python package project"
 version = "0.1.0"
 min_dex_version = "0.1.0"
 
