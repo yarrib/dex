@@ -6,7 +6,7 @@ pub mod registry;
 pub mod variables;
 
 pub use engine::TemplateEngine;
-pub use manifest::{FileRule, OnSuccessSpec, TemplateManifest, TemplateSkillsSpec};
+pub use manifest::{FileRule, HooksSpec, OnSuccessSpec, TemplateManifest, TemplateSkillsSpec};
 pub use registry::TemplateSource;
 pub use variables::{VariableSpec, VariableType};
 
@@ -34,4 +34,7 @@ pub struct Template {
     pub suggested_skills: Vec<String>,
     /// Post-scaffold activation config (from `[on_success]` in `template.toml`).
     pub on_success: Option<OnSuccessSpec>,
+    /// Hook commands (from `[hooks]` in `template.toml`). Only the
+    /// `pre_update`/`post_update` hooks are executed (by `dex update`).
+    pub hooks: Option<HooksSpec>,
 }

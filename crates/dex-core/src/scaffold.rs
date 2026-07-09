@@ -1,6 +1,6 @@
 //! Scaffolding: render a template into a target directory.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 
 use crate::error::DexError;
@@ -16,30 +16,73 @@ pub struct ScaffoldResult {
     pub on_success: Option<OnSuccessSpec>,
 }
 
-/// Scaffold a project from a template into a target directory.
+/// A fully rendered template: final relative paths (variables interpolated,
+/// `.j2` stripped) mapped to rendered content. Pure data — nothing on disk.
 ///
-/// Renders all template files through the Jinja2 engine with the given variables,
-/// writing the results to `target_dir`. File paths containing `{{ var }}` syntax
-/// are also rendered (variable interpolation in paths).
-pub fn scaffold(
+/// This is the unit `dex update` compares: rendering the same template at two
+/// refs with the same answers yields two `RenderedTree`s to diff.
+#[derive(Debug, Default, PartialEq)]
+pub struct RenderedTree {
+    pub files: BTreeMap<PathBuf, String>,
+}
+
+impl RenderedTree {
+    /// Read a previously written tree back from a directory (e.g. the
+    /// `.dex/cache/baseline/` written at init time).
+    pub fn from_dir(dir: &Path) -> Result<Self, DexError> {
+        let mut files = BTreeMap::new();
+
+        if !dir.is_dir() {
+            return Ok(Self { files });
+        }
+
+        for entry in walkdir::WalkDir::new(dir) {
+            let entry = entry.map_err(|e| DexError::Io {
+                path: dir.to_path_buf(),
+                source: std::io::Error::other(e),
+            })?;
+
+            if entry.file_type().is_file() {
+                let rel = entry
+                    .path()
+                    .strip_prefix(dir)
+                    .map_err(|e| DexError::Io {
+                        path: entry.path().to_path_buf(),
+                        source: std::io::Error::other(e),
+                    })?
+                    .to_path_buf();
+
+                let content =
+                    std::fs::read_to_string(entry.path()).map_err(|source| DexError::Io {
+                        path: entry.path().to_path_buf(),
+                        source,
+                    })?;
+
+                files.insert(rel, content);
+            }
+        }
+
+        Ok(Self { files })
+    }
+}
+
+/// One rendered template file, keeping the source path so write policies
+/// (file rules are keyed on source paths) can still be applied.
+struct RenderedEntry {
+    source: PathBuf,
+    dest: PathBuf,
+    content: String,
+}
+
+/// Render every included template file without touching the filesystem.
+fn render_entries(
     template: &Template,
-    target_dir: &Path,
     variables: &HashMap<String, minijinja::Value>,
-) -> Result<ScaffoldResult, DexError> {
+) -> Result<Vec<RenderedEntry>, DexError> {
     let engine = TemplateEngine::new();
     let context = minijinja::Value::from_serialize(variables);
 
-    let mut files_created = Vec::new();
-    let mut directories_created = Vec::new();
-
-    // Create the target directory if it doesn't exist.
-    if !target_dir.exists() {
-        std::fs::create_dir_all(target_dir).map_err(|source| DexError::Io {
-            path: target_dir.to_path_buf(),
-            source,
-        })?;
-        directories_created.push(target_dir.to_path_buf());
-    }
+    let mut entries = Vec::new();
 
     for (rel_path, content) in &template.files {
         // Check file rules for conditional inclusion.
@@ -58,10 +101,102 @@ pub fn scaffold(
             rendered_path
         };
 
-        let dest = target_dir.join(&final_path);
+        // Render content through template engine if it's a .j2 file.
+        let is_template = rel_path.extension().and_then(|e| e.to_str()) == Some("j2");
+
+        let rendered_content = if is_template {
+            engine.render_string(content, &context)?
+        } else {
+            content.clone()
+        };
+
+        entries.push(RenderedEntry {
+            source: rel_path.clone(),
+            dest: final_path,
+            content: rendered_content,
+        });
+    }
+
+    Ok(entries)
+}
+
+/// Render a template fully in memory with the given variables.
+///
+/// Applies `[[files]]` condition rules and path/content rendering exactly like
+/// [`scaffold`], but performs no filesystem writes and no overwrite checks.
+pub fn render_tree(
+    template: &Template,
+    variables: &HashMap<String, minijinja::Value>,
+) -> Result<RenderedTree, DexError> {
+    let files = render_entries(template, variables)?
+        .into_iter()
+        .map(|e| (e.dest, e.content))
+        .collect();
+    Ok(RenderedTree { files })
+}
+
+/// Write a rendered tree into a directory, creating parents as needed.
+/// Existing files are overwritten unconditionally. Returns the relative
+/// paths written.
+pub fn write_tree(tree: &RenderedTree, target_dir: &Path) -> Result<Vec<PathBuf>, DexError> {
+    if !target_dir.exists() {
+        std::fs::create_dir_all(target_dir).map_err(|source| DexError::Io {
+            path: target_dir.to_path_buf(),
+            source,
+        })?;
+    }
+
+    let mut written = Vec::new();
+
+    for (rel_path, content) in &tree.files {
+        let dest = target_dir.join(rel_path);
+
+        if let Some(parent) = dest.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|source| DexError::Io {
+                path: parent.to_path_buf(),
+                source,
+            })?;
+        }
+
+        std::fs::write(&dest, content).map_err(|source| DexError::Io {
+            path: dest.clone(),
+            source,
+        })?;
+        written.push(rel_path.clone());
+    }
+
+    Ok(written)
+}
+
+/// Scaffold a project from a template into a target directory.
+///
+/// Renders all template files through the Jinja2 engine with the given variables,
+/// writing the results to `target_dir`. File paths containing `{{ var }}` syntax
+/// are also rendered (variable interpolation in paths).
+pub fn scaffold(
+    template: &Template,
+    target_dir: &Path,
+    variables: &HashMap<String, minijinja::Value>,
+) -> Result<ScaffoldResult, DexError> {
+    let mut files_created = Vec::new();
+    let mut directories_created = Vec::new();
+
+    // Create the target directory if it doesn't exist.
+    if !target_dir.exists() {
+        std::fs::create_dir_all(target_dir).map_err(|source| DexError::Io {
+            path: target_dir.to_path_buf(),
+            source,
+        })?;
+        directories_created.push(target_dir.to_path_buf());
+    }
+
+    for entry in render_entries(template, variables)? {
+        let dest = target_dir.join(&entry.dest);
 
         // Respect file rule overwrite flag: skip if file exists and rule says don't overwrite.
-        if dest.exists() && !get_overwrite_flag(rel_path, &template.file_rules) {
+        if dest.exists() && !get_overwrite_flag(&entry.source, &template.file_rules) {
             continue;
         }
 
@@ -76,20 +211,11 @@ pub fn scaffold(
             directories_created.push(parent.to_path_buf());
         }
 
-        // Render content through template engine if it's a .j2 file.
-        let is_template = rel_path.extension().and_then(|e| e.to_str()) == Some("j2");
-
-        let rendered_content = if is_template {
-            engine.render_string(content, &context)?
-        } else {
-            content.clone()
-        };
-
-        std::fs::write(&dest, &rendered_content).map_err(|source| DexError::Io {
+        std::fs::write(&dest, &entry.content).map_err(|source| DexError::Io {
             path: dest.clone(),
             source,
         })?;
-        files_created.push(final_path);
+        files_created.push(entry.dest);
     }
 
     Ok(ScaffoldResult {
@@ -158,6 +284,7 @@ mod tests {
             files,
             suggested_skills: vec![],
             on_success: None,
+            hooks: None,
         }
     }
 
@@ -240,5 +367,81 @@ mod tests {
         let result = scaffold(&template, dir.path(), &vars).unwrap();
         assert_eq!(result.files_created.len(), 1);
         assert!(!dir.path().join(".github/ci.yml").exists());
+    }
+
+    #[test]
+    fn render_tree_matches_scaffold_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut files = HashMap::new();
+        files.insert(PathBuf::from("README.md"), "# Hello".to_string());
+        files.insert(
+            PathBuf::from("src/{{ project_name }}/main.py.j2"),
+            "# Project: {{ project_name }}".to_string(),
+        );
+
+        let template = make_template(files, vec![]);
+        let mut vars = HashMap::new();
+        vars.insert("project_name".to_string(), minijinja::Value::from("proj"));
+
+        let tree = render_tree(&template, &vars).unwrap();
+        assert_eq!(tree.files.len(), 2);
+        assert_eq!(
+            tree.files.get(Path::new("src/proj/main.py")).unwrap(),
+            "# Project: proj"
+        );
+
+        scaffold(&template, dir.path(), &vars).unwrap();
+        for (rel, content) in &tree.files {
+            assert_eq!(
+                &std::fs::read_to_string(dir.path().join(rel)).unwrap(),
+                content
+            );
+        }
+    }
+
+    #[test]
+    fn render_tree_applies_condition_rules() {
+        let mut files = HashMap::new();
+        files.insert(PathBuf::from(".github/ci.yml"), "name: CI".to_string());
+        files.insert(PathBuf::from("README.md"), "# Hello".to_string());
+
+        let rules = vec![FileRule {
+            src: ".github/".to_string(),
+            dest: None,
+            condition: Some("include_ci".to_string()),
+            overwrite: false,
+            context_role: None,
+            context_description: None,
+        }];
+
+        let template = make_template(files, rules);
+        let mut vars = HashMap::new();
+        vars.insert("include_ci".to_string(), minijinja::Value::from(false));
+
+        let tree = render_tree(&template, &vars).unwrap();
+        assert_eq!(tree.files.len(), 1);
+        assert!(tree.files.contains_key(Path::new("README.md")));
+    }
+
+    #[test]
+    fn write_tree_and_from_dir_round_trip() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut files = BTreeMap::new();
+        files.insert(PathBuf::from("a.txt"), "alpha\n".to_string());
+        files.insert(PathBuf::from("nested/b.txt"), "beta\n".to_string());
+        let tree = RenderedTree { files };
+
+        let written = write_tree(&tree, dir.path()).unwrap();
+        assert_eq!(written.len(), 2);
+
+        let read_back = RenderedTree::from_dir(dir.path()).unwrap();
+        assert_eq!(read_back, tree);
+    }
+
+    #[test]
+    fn from_dir_missing_directory_is_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let tree = RenderedTree::from_dir(&dir.path().join("nope")).unwrap();
+        assert!(tree.files.is_empty());
     }
 }

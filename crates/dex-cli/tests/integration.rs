@@ -142,6 +142,51 @@ fn init_default_template_no_prompt_creates_files() {
     );
 }
 
+#[test]
+fn init_writes_dex_update_state() {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("statefulproj");
+    std::fs::create_dir(&project_dir).unwrap();
+
+    dex()
+        .args(["init", "--template", "default", "--no-prompt", "--dir"])
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    let dex_dir = project_dir.join(".dex");
+    let manifest = dex_dir.join("manifest.toml");
+    assert!(manifest.is_file(), "expected .dex/manifest.toml");
+    assert!(
+        dex_dir.join("history.toml").is_file(),
+        "expected .dex/history.toml"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dex_dir.join(".gitignore")).unwrap(),
+        "cache/\n",
+        "expected .dex/.gitignore to ignore cache/"
+    );
+    assert!(
+        dex_dir.join("cache/baseline").is_dir(),
+        "expected .dex/cache/baseline/ rendered baseline"
+    );
+
+    // Manifest records the embedded source and version-as-ref.
+    let manifest_body = std::fs::read_to_string(&manifest).unwrap();
+    assert!(
+        manifest_body.contains("name = \"default\""),
+        "manifest should record template name: {manifest_body}"
+    );
+    assert!(
+        manifest_body.contains("source = \"embedded\""),
+        "manifest should record embedded source: {manifest_body}"
+    );
+    assert!(
+        manifest_body.contains("[answers]"),
+        "manifest should have an [answers] section: {manifest_body}"
+    );
+}
+
 // --- dabs-platform preset matrix tests ---
 
 /// Path to the shipped `dabs-platform` presets file (guards the real presets).

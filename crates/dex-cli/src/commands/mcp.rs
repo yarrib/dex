@@ -27,6 +27,7 @@ use dex_core::skills::{InstallTarget, install_skills, load_pack};
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
+use dex_core::update::{SourceKind, record_project_state};
 use dex_core::{DexError, scaffold};
 
 use crate::output;
@@ -489,6 +490,19 @@ fn tool_scaffold_project(args: &Value) -> Result<String, DexError> {
 
     // Write .context-map.json (best-effort).
     let _ = write_context_map(&result, &template, &target, &variables);
+
+    // Record `.dex/` state so the scaffolded project is updatable via
+    // `dex update` (best-effort; MCP templates are always embedded, so the
+    // recorded ref is the template version).
+    let _ = record_project_state(
+        &target,
+        &template,
+        SourceKind::Embedded,
+        None,
+        template.meta.version.clone(),
+        env!("CARGO_PKG_VERSION"),
+        &variables,
+    );
 
     let file_list = result
         .files_created

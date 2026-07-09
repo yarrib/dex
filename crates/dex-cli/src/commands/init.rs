@@ -8,14 +8,16 @@ use console::style;
 use dialoguer::{Confirm, Input, MultiSelect, Select};
 
 use dex_core::config::{
-    load_answers, load_dex_config, load_preset, load_standards, resolve_remote, save_answers,
+    RemoteSource, git_head_sha, load_answers, load_dex_config, load_preset, load_standards,
+    remote_cache_dir, resolve_remote, save_answers,
 };
 use dex_core::context_map::write_context_map;
 use dex_core::skills::InstallTarget;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
-use dex_core::{DexError, scaffold};
+use dex_core::update::{SourceKind, record_project_state};
+use dex_core::{DexError, Template, scaffold};
 
 use crate::commands::skills::install_template_skills;
 use crate::output;
@@ -101,6 +103,10 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
     } else {
         HashMap::new()
     };
+
+    // Capture provenance before the registry borrow ends (needed later to
+    // record `.dex/manifest.toml`).
+    let origin = entry.origin.clone();
 
     // Load the template.
     let template = load_template(&entry.source, &args.template)?;
@@ -300,6 +306,24 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         );
     }
 
+    // Record `.dex/` state (manifest + history + baseline cache) so this
+    // project can later be re-synced with `dex update`. Non-fatal: a scaffold
+    // that succeeded shouldn't be lost because state-recording hit an error.
+    {
+        let (source, location, git_ref) = resolve_source_state(&origin, &template);
+        if let Err(e) = record_project_state(
+            &target,
+            &template,
+            source,
+            location,
+            git_ref,
+            env!("CARGO_PKG_VERSION"),
+            &variables,
+        ) {
+            output::print_warning(&format!("could not write .dex/ update state: {e}"));
+        }
+    }
+
     // If the template suggests skill packs, install them now via the library
     // API (no shell) so scaffold is atomic and survives a missing $PATH.
     // Targets come from the `ai_tools` variable if present, else all four.
@@ -477,8 +501,46 @@ fn run_on_success(
 /// Registry entry for a discovered template.
 struct TemplateEntry {
     source: TemplateSource,
+    /// Where the template really came from — kept alongside `source` because
+    /// remotes are resolved to cache directories, which would otherwise lose
+    /// the URL needed for `.dex/manifest.toml`.
+    origin: TemplateOrigin,
     #[allow(dead_code)]
     description: String,
+}
+
+/// Provenance of a discovered template.
+#[derive(Clone)]
+enum TemplateOrigin {
+    Embedded,
+    LocalDir(PathBuf),
+    Remote(RemoteSource),
+}
+
+/// Resolve the manifest source fields for a template from its provenance.
+///
+/// - Embedded / local directory: `ref` is the template version.
+/// - Remote: `ref` is the resolved commit SHA read from the cache clone, so
+///   `dex update` can later render the exact same revision. Falls back to the
+///   template version if the SHA can't be read (e.g. cache is not a git repo).
+fn resolve_source_state(
+    origin: &TemplateOrigin,
+    template: &Template,
+) -> (SourceKind, Option<String>, String) {
+    let version = template.meta.version.clone();
+    match origin {
+        TemplateOrigin::Embedded => (SourceKind::Embedded, None, version),
+        TemplateOrigin::LocalDir(path) => (
+            SourceKind::Directory,
+            Some(path.to_string_lossy().to_string()),
+            version,
+        ),
+        TemplateOrigin::Remote(remote) => {
+            let cache = remote_cache_dir().join(&remote.name);
+            let git_ref = git_head_sha(&cache).unwrap_or(version);
+            (SourceKind::Remote, Some(remote.url.clone()), git_ref)
+        }
+    }
 }
 
 /// Collect all available templates from embedded + config + extra_dir.
@@ -491,6 +553,7 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
             meta.name.clone(),
             TemplateEntry {
                 source: TemplateSource::Embedded,
+                origin: TemplateOrigin::Embedded,
                 description: meta.description,
             },
         );
@@ -498,16 +561,22 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
 
     // 2. Config-based sources.
     let config = load_dex_config();
-    let mut dirs_to_scan: Vec<(PathBuf, TemplateSource)> = Vec::new();
+    let mut dirs_to_scan: Vec<(TemplateSource, TemplateOrigin)> = Vec::new();
 
     if let Some(dir) = &config.templates_dir {
-        dirs_to_scan.push((dir.clone(), TemplateSource::Directory(dir.clone())));
+        dirs_to_scan.push((
+            TemplateSource::Directory(dir.clone()),
+            TemplateOrigin::LocalDir(dir.clone()),
+        ));
     }
 
     for remote in &config.remotes {
         match resolve_remote(remote, true) {
             Ok(local) => {
-                dirs_to_scan.push((local.clone(), TemplateSource::Directory(local)));
+                dirs_to_scan.push((
+                    TemplateSource::Directory(local),
+                    TemplateOrigin::Remote(remote.clone()),
+                ));
             }
             Err(e) => {
                 output::print_warning(&format!("could not resolve remote '{}': {e}", remote.name));
@@ -518,18 +587,19 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
     // 3. Extra dir (from extension).
     if let Some(dir) = extra_dir {
         dirs_to_scan.push((
-            dir.to_path_buf(),
             TemplateSource::Directory(dir.to_path_buf()),
+            TemplateOrigin::LocalDir(dir.to_path_buf()),
         ));
     }
 
-    for (_dir, source) in &dirs_to_scan {
+    for (source, origin) in &dirs_to_scan {
         if let Ok(metas) = list_templates(source) {
             for meta in metas {
                 registry.insert(
                     meta.name.clone(),
                     TemplateEntry {
                         source: source.clone(),
+                        origin: origin.clone(),
                         description: meta.description,
                     },
                 );

@@ -369,7 +369,7 @@ pub fn load_answers(path: &Path) -> Result<HashMap<String, toml::Value>, DexErro
 }
 
 /// Return today's date as an ISO 8601 string (YYYY-MM-DD) without pulling in chrono.
-fn chrono_date_today() -> String {
+pub(crate) fn chrono_date_today() -> String {
     // Use the system time offset from Unix epoch to derive a calendar date.
     // This is a lightweight calculation that avoids a heavy dependency.
     let secs = std::time::SystemTime::now()
@@ -540,6 +540,32 @@ fn git_clone(url: &str, dest: &Path, git_ref: Option<&str>) -> Result<(), DexErr
     }
 
     Ok(())
+}
+
+/// Return the commit SHA at HEAD of a local git repository (works on the
+/// shallow clones produced by `resolve_remote`). Used to pin the exact
+/// template revision in `.dex/manifest.toml` at init time.
+pub fn git_head_sha(repo_dir: &Path) -> Result<String, DexError> {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(repo_dir)
+        .args(["rev-parse", "HEAD"])
+        .output()
+        .map_err(|source| DexError::Io {
+            path: repo_dir.to_path_buf(),
+            source,
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(DexError::Config(ConfigError::Invalid(format!(
+            "could not read HEAD of '{}': {}",
+            repo_dir.display(),
+            stderr.trim()
+        ))));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
 fn git_pull(dest: &Path, git_ref: Option<&str>) {

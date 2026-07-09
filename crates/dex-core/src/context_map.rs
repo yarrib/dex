@@ -297,6 +297,7 @@ mod tests {
             files: std::collections::HashMap::new(),
             suggested_skills: vec![],
             on_success: None,
+            hooks: None,
         };
 
         let vars = HashMap::new();
@@ -333,6 +334,7 @@ mod tests {
             files: std::collections::HashMap::new(),
             suggested_skills: vec![],
             on_success: None,
+            hooks: None,
         };
 
         let vars = HashMap::new();

@@ -20,6 +20,9 @@ pub enum DexError {
     #[error(transparent)]
     Context(#[from] ContextError),
 
+    #[error(transparent)]
+    Update(#[from] UpdateError),
+
     #[error("render error: {0}")]
     Render(#[from] minijinja::Error),
 
@@ -41,6 +44,32 @@ pub enum ContextError {
 
     #[error("could not run git — is it installed and on PATH? ({0})")]
     GitSpawn(String),
+}
+
+/// Errors related to `dex update` (template re-application).
+#[derive(Debug, thiserror::Error)]
+pub enum UpdateError {
+    #[error(
+        "no update state found at {0} — this project predates `dex update`; re-run `dex init` with a current dex to record it"
+    )]
+    NoManifest(PathBuf),
+
+    #[error("could not resolve ref '{git_ref}': {message}")]
+    RefResolution { git_ref: String, message: String },
+
+    #[error(
+        "old baseline unavailable ({0}) — restore .dex/cache/ from a teammate or pass --ref to pick an explicit target"
+    )]
+    BaselineUnavailable(String),
+
+    #[error("template source unreachable and ref not cached locally: {0}")]
+    Offline(String),
+
+    #[error("git command failed: {0}")]
+    Git(String),
+
+    #[error("already up to date (ref {0})")]
+    AlreadyUpToDate(String),
 }
 
 /// Errors related to configuration parsing and validation.

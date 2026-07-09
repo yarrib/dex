@@ -83,12 +83,23 @@ pub struct FileRule {
 }
 
 /// Hook script references.
-#[derive(Debug, Deserialize)]
+///
+/// `pre_scaffold`/`post_scaffold` are parsed for forward compatibility but not
+/// executed. `pre_update`/`post_update` are copied into `.dex/manifest.toml`
+/// at init time and executed by `dex update` (via the CLI layer, same model
+/// as `[on_success]`).
+#[derive(Debug, Deserialize, Clone)]
 pub struct HooksSpec {
     #[serde(default)]
     pub pre_scaffold: Option<String>,
     #[serde(default)]
     pub post_scaffold: Option<String>,
+    /// Shell command run before `dex update` plans changes.
+    #[serde(default)]
+    pub pre_update: Option<String>,
+    /// Shell command run after `dex update` applies changes.
+    #[serde(default)]
+    pub post_update: Option<String>,
 }
 
 /// Post-scaffold activation config (`[on_success]` in `template.toml`).
