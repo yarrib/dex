@@ -18,6 +18,7 @@ include_dir = { workspace = true }
 regex = { workspace = true }
 dirs = { workspace = true }
 shellexpand = { workspace = true }
+diffy = { workspace = true }
 
 [dev-dependencies]
 insta = { workspace = true }

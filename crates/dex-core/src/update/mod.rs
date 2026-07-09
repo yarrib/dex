@@ -11,6 +11,11 @@
 //! ```
 
 pub mod manifest;
+pub mod merge;
+pub mod report;
+
+pub use merge::{FileAction, FileChange, merge_trees};
+pub use report::UpdateReport;
 
 pub use manifest::{
     HistoryEntry, SCHEMA_VERSION, SourceKind, StateManifest, TemplateState, UpdateHooks,

@@ -38,8 +38,9 @@ pub use template::OnSuccessSpec;
 pub use template::{HooksSpec, Template, TemplateMeta, TemplateSource};
 pub use traits::{Trait, TraitMeta, list_traits, load_trait};
 pub use update::{
-    HistoryEntry, SourceKind, StateManifest, TemplateState, UpdateHooks, load_state_manifest,
-    record_project_state, save_state_manifest, typed_answers, write_project_state,
+    FileAction, FileChange, HistoryEntry, SourceKind, StateManifest, TemplateState, UpdateHooks,
+    UpdateReport, load_state_manifest, merge_trees, record_project_state, save_state_manifest,
+    typed_answers, write_project_state,
 };
 
 /// Result type alias for dex operations.
