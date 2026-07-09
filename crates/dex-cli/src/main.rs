@@ -15,6 +15,8 @@ enum Cli {
     Agent(commands::agent::AgentArgs),
     /// Add a composable trait to an existing project.
     Add(commands::add::AddArgs),
+    /// Re-apply template changes to an existing project.
+    Update(commands::update::UpdateArgs),
     /// Manage and install AI agent skill packs.
     Skills(commands::skills::SkillsArgs),
     /// MCP server for AI tool integration.
@@ -37,6 +39,7 @@ fn main() {
         Cli::Init(args) => commands::init::run(args),
         Cli::Agent(args) => commands::agent::run(args),
         Cli::Add(args) => commands::add::run(args),
+        Cli::Update(args) => commands::update::run(args),
         Cli::Skills(args) => commands::skills::run(args),
         Cli::Mcp(args) => commands::mcp::run(args),
         Cli::Templates(args) => commands::templates::run(args),

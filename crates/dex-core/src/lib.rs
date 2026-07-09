@@ -38,8 +38,9 @@ pub use template::OnSuccessSpec;
 pub use template::{HooksSpec, Template, TemplateMeta, TemplateSource};
 pub use traits::{Trait, TraitMeta, list_traits, load_trait};
 pub use update::{
-    FileAction, FileChange, HistoryEntry, SourceKind, StateManifest, TemplateState, UpdateHooks,
-    UpdateReport, load_state_manifest, merge_trees, record_project_state, save_state_manifest,
+    FileAction, FileChange, HistoryEntry, ResolvedTemplate, SourceKind, StateManifest,
+    TemplateState, UpdateHooks, UpdatePlan, UpdateReport, apply_update, load_state_manifest,
+    merge_trees, plan_update, record_project_state, resolve_new_template, save_state_manifest,
     typed_answers, write_project_state,
 };
 

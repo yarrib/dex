@@ -10,11 +10,15 @@
 //! └── cache/baseline/    # rendered tree at the recorded ref (offline baseline)
 //! ```
 
+pub mod baseline;
 pub mod manifest;
 pub mod merge;
+pub mod plan;
 pub mod report;
 
+pub use baseline::{ResolvedTemplate, load_old_baseline, resolve_new_template};
 pub use merge::{FileAction, FileChange, merge_trees};
+pub use plan::{UpdatePlan, apply_update, plan_update};
 pub use report::UpdateReport;
 
 pub use manifest::{

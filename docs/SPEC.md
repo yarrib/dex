@@ -84,6 +84,18 @@ dex run <task> [-- <extra-args>]
     Extra args after -- are appended to the task command. Runs pre hooks before
     the task and post hooks after it succeeds. A failing pre hook aborts the task.
 
+dex update [--ref <ref>] [--dry-run] [--no-prompt] [--dir <path>]
+    Re-apply template changes to an already-generated project without clobbering
+    local edits. Renders the template at the recorded ref (from the baseline
+    cache) and at the target ref with the stored answers, then performs a
+    per-file 3-way merge into the working tree (base = old render, ours = working
+    tree, theirs = new render). Clean hunks apply automatically; conflicts are
+    written with standard git conflict markers to resolve by hand (exit 0 — a
+    conflict is a normal outcome). Files outside both renders are never touched,
+    so unrelated local edits never conflict. --ref selects a target (default:
+    latest for the source); --dry-run previews without writing. Requires the
+    `.dex/` state written at `dex init` time (see §5.5).
+
 dex context sync [--dir <path>] [--rebuild] [--limit <n>] [--all]
     Build/refresh the project-memory knowledge graph in .context/wiki/.
     Reads git history, classifies commits ([Decision]/[Evolution]/[Stability]/
@@ -233,6 +245,44 @@ python_version = "3.12"
 
 ```bash
 dex init --template default --standards ./org-standards.toml
+```
+
+### 5.5. Project State: `.dex/`
+
+`dex init` writes a dex-owned state folder (analogous to `.git/`) that lets
+`dex update` re-apply template changes later:
+
+```
+.dex/
+  manifest.toml        # template source, ref, answers, and update hooks
+  history.toml         # append-only log of applied updates
+  .gitignore           # ignores cache/
+  cache/baseline/      # the template rendered at the recorded ref (offline baseline)
+```
+
+`manifest.toml` and `history.toml` are meant to be committed; `cache/` is
+ignored. `manifest.toml` records the template `source` (embedded/directory/
+remote), the `ref` (a commit SHA for remote sources, the template version for
+embedded/directory sources), and the typed `[answers]` used at generation, so
+updates replay with the same answers and gate `[[files]]` conditions correctly.
+
+```toml
+schema_version = 1
+
+[template]
+name = "dabs-package"
+source = "remote"
+location = "https://github.com/org/templates.git"
+ref = "9f3ab12…"
+version = "0.3.0"
+dex_version = "0.6.0"
+
+[answers]
+project_name = "user_events"
+include_notebook = true
+
+[hooks]                       # optional; copied from template.toml, user-editable
+post_update = "uv sync"
 ```
 
 ## 6. Template System

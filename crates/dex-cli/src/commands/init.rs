@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use clap::Args;
 use console::style;
-use dialoguer::{Confirm, Input, MultiSelect, Select};
+use dialoguer::Confirm;
 
 use dex_core::config::{
     RemoteSource, git_head_sha, load_answers, load_dex_config, load_preset, load_standards,
@@ -19,6 +19,9 @@ use dex_core::template::variables::VariableType;
 use dex_core::update::{SourceKind, record_project_state};
 use dex_core::{DexError, Template, scaffold};
 
+use crate::commands::prompting::{
+    evaluate_when, prompt_variable, skipped_default, toml_val_to_minijinja, toml_value_to_string,
+};
 use crate::commands::skills::install_template_skills;
 use crate::output;
 
@@ -138,21 +141,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
         if let Some(when_expr) = &spec.when
             && !evaluate_when(when_expr, &variables)
         {
-            let default_val = match spec.var_type {
-                VariableType::Bool => {
-                    let b = effective_default.is_empty() || effective_default == "true";
-                    minijinja::Value::from(b)
-                }
-                _ => minijinja::Value::from(effective_default),
-            };
-            variables.insert(spec.name.clone(), default_val);
+            variables.insert(spec.name.clone(), skipped_default(spec, &effective_default));
             continue;
         }
 
         // Answers file (highest priority): overrides standards, preset, and defaults.
         if let Some(toml_val) = answers_prefills.get(&spec.name) {
-            let mj_val = toml_val_to_minijinja(toml_val);
-            variables.insert(spec.name.clone(), mj_val);
+            variables.insert(spec.name.clone(), toml_val_to_minijinja(toml_val));
             continue;
         }
 
@@ -162,103 +157,8 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
             continue;
         }
 
-        if args.no_prompt {
-            let val = match spec.var_type {
-                VariableType::Bool => {
-                    let b = effective_default.is_empty() || effective_default == "true";
-                    minijinja::Value::from(b)
-                }
-                VariableType::Choice => {
-                    let v = if effective_default.is_empty() {
-                        spec.choices
-                            .as_ref()
-                            .and_then(|c| c.first().cloned())
-                            .unwrap_or_default()
-                    } else {
-                        effective_default
-                    };
-                    minijinja::Value::from(v)
-                }
-                _ => minijinja::Value::from(effective_default),
-            };
-            variables.insert(spec.name.clone(), val);
-        } else {
-            let val = match spec.var_type {
-                VariableType::Choice => {
-                    let choices = spec.choices.as_deref().unwrap_or(&[]);
-                    let default_idx = choices
-                        .iter()
-                        .position(|c| c == &effective_default)
-                        .unwrap_or(0);
-                    let selection = Select::new()
-                        .with_prompt(&spec.prompt)
-                        .items(choices)
-                        .default(default_idx)
-                        .interact()
-                        .map_err(io_error)?;
-                    minijinja::Value::from(choices[selection].clone())
-                }
-                VariableType::Multi => {
-                    let choices = spec.choices.as_deref().unwrap_or(&[]);
-                    let preselected: Vec<&str> = effective_default
-                        .split(',')
-                        .map(|s| s.trim())
-                        .filter(|s| !s.is_empty())
-                        .collect();
-                    let defaults: Vec<bool> = choices
-                        .iter()
-                        .map(|c| preselected.contains(&c.as_str()))
-                        .collect();
-                    let selections = MultiSelect::new()
-                        .with_prompt(&spec.prompt)
-                        .items(choices)
-                        .defaults(&defaults)
-                        .interact()
-                        .map_err(io_error)?;
-                    let picked: Vec<String> =
-                        selections.into_iter().map(|i| choices[i].clone()).collect();
-                    minijinja::Value::from(picked.join(","))
-                }
-                VariableType::Bool => {
-                    let default = effective_default.is_empty() || effective_default == "true";
-                    let answer = Confirm::new()
-                        .with_prompt(&spec.prompt)
-                        .default(default)
-                        .interact()
-                        .map_err(io_error)?;
-                    minijinja::Value::from(answer)
-                }
-                _ => {
-                    let mut input = Input::<String>::new().with_prompt(&spec.prompt);
-                    if !effective_default.is_empty() {
-                        input = input.default(effective_default.clone());
-                    }
-
-                    // Add validation if a pattern is defined.
-                    if let Some(pattern) = &spec.validate {
-                        let re = regex::Regex::new(pattern).ok();
-                        let pattern_str = pattern.clone();
-                        input = input.validate_with(move |val: &String| -> Result<(), String> {
-                            if let Some(ref re) = re {
-                                if re.is_match(val) {
-                                    Ok(())
-                                } else {
-                                    Err(format!(
-                                        "value '{val}' does not match pattern '{pattern_str}'"
-                                    ))
-                                }
-                            } else {
-                                Ok(())
-                            }
-                        });
-                    }
-
-                    let answer = input.interact_text().map_err(io_error)?;
-                    minijinja::Value::from(answer)
-                }
-            };
-            variables.insert(spec.name.clone(), val);
-        }
+        let val = prompt_variable(spec, &effective_default, args.no_prompt)?;
+        variables.insert(spec.name.clone(), val);
     }
 
     let result = scaffold(&template, &target, &variables)?;
@@ -610,20 +510,6 @@ fn collect_templates(extra_dir: Option<&Path>) -> Result<HashMap<String, Templat
     Ok(registry)
 }
 
-/// Convert a typed TOML value from an answers file into a minijinja Value.
-///
-/// Preserves bool → bool and string → string so that template conditionals
-/// behave correctly on replay.
-fn toml_val_to_minijinja(v: &toml::Value) -> minijinja::Value {
-    match v {
-        toml::Value::Boolean(b) => minijinja::Value::from(*b),
-        toml::Value::String(s) => minijinja::Value::from(s.clone()),
-        toml::Value::Integer(i) => minijinja::Value::from(*i),
-        toml::Value::Float(f) => minijinja::Value::from(*f),
-        _ => minijinja::Value::from(v.to_string()),
-    }
-}
-
 /// Coerce a pre-fill string (from a preset or standards file) into a typed
 /// minijinja value according to the variable's declared type.
 ///
@@ -637,16 +523,6 @@ fn prefill_to_value(var_type: &VariableType, raw: &str) -> minijinja::Value {
     match var_type {
         VariableType::Bool => minijinja::Value::from(raw.is_empty() || raw == "true"),
         _ => minijinja::Value::from(raw.to_string()),
-    }
-}
-
-fn toml_value_to_string(v: &toml::Value) -> String {
-    match v {
-        toml::Value::String(s) => s.clone(),
-        toml::Value::Boolean(b) => b.to_string(),
-        toml::Value::Integer(i) => i.to_string(),
-        toml::Value::Float(f) => f.to_string(),
-        other => other.to_string(),
     }
 }
 
@@ -706,18 +582,6 @@ fn io_error(e: impl std::fmt::Display) -> DexError {
         path: PathBuf::from("<stdin>"),
         source: std::io::Error::other(e.to_string()),
     }
-}
-
-/// Evaluate a Jinja2 boolean expression against already-resolved variables.
-///
-/// Returns `true` if the expression evaluates to a truthy value, `false` otherwise
-/// (including on evaluation errors, so that a bad `when` expression silently skips
-/// the variable rather than crashing the prompt loop).
-fn evaluate_when(expr: &str, vars: &HashMap<String, minijinja::Value>) -> bool {
-    let env = minijinja::Environment::new();
-    let source = format!("{{% if {expr} %}}true{{% else %}}false{{% endif %}}");
-    env.render_str(&source, vars)
-        .is_ok_and(|r| r.trim() == "true")
 }
 
 #[cfg(test)]

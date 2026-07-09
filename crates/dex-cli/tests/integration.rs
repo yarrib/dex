@@ -880,3 +880,231 @@ fn context_sync_outside_git_repo_fails() {
         .assert()
         .failure();
 }
+
+// --- dex update -------------------------------------------------------------
+
+/// Write a `demo` directory template at `<templates>/demo` with the given
+/// version and `files/` contents (relative path → contents).
+fn write_demo_template(templates: &std::path::Path, version: &str, files: &[(&str, &str)]) {
+    let demo = templates.join("demo");
+    let files_dir = demo.join("files");
+    // Rewrite the files/ dir from scratch so removed files really disappear.
+    if files_dir.exists() {
+        std::fs::remove_dir_all(&files_dir).unwrap();
+    }
+    std::fs::create_dir_all(&files_dir).unwrap();
+    std::fs::write(
+        demo.join("template.toml"),
+        format!(
+            "[template]\nname = \"demo\"\ndescription = \"demo\"\nversion = \"{version}\"\n\n\
+             [variables]\nproject_name = {{ prompt = \"Name\", default = \"demo\" }}\n"
+        ),
+    )
+    .unwrap();
+    for (rel, contents) in files {
+        let full = files_dir.join(rel);
+        if let Some(parent) = full.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(full, contents).unwrap();
+    }
+}
+
+/// Scaffold a `demo` project from a v0.1.0 directory template. Returns the
+/// tempdir guard (keep alive), the project dir, and the templates dir.
+fn init_demo_project(
+    files: &[(&str, &str)],
+) -> (tempfile::TempDir, std::path::PathBuf, std::path::PathBuf) {
+    let base = tempfile::tempdir().unwrap();
+    let templates = base.path().join("templates");
+    let xdg = base.path().join("xdg");
+    let project = base.path().join("proj");
+    std::fs::create_dir_all(templates.join("demo")).unwrap();
+    std::fs::create_dir_all(xdg.join("dex")).unwrap();
+    std::fs::create_dir_all(&project).unwrap();
+
+    write_demo_template(&templates, "0.1.0", files);
+    std::fs::write(
+        xdg.join("dex").join("config.toml"),
+        format!("[templates]\ndir = \"{}\"\n", templates.display()),
+    )
+    .unwrap();
+
+    dex()
+        .args(["init", "--template", "demo", "--no-prompt", "--dir"])
+        .arg(&project)
+        .env("XDG_CONFIG_HOME", &xdg)
+        .assert()
+        .success();
+
+    (base, project, templates)
+}
+
+#[test]
+fn update_applies_template_changes() {
+    let (_base, project, templates) =
+        init_demo_project(&[("config.yml", "version: 1\n"), ("keep.txt", "keep\n")]);
+
+    // Bump to v0.2.0: edit config, add a file, delete keep.txt.
+    write_demo_template(
+        &templates,
+        "0.2.0",
+        &[("config.yml", "version: 2\n"), ("NEW.txt", "new\n")],
+    );
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success();
+
+    assert_eq!(
+        std::fs::read_to_string(project.join("config.yml")).unwrap(),
+        "version: 2\n"
+    );
+    assert!(project.join("NEW.txt").is_file(), "new file not created");
+    assert!(!project.join("keep.txt").exists(), "deleted file survived");
+    assert!(
+        std::fs::read_to_string(project.join(".dex/manifest.toml"))
+            .unwrap()
+            .contains("ref = \"0.2.0\""),
+        "manifest ref not bumped"
+    );
+}
+
+#[test]
+fn update_preserves_unrelated_local_edits() {
+    let (_base, project, templates) = init_demo_project(&[
+        ("config.yml", "version: 1\n"),
+        ("README.md", "# demo\n\nintro\n"),
+    ]);
+
+    // User edits README (which the template does NOT change) and adds an
+    // untracked file.
+    std::fs::write(project.join("README.md"), "# demo\n\nMY OWN NOTES\n").unwrap();
+    std::fs::write(project.join("untracked.txt"), "mine\n").unwrap();
+
+    // Template only bumps config.yml.
+    write_demo_template(
+        &templates,
+        "0.2.0",
+        &[
+            ("config.yml", "version: 2\n"),
+            ("README.md", "# demo\n\nintro\n"),
+        ],
+    );
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success();
+
+    // Local edits are byte-identical, no conflict markers introduced.
+    assert_eq!(
+        std::fs::read_to_string(project.join("README.md")).unwrap(),
+        "# demo\n\nMY OWN NOTES\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(project.join("untracked.txt")).unwrap(),
+        "mine\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(project.join("config.yml")).unwrap(),
+        "version: 2\n"
+    );
+}
+
+#[test]
+fn update_same_line_conflict_writes_markers() {
+    let (_base, project, templates) = init_demo_project(&[("config.yml", "shared: original\n")]);
+
+    // User edits the same line the template will change.
+    std::fs::write(project.join("config.yml"), "shared: mine\n").unwrap();
+
+    write_demo_template(&templates, "0.2.0", &[("config.yml", "shared: upstream\n")]);
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success(); // conflicts are a normal outcome, exit 0
+
+    let body = std::fs::read_to_string(project.join("config.yml")).unwrap();
+    assert!(body.contains("<<<<<<<"), "missing conflict markers: {body}");
+    assert!(body.contains("======="), "missing separator: {body}");
+    assert!(body.contains(">>>>>>>"), "missing closing marker: {body}");
+    assert!(body.contains("shared: mine"), "local edit lost: {body}");
+    assert!(body.contains("shared: upstream"), "upstream lost: {body}");
+}
+
+#[test]
+fn update_respects_local_deletion_of_upstream_changed_file() {
+    let (_base, project, templates) =
+        init_demo_project(&[("config.yml", "version: 1\n"), ("opt.txt", "orig\n")]);
+
+    // User deletes opt.txt locally.
+    std::fs::remove_file(project.join("opt.txt")).unwrap();
+
+    // Template changes opt.txt.
+    write_demo_template(
+        &templates,
+        "0.2.0",
+        &[("config.yml", "version: 1\n"), ("opt.txt", "changed\n")],
+    );
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success();
+
+    // Deletion is respected — the file is not resurrected.
+    assert!(
+        !project.join("opt.txt").exists(),
+        "locally-deleted file was resurrected"
+    );
+}
+
+#[test]
+fn update_dry_run_writes_nothing() {
+    let (_base, project, templates) = init_demo_project(&[("config.yml", "version: 1\n")]);
+
+    write_demo_template(
+        &templates,
+        "0.2.0",
+        &[("config.yml", "version: 2\n"), ("NEW.txt", "new\n")],
+    );
+
+    dex()
+        .args(["update", "--dry-run", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success();
+
+    // Nothing changed on disk.
+    assert_eq!(
+        std::fs::read_to_string(project.join("config.yml")).unwrap(),
+        "version: 1\n"
+    );
+    assert!(!project.join("NEW.txt").exists(), "dry-run created a file");
+    assert!(
+        std::fs::read_to_string(project.join(".dex/manifest.toml"))
+            .unwrap()
+            .contains("ref = \"0.1.0\""),
+        "dry-run bumped the manifest ref"
+    );
+}
+
+#[test]
+fn update_without_manifest_errors() {
+    let dir = tempfile::tempdir().unwrap();
+    // A plain directory with no .dex/ state.
+    std::fs::write(dir.path().join("file.txt"), "hi").unwrap();
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .failure();
+}
