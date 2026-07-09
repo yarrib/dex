@@ -14,6 +14,7 @@ pub mod baseline;
 pub mod manifest;
 pub mod merge;
 pub mod plan;
+pub mod remote;
 pub mod report;
 
 pub use baseline::{ResolvedTemplate, load_old_baseline, resolve_new_template};
@@ -22,7 +23,7 @@ pub use plan::{UpdatePlan, apply_update, plan_update};
 pub use report::UpdateReport;
 
 pub use manifest::{
-    HistoryEntry, SCHEMA_VERSION, SourceKind, StateManifest, TemplateState, UpdateHooks,
+    HistoryEntry, SCHEMA_VERSION, SourceKind, SourceRef, StateManifest, TemplateState, UpdateHooks,
     append_history, build_state_manifest, load_baseline_cache, load_history, load_state_manifest,
     record_project_state, save_state_manifest, typed_answers, write_baseline_cache,
     write_project_state,

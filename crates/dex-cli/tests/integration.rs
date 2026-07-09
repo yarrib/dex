@@ -1108,3 +1108,203 @@ fn update_without_manifest_errors() {
         .assert()
         .failure();
 }
+
+/// `git -C <dir> <args>` returning trimmed stdout (test helper).
+fn git_stdout(dir: &std::path::Path, args: &[&str]) -> String {
+    let out = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .output()
+        .expect("git failed");
+    String::from_utf8_lossy(&out.stdout).trim().to_string()
+}
+
+fn write_remote_template(origin: &std::path::Path, version: &str, files: &[(&str, &str)]) {
+    let demo = origin.join("demo");
+    let files_dir = demo.join("files");
+    if files_dir.exists() {
+        std::fs::remove_dir_all(&files_dir).unwrap();
+    }
+    std::fs::create_dir_all(&files_dir).unwrap();
+    std::fs::write(
+        demo.join("template.toml"),
+        format!(
+            "[template]\nname = \"demo\"\ndescription = \"demo\"\nversion = \"{version}\"\n\n\
+             [variables]\nproject_name = {{ prompt = \"Name\", default = \"demo\" }}\n"
+        ),
+    )
+    .unwrap();
+    for (rel, contents) in files {
+        std::fs::write(files_dir.join(rel), contents).unwrap();
+    }
+}
+
+#[test]
+fn update_resolves_latest_remote_tag_and_cleans_worktrees() {
+    let base = tempfile::tempdir().unwrap();
+    let origin = base.path().join("origin");
+    let xdg = base.path().join("xdg");
+    let cache = base.path().join("cache");
+    let project = base.path().join("proj");
+    std::fs::create_dir_all(origin.join("demo")).unwrap();
+    std::fs::create_dir_all(xdg.join("dex")).unwrap();
+    std::fs::create_dir_all(&project).unwrap();
+
+    // Remote templates repo at v0.1.0.
+    git(&origin, &["init", "-q", "-b", "main"]);
+    write_remote_template(
+        &origin,
+        "0.1.0",
+        &[("config.yml", "version: 1\n"), ("keep.txt", "keep\n")],
+    );
+    git(&origin, &["add", "."]);
+    git(&origin, &["commit", "-q", "-m", "v0.1.0"]);
+    git(&origin, &["tag", "v0.1.0"]);
+
+    std::fs::write(
+        xdg.join("dex").join("config.toml"),
+        format!(
+            "[templates]\nremotes = [{{ name = \"demo-remote\", url = \"{}\" }}]\n",
+            origin.display()
+        ),
+    )
+    .unwrap();
+
+    dex()
+        .args(["init", "--template", "demo", "--no-prompt", "--dir"])
+        .arg(&project)
+        .env("XDG_CONFIG_HOME", &xdg)
+        .env("XDG_CACHE_HOME", &cache)
+        .assert()
+        .success();
+
+    let manifest = project.join(".dex/manifest.toml");
+    let ref_v1 = read_ref(&manifest);
+    assert_eq!(ref_v1.len(), 40, "init should pin a full commit SHA");
+
+    // Publish v0.2.0: change config, add a file, delete keep.txt.
+    write_remote_template(
+        &origin,
+        "0.2.0",
+        &[("config.yml", "version: 2\n"), ("NEW.txt", "new\n")],
+    );
+    git(&origin, &["add", "."]);
+    git(&origin, &["commit", "-q", "-m", "v0.2.0"]);
+    git(&origin, &["tag", "v0.2.0"]);
+    let sha_v2 = git_stdout(&origin, &["rev-parse", "v0.2.0"]);
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .env("XDG_CONFIG_HOME", &xdg)
+        .env("XDG_CACHE_HOME", &cache)
+        .assert()
+        .success();
+
+    assert_eq!(
+        std::fs::read_to_string(project.join("config.yml")).unwrap(),
+        "version: 2\n"
+    );
+    assert!(project.join("NEW.txt").is_file());
+    assert!(!project.join("keep.txt").exists());
+    assert_eq!(
+        read_ref(&manifest),
+        sha_v2,
+        "update should pin the v0.2.0 SHA"
+    );
+
+    // The scratch worktree used to render the new ref must be cleaned up:
+    // only the cache clone's own (main) worktree remains.
+    let cache_repo = cache.join("dex/templates/demo-remote");
+    let worktrees = git_stdout(&cache_repo, &["worktree", "list"]);
+    assert_eq!(
+        worktrees.lines().count(),
+        1,
+        "leftover worktree(s): {worktrees}"
+    );
+
+    // Offline re-run: with the origin gone, resolve from the local cache and
+    // report up-to-date rather than erroring.
+    std::fs::remove_dir_all(&origin).unwrap();
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .env("XDG_CONFIG_HOME", &xdg)
+        .env("XDG_CACHE_HOME", &cache)
+        .assert()
+        .success();
+}
+
+fn read_ref(manifest: &std::path::Path) -> String {
+    std::fs::read_to_string(manifest)
+        .unwrap()
+        .lines()
+        .find_map(|l| l.strip_prefix("ref = "))
+        .map(|v| v.trim().trim_matches('"').to_string())
+        .expect("manifest has no ref")
+}
+
+#[test]
+fn update_runs_post_update_hook() {
+    // Template carries a post_update hook that renders against the answers.
+    let base = tempfile::tempdir().unwrap();
+    let templates = base.path().join("templates");
+    let xdg = base.path().join("xdg");
+    let project = base.path().join("proj");
+    std::fs::create_dir_all(templates.join("demo").join("files")).unwrap();
+    std::fs::create_dir_all(xdg.join("dex")).unwrap();
+    std::fs::create_dir_all(&project).unwrap();
+
+    let demo = templates.join("demo");
+    std::fs::write(
+        demo.join("template.toml"),
+        "[template]\nname = \"demo\"\ndescription = \"demo\"\nversion = \"0.1.0\"\n\n\
+         [variables]\nproject_name = { prompt = \"Name\", default = \"demo\" }\n\n\
+         [hooks]\npost_update = \"touch HOOK_RAN_{{ project_name }}\"\n",
+    )
+    .unwrap();
+    std::fs::write(demo.join("files").join("config.yml"), "version: 1\n").unwrap();
+    std::fs::write(
+        xdg.join("dex").join("config.toml"),
+        format!("[templates]\ndir = \"{}\"\n", templates.display()),
+    )
+    .unwrap();
+
+    dex()
+        .args(["init", "--template", "demo", "--no-prompt", "--dir"])
+        .arg(&project)
+        .env("XDG_CONFIG_HOME", &xdg)
+        .assert()
+        .success();
+
+    // The hook is recorded in the manifest.
+    assert!(
+        std::fs::read_to_string(project.join(".dex/manifest.toml"))
+            .unwrap()
+            .contains("post_update"),
+        "manifest should record the post_update hook"
+    );
+
+    // Bump the template so the update is non-empty and the hook fires.
+    std::fs::write(
+        demo.join("template.toml"),
+        "[template]\nname = \"demo\"\ndescription = \"demo\"\nversion = \"0.2.0\"\n\n\
+         [variables]\nproject_name = { prompt = \"Name\", default = \"demo\" }\n\n\
+         [hooks]\npost_update = \"touch HOOK_RAN_{{ project_name }}\"\n",
+    )
+    .unwrap();
+    std::fs::write(demo.join("files").join("config.yml"), "version: 2\n").unwrap();
+
+    dex()
+        .args(["update", "--no-prompt", "--dir"])
+        .arg(&project)
+        .assert()
+        .success();
+
+    // The hook ran with `{{ project_name }}` rendered from the answers.
+    assert!(
+        project.join("HOOK_RAN_proj").exists(),
+        "post_update hook did not run (or wasn't rendered)"
+    );
+}

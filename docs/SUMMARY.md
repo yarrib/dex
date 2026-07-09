@@ -8,6 +8,7 @@
 
 - [Overview](usage/index.md)
 - [dex init](usage/init.md)
+- [dex update](usage/update.md)
 - [Templates](usage/templates.md)
 - [dex agent new](usage/agent.md)
 - [dex mcp serve](usage/mcp.md)

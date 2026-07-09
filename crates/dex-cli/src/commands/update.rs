@@ -6,16 +6,18 @@
 //! the user to resolve. Local edits are never silently overwritten.
 
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::Args;
 use console::style;
+use dialoguer::Confirm;
 
 use dex_core::update::{apply_update, load_state_manifest, plan_update, resolve_new_template};
 use dex_core::{DexError, Template, UpdateReport};
 
 use crate::commands::prompting::{
-    evaluate_when, prompt_variable, skipped_default, toml_val_to_minijinja, toml_value_to_string,
+    evaluate_when, io_error, prompt_variable, skipped_default, toml_val_to_minijinja,
+    toml_value_to_string,
 };
 use crate::output;
 
@@ -54,6 +56,24 @@ pub fn run(args: UpdateArgs) -> Result<(), DexError> {
         style(&manifest.template.name).cyan()
     );
 
+    // The context hooks and prompts render against: the answers on record.
+    let hook_ctx: HashMap<String, minijinja::Value> = manifest
+        .answers
+        .iter()
+        .map(|(k, v)| (k.clone(), toml_val_to_minijinja(v)))
+        .collect();
+
+    // pre_update runs before we touch anything (skipped on --dry-run).
+    if !args.dry_run {
+        run_hook(
+            "pre_update",
+            manifest.hooks.pre_update.as_deref(),
+            &project_dir,
+            &hook_ctx,
+            args.no_prompt,
+        )?;
+    }
+
     let resolved = resolve_new_template(&manifest, args.git_ref.as_deref())?;
 
     let variables =
@@ -82,6 +102,71 @@ pub fn run(args: UpdateArgs) -> Result<(), DexError> {
     apply_update(&project_dir, &manifest, &plan, env!("CARGO_PKG_VERSION"))?;
     print_report(&plan.report, false);
 
+    // post_update runs the hooks carried forward from the new template.
+    run_hook(
+        "post_update",
+        plan.new_hooks.post_update.as_deref(),
+        &project_dir,
+        &variables,
+        args.no_prompt,
+    )?;
+
+    Ok(())
+}
+
+/// Execute an update hook command in the project directory. Rendered through
+/// Jinja against the answer context, confirmed unless `--no-prompt`, and
+/// non-fatal on failure — same model as `dex init`'s `[on_success]` hook.
+fn run_hook(
+    label: &str,
+    command: Option<&str>,
+    project_dir: &Path,
+    ctx: &HashMap<String, minijinja::Value>,
+    no_prompt: bool,
+) -> Result<(), DexError> {
+    let Some(raw) = command else {
+        return Ok(());
+    };
+    if raw.trim().is_empty() {
+        return Ok(());
+    }
+
+    let env = minijinja::Environment::new();
+    let cmd = env.render_str(raw, ctx).unwrap_or_else(|_| raw.to_string());
+
+    let should_run = if no_prompt {
+        true
+    } else {
+        Confirm::new()
+            .with_prompt(format!("Run {label} hook `{cmd}` now?"))
+            .default(true)
+            .interact()
+            .map_err(io_error)?
+    };
+    if !should_run {
+        return Ok(());
+    }
+
+    println!(
+        "  {} {}",
+        style(format!("{label}:")).cyan().bold(),
+        style(&cmd).dim()
+    );
+
+    let mut parts = cmd.split_whitespace();
+    let Some(program) = parts.next() else {
+        return Ok(());
+    };
+    let args: Vec<&str> = parts.collect();
+    match std::process::Command::new(program)
+        .args(&args)
+        .current_dir(project_dir)
+        .status()
+    {
+        Ok(s) if s.success() => {}
+        Ok(s) => output::print_warning(&format!("{label} hook `{cmd}` exited with status {s}")),
+        Err(e) => output::print_warning(&format!("could not run {label} hook `{cmd}`: {e}")),
+    }
     Ok(())
 }
 

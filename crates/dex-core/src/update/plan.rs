@@ -96,6 +96,7 @@ pub fn apply_update(
             name: manifest.template.name.clone(),
             source: manifest.template.source,
             location: manifest.template.location.clone(),
+            remote_name: manifest.template.remote_name.clone(),
             git_ref: plan.new_ref.clone(),
             version: plan.new_version.clone(),
             dex_version: Some(dex_version.to_string()),

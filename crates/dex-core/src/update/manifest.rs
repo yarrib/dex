@@ -50,6 +50,10 @@ pub struct TemplateState {
     /// Remote: repository URL. Directory: absolute path. Embedded: absent.
     #[serde(default)]
     pub location: Option<String>,
+    /// Remote sources only: the configured remote name, which keys the local
+    /// cache clone (`~/.cache/dex/templates/<remote_name>`).
+    #[serde(default)]
+    pub remote_name: Option<String>,
     /// Pinned ref used at last generation/update: a commit SHA for remote
     /// sources, the template version for embedded/directory sources.
     #[serde(rename = "ref")]
@@ -192,6 +196,9 @@ pub fn save_state_manifest(project_dir: &Path, manifest: &StateManifest) -> Resu
     ];
     if let Some(location) = &manifest.template.location {
         lines.push(format!("location = {location:?}"));
+    }
+    if let Some(remote_name) = &manifest.template.remote_name {
+        lines.push(format!("remote_name = {remote_name:?}"));
     }
     lines.push(format!("ref = {:?}", manifest.template.git_ref));
     if let Some(version) = &manifest.template.version {
@@ -378,13 +385,23 @@ pub fn write_project_state(
     Ok(())
 }
 
+/// Where a scaffolded project's template came from, as recorded at init time.
+#[derive(Debug, Clone)]
+pub struct SourceRef {
+    pub kind: SourceKind,
+    /// Remote URL or directory path (absent for embedded).
+    pub location: Option<String>,
+    /// Remote sources only: configured remote name that keys the cache clone.
+    pub remote_name: Option<String>,
+    /// Pinned ref: commit SHA (remote) or template version (embedded/directory).
+    pub git_ref: String,
+}
+
 /// Build the init-time state manifest for a freshly scaffolded project.
 #[must_use]
 pub fn build_state_manifest(
     template: &Template,
-    source: SourceKind,
-    location: Option<String>,
-    git_ref: String,
+    source: &SourceRef,
     dex_version: &str,
     variables: &HashMap<String, minijinja::Value>,
 ) -> StateManifest {
@@ -392,9 +409,10 @@ pub fn build_state_manifest(
         schema_version: SCHEMA_VERSION,
         template: TemplateState {
             name: template.meta.name.clone(),
-            source,
-            location,
-            git_ref,
+            source: source.kind,
+            location: source.location.clone(),
+            remote_name: source.remote_name.clone(),
+            git_ref: source.git_ref.clone(),
             version: Some(template.meta.version.clone()),
             dex_version: Some(dex_version.to_string()),
         },
@@ -413,14 +431,11 @@ pub fn build_state_manifest(
 pub fn record_project_state(
     project_dir: &Path,
     template: &Template,
-    source: SourceKind,
-    location: Option<String>,
-    git_ref: String,
+    source: &SourceRef,
     dex_version: &str,
     variables: &HashMap<String, minijinja::Value>,
 ) -> Result<(), DexError> {
-    let manifest =
-        build_state_manifest(template, source, location, git_ref, dex_version, variables);
+    let manifest = build_state_manifest(template, source, dex_version, variables);
     let baseline = render_tree(template, variables)?;
     write_project_state(project_dir, &manifest, Some(&baseline))
 }
@@ -469,6 +484,7 @@ mod tests {
                 name: "dabs-package".to_string(),
                 source: SourceKind::Remote,
                 location: Some("https://example.com/templates.git".to_string()),
+                remote_name: Some("org-templates".to_string()),
                 git_ref: "9f3ab12deadbeef".to_string(),
                 version: Some("0.3.0".to_string()),
                 dex_version: Some("0.6.0".to_string()),

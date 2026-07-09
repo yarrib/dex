@@ -13,12 +13,13 @@
 
 use std::path::PathBuf;
 
-use crate::config::{git_head_sha, remote_cache_dir};
+use crate::config::{RemoteSource, remote_cache_dir, resolve_remote};
 use crate::error::{DexError, UpdateError};
 use crate::scaffold::RenderedTree;
 use crate::template::registry::load_template;
 use crate::template::{Template, TemplateSource};
 use crate::update::manifest::{StateManifest, load_baseline_cache};
+use crate::update::remote::{fetch_updates, load_template_at_ref, target_refish};
 use crate::update::{SourceKind, TemplateState};
 
 /// The template at the update target, plus the ref it resolved to.
@@ -76,24 +77,59 @@ fn directory_base(state: &TemplateState) -> Result<PathBuf, DexError> {
     Ok(PathBuf::from(location))
 }
 
-/// Load a remote template from its local cache clone.
+/// Resolve and load a remote template from its local cache clone.
 ///
-/// This resolves the clone's current HEAD as the new ref. Fetching/tag
-/// selection is added by the remote-ref layer; here we render whatever the
-/// cache currently points at, which is correct for already-synced caches.
+/// Fetches updates (best-effort — offline is tolerated), selects the target ref
+/// (explicit `--ref`, else latest tag, else the default branch head), and
+/// materializes it via a detached worktree. The recorded ref is the resolved
+/// commit SHA.
 fn resolve_remote_template(
     state: &TemplateState,
-    _explicit_ref: Option<&str>,
+    explicit_ref: Option<&str>,
 ) -> Result<ResolvedTemplate, DexError> {
-    let cache = remote_cache_dir().join(&state.name);
+    // The cache clone is keyed by the configured remote name, recorded at init.
+    let remote_name = state.remote_name.clone().ok_or_else(|| {
+        DexError::Update(UpdateError::RefResolution {
+            git_ref: state.git_ref.clone(),
+            message: "remote template state is missing its remote_name".to_string(),
+        })
+    })?;
+    let cache = remote_cache_dir().join(&remote_name);
+
+    // Re-clone if the cache was cleared (needs the URL from `location`).
+    if !cache.is_dir()
+        && let Some(url) = &state.location
+    {
+        let remote = RemoteSource {
+            name: remote_name.clone(),
+            url: url.clone(),
+            git_ref: None,
+        };
+        resolve_remote(&remote, true)?;
+    }
     if !cache.is_dir() {
         return Err(DexError::Update(UpdateError::Offline(format!(
-            "remote template cache '{}' is missing",
+            "remote template cache '{}' is missing and could not be cloned",
             cache.display()
         ))));
     }
 
-    let template = load_template(&TemplateSource::Directory(cache.clone()), &state.name)?;
-    let new_ref = git_head_sha(&cache).unwrap_or_else(|_| template.meta.version.clone());
-    Ok(ResolvedTemplate { template, new_ref })
+    let online = fetch_updates(&cache);
+    let refish = target_refish(&cache, explicit_ref);
+
+    let revision = load_template_at_ref(&cache, &state.name, &refish).map_err(|e| {
+        // Distinguish "we're offline and the ref isn't cached" from other errors.
+        if !online {
+            DexError::Update(UpdateError::Offline(format!(
+                "could not resolve '{refish}' from the local cache while offline"
+            )))
+        } else {
+            e
+        }
+    })?;
+
+    Ok(ResolvedTemplate {
+        template: revision.template,
+        new_ref: revision.sha,
+    })
 }

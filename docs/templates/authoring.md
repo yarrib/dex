@@ -104,6 +104,23 @@ condition = "include_job"
 
 If no `[[files]]` entry exists for a path, it is always included.
 
+### `[hooks]` — update hooks
+
+Declare commands for `dex update` to run around a re-apply. They're copied into
+the generated project's `.dex/manifest.toml` (where users can edit them),
+rendered with the project's answers, and run in the project directory.
+
+```toml
+[hooks]
+pre_update  = "git stash --keep-index"   # runs before changes are planned
+post_update = "uv sync"                   # runs after changes are applied
+```
+
+Hooks prompt for confirmation unless `--no-prompt` is passed, and are non-fatal
+(a failure warns rather than aborting). Only `pre_update`/`post_update` are
+executed; the older `pre_scaffold`/`post_scaffold` keys are parsed but not run.
+For a command to run right after `dex init`, use `[on_success]` instead.
+
 ## Writing template files
 
 Template files use [Jinja2](https://jinja.palletsprojects.com/) syntax, rendered by [minijinja](https://github.com/mitsuhiko/minijinja) in Rust. Use the `.j2` extension for any file that needs rendering.

@@ -16,7 +16,7 @@ use dex_core::skills::InstallTarget;
 use dex_core::template::TemplateSource;
 use dex_core::template::registry::{list_templates, load_template};
 use dex_core::template::variables::VariableType;
-use dex_core::update::{SourceKind, record_project_state};
+use dex_core::update::{SourceKind, SourceRef, record_project_state};
 use dex_core::{DexError, Template, scaffold};
 
 use crate::commands::prompting::{
@@ -210,13 +210,11 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
     // project can later be re-synced with `dex update`. Non-fatal: a scaffold
     // that succeeded shouldn't be lost because state-recording hit an error.
     {
-        let (source, location, git_ref) = resolve_source_state(&origin, &template);
+        let source = resolve_source_state(&origin, &template);
         if let Err(e) = record_project_state(
             &target,
             &template,
-            source,
-            location,
-            git_ref,
+            &source,
             env!("CARGO_PKG_VERSION"),
             &variables,
         ) {
@@ -423,22 +421,30 @@ enum TemplateOrigin {
 /// - Remote: `ref` is the resolved commit SHA read from the cache clone, so
 ///   `dex update` can later render the exact same revision. Falls back to the
 ///   template version if the SHA can't be read (e.g. cache is not a git repo).
-fn resolve_source_state(
-    origin: &TemplateOrigin,
-    template: &Template,
-) -> (SourceKind, Option<String>, String) {
+fn resolve_source_state(origin: &TemplateOrigin, template: &Template) -> SourceRef {
     let version = template.meta.version.clone();
     match origin {
-        TemplateOrigin::Embedded => (SourceKind::Embedded, None, version),
-        TemplateOrigin::LocalDir(path) => (
-            SourceKind::Directory,
-            Some(path.to_string_lossy().to_string()),
-            version,
-        ),
+        TemplateOrigin::Embedded => SourceRef {
+            kind: SourceKind::Embedded,
+            location: None,
+            remote_name: None,
+            git_ref: version,
+        },
+        TemplateOrigin::LocalDir(path) => SourceRef {
+            kind: SourceKind::Directory,
+            location: Some(path.to_string_lossy().to_string()),
+            remote_name: None,
+            git_ref: version,
+        },
         TemplateOrigin::Remote(remote) => {
             let cache = remote_cache_dir().join(&remote.name);
             let git_ref = git_head_sha(&cache).unwrap_or(version);
-            (SourceKind::Remote, Some(remote.url.clone()), git_ref)
+            SourceRef {
+                kind: SourceKind::Remote,
+                location: Some(remote.url.clone()),
+                remote_name: Some(remote.name.clone()),
+                git_ref,
+            }
         }
     }
 }

@@ -9,7 +9,8 @@ _(nothing active)_
 ### Features
 
 - [ ] Remote trait sources — `[traits.remotes]` in `dex.toml`/user config (prerequisite for `dex.lock`)
-- [ ] `dex.lock` — reproducible trait & skill resolution (see `docs/internal/prd-dex-lock.md`)
+- [ ] `dex.lock` — reproducible trait & skill resolution (see `docs/internal/prd-dex-lock.md`); `dex update` already records the template's resolved commit SHA in `.dex/manifest.toml`, a step toward this
+- [ ] `dex update --smart` — LLM-assisted reconciliation for conflicted hunks (seam left in `update::plan`)
 - [ ] WASM Compatibility — compile `dex-core` to `wasm32-unknown-unknown` (see `docs/internal/prd-ai-ready-scaffolding.md`)
 - [ ] Context-Map: populate `tasks` from scaffolded `dex.toml` at write time
 - [ ] MCP: `apply_trait` tool (expose `dex add` via MCP)
@@ -22,6 +23,7 @@ _(nothing active)_
 
 - [x] Initial Rust core — template engine, config, file I/O (`dex-core`)
 - [x] Native binary CLI (`dex-cli`) — `dex init`, `dex add`, `dex skills`, `dex templates`, `dex mcp`, `dex run`
+- [x] `dex update` — re-apply template changes via 3-way merge; `.dex/` state (manifest/history/baseline cache) written at init; deterministic offline merge with git conflict markers, remote latest-tag/SHA resolution, and `pre_update`/`post_update` hooks
 - [x] `dabs-platform` — profile-driven Databricks Asset Bundle template (presets: `data_eng`, `mlops`, `agents`, `extraction_agents`); supersedes `dabs-package`/`dabs-etl`/`dabs-ml`/`dabs-aiagent`
 - [x] `default`, `python-package`, `dabs-package`, `dabs-etl`, `dabs-ml`, `dabs-aiagent` templates
 - [x] Multi-variable scaffolding — all manifest variables prompted interactively
