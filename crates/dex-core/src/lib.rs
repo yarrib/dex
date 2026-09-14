@@ -3,6 +3,7 @@
 //! This crate contains all business logic. No UI, no terminal output, no Python
 //! dependencies. It returns structured data; the calling layer renders it.
 
+pub mod agent_env;
 pub mod apply_trait;
 pub mod config;
 pub mod context_graph;
@@ -14,6 +15,10 @@ pub mod skills;
 pub mod template;
 pub mod traits;
 
+pub use agent_env::{
+    AgentEnvFilePlan, AgentEnvManifest, AgentEnvPlan, FileState, apply_agent_env_plan,
+    plan_agent_env_init,
+};
 pub use apply_trait::{TraitResult, apply_trait};
 pub use config::{
     DexConfig, PassthroughSpec, ProjectConfig, ProjectSkillsConfig, RemoteSource, load_answers,
@@ -25,7 +30,7 @@ pub use context_graph::{
     SyncReport, export as export_context_graph, sync as sync_context_graph,
 };
 pub use context_map::{ContextMap, write_context_map};
-pub use error::{ContextError, DexError, McpError, SkillError};
+pub use error::{AgentEnvError, ContextError, DexError, McpError, SkillError};
 pub use mcp::{McpClient, McpInstallPlan, apply_mcp_plan, build_client_config, plan_mcp_client};
 pub use scaffold::{ScaffoldResult, scaffold};
 pub use skills::{

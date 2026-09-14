@@ -96,6 +96,13 @@ dex context sync [--dir <path>] [--rebuild] [--limit <n>] [--all]
     (PRD/SPEC/ARCHITECTURE/SCOPE) are kept (they classify as [Decision]). Pass
     --all to include every commit.
 
+dex agent-env init [--dir <path>] [--dry-run]
+    Generate a reproducible, non-interactive dev environment for coding agents
+    from dex.agent-env.toml: .devcontainer/devcontainer.json + Dockerfile,
+    an auth-bootstrap script, a verify script, and a CI workflow stub (see
+    §10 for the manifest schema and generated structure). Idempotent — safe
+    to re-run after editing the manifest; --dry-run previews without writing.
+
 dex context export [--dir <path>] [--out <dir>] [--summary <file>] [--all]
     Render the graph into mdBook-ready pages (default docs/wiki/), rewriting
     [[wikilinks]] to relative links and injecting a SUMMARY.md nav section.
@@ -610,7 +617,109 @@ dex skills init
 dex skills sync
 ```
 
-## 10. v0.1 Scope
+## 10. Agent Environments (`dex agent-env`)
+
+### 10.1. Overview
+
+`dex agent-env` lets a project declare — in one manifest, `dex.agent-env.toml`
+at the project root — everything a coding agent needs for a reproducible,
+non-interactive dev environment: a devcontainer, credential bootstrap, and a
+verify step. It composes with (doesn't replace) `databricks.yml`.
+
+```
+dex agent-env init [--dir <path>] [--dry-run]
+```
+
+`init` is idempotent: it regenerates every file from the manifest on each run
+(never patches by hand) and reports each as created, updated, or unchanged.
+
+### 10.2. Manifest Fields (`dex.agent-env.toml`)
+
+| Section | Field | Required | Description |
+|---|---|---|---|
+| (root) | `version` | yes | Manifest schema version. Only `1` is supported. |
+| `[base]` | `image` | yes | Devcontainer base image. |
+| `[base]` | `extra_packages` | no | `apt-get install` targets layered onto the base image. |
+| `[base]` | `repos` | no | Repos to clone in `postCreateCommand` (`org/repo` slugs). Defaults to `["self"]`; `"self"` is skipped (already mounted). |
+| `[auth]` | `provider` | yes | Only `"databricks-oauth-m2m"` is supported in v1. |
+| `[auth]` | `workspace` | yes | Short label; becomes the `.databrickscfg` profile name. |
+| `[auth]` | `workspace_host` | yes | Literal `https://...` Databricks workspace URL used for the OAuth token exchange. |
+| `[auth.service_principal_env]` | `client_id`, `client_secret` | yes | **Names** of the environment variables holding the service-principal credentials (not the values themselves). |
+| `[auth.scope]` | `catalog`, `schema` | yes | The sandbox catalog/schema the service principal is scoped to — least privilege, not the whole workspace. |
+| `[[verify.steps]]` | `name`, `run` | yes | An ordered verify step: a label and a shell command. |
+| `[[verify.steps]]` | `always` | no | If `true`, the step still runs even if an earlier step failed (default `false`). |
+| `[refresh]` | `schedule` | no | `"nightly"`, `"weekly"`, or a raw 5-field cron expression — when the CI workflow rebuilds the base image. |
+
+### 10.3. Generated Structure
+
+```
+my-project/
+├── dex.agent-env.toml           # manifest (hand-authored)
+├── .devcontainer/
+│   ├── devcontainer.json        # pinned image, repo clones, env forwarding
+│   ├── Dockerfile                # base image + apt packages
+│   ├── auth-bootstrap.sh         # Databricks OAuth M2M -> .databrickscfg
+│   └── verify.sh                 # runs [[verify.steps]] in order
+└── .github/workflows/
+    └── agent-env.yml             # rebuilds base image on schedule, runs verify on PRs
+```
+
+### 10.4. Worked Example
+
+```toml
+version = 1
+
+[base]
+image = "mcr.microsoft.com/devcontainers/python:3.12"
+extra_packages = ["ripgrep", "jq"]
+repos = ["self", "my-org/shared-libs"]
+
+[auth]
+provider = "databricks-oauth-m2m"
+workspace = "dev"
+workspace_host = "https://adb-123.4.azuredatabricks.net"
+
+[auth.service_principal_env]
+client_id = "DATABRICKS_CLIENT_ID"
+client_secret = "DATABRICKS_CLIENT_SECRET"
+
+[auth.scope]
+catalog = "main"
+schema = "agent_dev"
+
+[[verify.steps]]
+name = "lint"
+run = "ruff check ."
+
+[[verify.steps]]
+name = "test"
+run = "pytest -q"
+
+[[verify.steps]]
+name = "cleanup"
+run = "rm -rf /tmp/agent-scratch"
+always = true
+
+[refresh]
+schedule = "nightly"
+```
+
+```bash
+dex agent-env init
+```
+
+### 10.5. Security Note
+
+Scope the service principal to a sandbox catalog/schema (`[auth.scope]`), not
+the full workspace — least privilege. `DATABRICKS_CLIENT_ID`/`DATABRICKS_CLIENT_SECRET`
+(or whatever env var names the manifest configures) must be provided by the
+environment (devcontainer `remoteEnv`/host env, or CI secrets); dex never
+writes secret values into generated files. See
+[docs/usage/agent-env.md](usage/agent-env.md) for the full guide, including
+the trust boundary around `verify.steps[].run` (executed as raw shell, same
+as `dex.toml`'s `[tasks]`).
+
+## 11. v0.1 Scope
 
 **Ship: `dex init` with built-in templates.**
 

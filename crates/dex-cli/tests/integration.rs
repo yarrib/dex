@@ -835,3 +835,146 @@ fn context_sync_outside_git_repo_fails() {
         .assert()
         .failure();
 }
+
+// --- dex agent-env init ------------------------------------------------------
+
+fn write_agent_env_manifest(dir: &std::path::Path, image: &str) {
+    std::fs::write(
+        dir.join("dex.agent-env.toml"),
+        format!(
+            r#"
+version = 1
+
+[base]
+image = "{image}"
+extra_packages = ["ripgrep", "jq"]
+repos = ["self", "my-org/shared-libs"]
+
+[auth]
+provider = "databricks-oauth-m2m"
+workspace = "dev"
+workspace_host = "https://adb-123.4.azuredatabricks.net"
+
+[auth.service_principal_env]
+client_id = "DATABRICKS_CLIENT_ID"
+client_secret = "DATABRICKS_CLIENT_SECRET"
+
+[auth.scope]
+catalog = "main"
+schema = "agent_dev"
+
+[[verify.steps]]
+name = "test"
+run = "pytest -q"
+
+[[verify.steps]]
+name = "cleanup"
+run = "rm -rf /tmp/agent-scratch"
+always = true
+
+[refresh]
+schedule = "nightly"
+"#
+        ),
+    )
+    .unwrap();
+}
+
+#[test]
+fn agent_env_init_missing_manifest_exits_failure() {
+    let dir = tempfile::tempdir().unwrap();
+    let output = dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("dex.agent-env.toml"));
+}
+
+#[test]
+fn agent_env_init_creates_devcontainer_files() {
+    let dir = tempfile::tempdir().unwrap();
+    write_agent_env_manifest(dir.path(), "mcr.microsoft.com/devcontainers/python:3.12");
+
+    dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .success();
+
+    let devcontainer_json = dir.path().join(".devcontainer").join("devcontainer.json");
+    let dockerfile = dir.path().join(".devcontainer").join("Dockerfile");
+    assert!(devcontainer_json.exists());
+    assert!(dockerfile.exists());
+
+    let devcontainer_content = std::fs::read_to_string(&devcontainer_json).unwrap();
+    assert!(devcontainer_content.contains("DATABRICKS_CLIENT_ID"));
+    assert!(devcontainer_content.contains("my-org/shared-libs"));
+
+    let dockerfile_content = std::fs::read_to_string(&dockerfile).unwrap();
+    assert!(dockerfile_content.contains("FROM mcr.microsoft.com/devcontainers/python:3.12"));
+    assert!(dockerfile_content.contains("ripgrep"));
+}
+
+#[test]
+fn agent_env_init_is_idempotent() {
+    let dir = tempfile::tempdir().unwrap();
+    write_agent_env_manifest(dir.path(), "mcr.microsoft.com/devcontainers/python:3.12");
+
+    dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .success();
+
+    let output = dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("0 created, 0 updated, 2 unchanged"));
+}
+
+#[test]
+fn agent_env_init_dry_run_writes_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    write_agent_env_manifest(dir.path(), "mcr.microsoft.com/devcontainers/python:3.12");
+
+    dex()
+        .args(["agent-env", "init", "--dry-run", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .success();
+
+    assert!(
+        !dir.path()
+            .join(".devcontainer")
+            .join("devcontainer.json")
+            .exists(),
+        "dry-run must not write any files"
+    );
+}
+
+#[test]
+fn agent_env_init_reports_updated_after_manifest_change() {
+    let dir = tempfile::tempdir().unwrap();
+    write_agent_env_manifest(dir.path(), "mcr.microsoft.com/devcontainers/python:3.12");
+
+    dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .assert()
+        .success();
+
+    write_agent_env_manifest(dir.path(), "mcr.microsoft.com/devcontainers/python:3.13");
+
+    let output = dex()
+        .args(["agent-env", "init", "--dir"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("0 created, 1 updated, 1 unchanged"));
+}

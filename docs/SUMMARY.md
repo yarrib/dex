@@ -10,6 +10,7 @@
 - [dex init](usage/init.md)
 - [Templates](usage/templates.md)
 - [dex agent new](usage/agent.md)
+- [dex agent-env init](usage/agent-env.md)
 - [dex mcp serve](usage/mcp.md)
 
 # Templates
