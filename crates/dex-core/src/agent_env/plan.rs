@@ -3,7 +3,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::agent_env::manifest::AgentEnvManifest;
-use crate::agent_env::render::{render_devcontainer_json, render_dockerfile};
+use crate::agent_env::render::{
+    render_auth_bootstrap_sh, render_ci_workflow, render_devcontainer_json, render_dockerfile,
+    render_verify_sh,
+};
 use crate::error::DexError;
 
 /// Whether a planned file is new, changed, or already up to date on disk.
@@ -37,6 +40,9 @@ pub fn plan_agent_env_init(
     let rendered = [
         render_devcontainer_json(manifest, project_dir)?,
         render_dockerfile(manifest, project_dir)?,
+        render_auth_bootstrap_sh(manifest, project_dir)?,
+        render_verify_sh(manifest, project_dir)?,
+        render_ci_workflow(manifest, project_dir)?,
     ];
 
     let files = rendered
@@ -121,7 +127,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let manifest = fixture_manifest("mcr.microsoft.com/devcontainers/base:ubuntu", "\"self\"");
         let plan = plan_agent_env_init(&manifest, dir.path()).unwrap();
-        assert_eq!(plan.files.len(), 2);
+        assert_eq!(plan.files.len(), 5);
         assert!(plan.files.iter().all(|f| f.state == FileState::Created));
     }
 
