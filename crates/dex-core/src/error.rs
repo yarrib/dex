@@ -20,6 +20,9 @@ pub enum DexError {
     #[error(transparent)]
     Context(#[from] ContextError),
 
+    #[error(transparent)]
+    AgentEnv(#[from] AgentEnvError),
+
     #[error("render error: {0}")]
     Render(#[from] minijinja::Error),
 
@@ -41,6 +44,27 @@ pub enum ContextError {
 
     #[error("could not run git — is it installed and on PATH? ({0})")]
     GitSpawn(String),
+}
+
+/// Errors related to `dex agent-env` manifest parsing and generation.
+#[derive(Debug, thiserror::Error)]
+pub enum AgentEnvError {
+    #[error(
+        "no dex.agent-env.toml found at {0}. See the manifest schema in docs/usage/agent-env.md"
+    )]
+    ManifestNotFound(PathBuf),
+
+    #[error("dex.agent-env.toml parse error: {0}")]
+    Parse(#[from] toml::de::Error),
+
+    #[error("unsupported dex.agent-env.toml version: {0} (expected 1)")]
+    UnsupportedVersion(u32),
+
+    #[error("unsupported auth.provider: '{0}' (expected 'databricks-oauth-m2m')")]
+    UnsupportedProvider(String),
+
+    #[error("invalid dex.agent-env.toml: {0}")]
+    Invalid(String),
 }
 
 /// Errors related to configuration parsing and validation.

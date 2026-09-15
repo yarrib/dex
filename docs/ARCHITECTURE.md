@@ -233,7 +233,46 @@ User runs: dex init --template default
     └────────────────────────────┘
 ```
 
-### 5.2. Pass-through Flow
+### 5.2. `dex agent-env init` Flow
+
+```
+User runs: dex agent-env init
+                │
+                ▼
+    ┌── dex-cli (clap) ─────────┐
+    │  parse args                │
+    │  resolve project dir       │
+    └────────┬───────────────────┘
+             │
+             ▼
+    ┌── dex-core ───────────────┐
+    │  AgentEnvManifest          │
+    │    ::from_path()           │
+    │    ::validate()             │
+    │  → AgentEnvManifest        │
+    └────────┬───────────────────┘
+             │
+             ▼
+    ┌── dex-core ───────────────┐
+    │  plan_agent_env_init(      │
+    │    manifest, project_dir)  │
+    │  → AgentEnvPlan             │
+    │    (render each .j2 file,  │
+    │     diff against disk,     │
+    │     classify Created/      │
+    │     Updated/Unchanged)     │
+    └────────┬───────────────────┘
+             │
+             ▼
+    ┌── dex-cli (console) ──────┐
+    │  --dry-run: print plan,    │
+    │    write nothing            │
+    │  else: apply_agent_env_    │
+    │    plan(), print summary   │
+    └────────────────────────────┘
+```
+
+### 5.3. Pass-through Flow
 
 ```
 User runs: dex db clusters list --output json

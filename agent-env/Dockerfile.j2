@@ -1,0 +1,7 @@
+FROM {{ image }}
+{% if extra_packages %}
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    {% for p in extra_packages %}{{ p }}{% if not loop.last %} \
+    {% endif %}{% endfor %} \
+    && rm -rf /var/lib/apt/lists/*
+{% endif %}

@@ -13,6 +13,8 @@ enum Cli {
     Init(commands::init::InitArgs),
     /// Scaffold and manage AI agent projects.
     Agent(commands::agent::AgentArgs),
+    /// Generate a reproducible dev environment for coding agents.
+    AgentEnv(commands::agent_env::AgentEnvArgs),
     /// Add a composable trait to an existing project.
     Add(commands::add::AddArgs),
     /// Manage and install AI agent skill packs.
@@ -36,6 +38,7 @@ fn main() {
     let result = match cli {
         Cli::Init(args) => commands::init::run(args),
         Cli::Agent(args) => commands::agent::run(args),
+        Cli::AgentEnv(args) => commands::agent_env::run(args),
         Cli::Add(args) => commands::add::run(args),
         Cli::Skills(args) => commands::skills::run(args),
         Cli::Mcp(args) => commands::mcp::run(args),

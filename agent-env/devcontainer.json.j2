@@ -1,0 +1,12 @@
+{
+  "name": "dex agent-env",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteEnv": {
+    "{{ client_id_env }}": "${localEnv:{{ client_id_env }}}",
+    "{{ client_secret_env }}": "${localEnv:{{ client_secret_env }}}"
+  },
+  "postCreateCommand": "set -e; {% for r in repos_to_clone %}[ -d /workspaces/{{ r.name }} ] || git clone https://github.com/{{ r.slug }}.git /workspaces/{{ r.name }}; {% endfor %}bash .devcontainer/auth-bootstrap.sh"
+}

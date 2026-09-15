@@ -1,5 +1,6 @@
 pub mod add;
 pub mod agent;
+pub mod agent_env;
 pub mod context;
 pub mod init;
 pub mod mcp;
