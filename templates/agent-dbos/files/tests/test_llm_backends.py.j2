@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+{%- if llm_sdk == 'openai' %}
 from types import SimpleNamespace as NS
 
+{%- endif %}
 from {{ project_name }}.steps import llm
 
 HISTORY = [

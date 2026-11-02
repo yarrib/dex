@@ -35,7 +35,9 @@ from {{ project_name }} import runtime
 from {{ project_name }}.steps.approval import pending_approval, submit_decision
 {%- endif %}
 from {{ project_name }}.streaming import aread_events, tokens
+{%- if include_hitl %}
 from {{ project_name }}.workflows.agent_run import agent_run
+{%- endif %}
 from {{ project_name }}.workflows.queue import enqueue_run
 
 PAGE = Path(__file__).parent / "static" / "index.html"

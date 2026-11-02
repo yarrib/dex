@@ -25,10 +25,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog=APP_NAME, description="{{ description }}")
     sub = p.add_subparsers(dest="command", required=True)
 
-    serve = sub.add_parser("serve", help="{% if include_api %}run the API and the queue worker{% else %}run the queue worker{% endif %}")
 {%- if include_api %}
+    serve = sub.add_parser("serve", help="run the API and the queue worker")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
+{%- else %}
+    sub.add_parser("serve", help="run the queue worker")
 {%- endif %}
 
     run = sub.add_parser("run", help="enqueue a run and print its run id")
