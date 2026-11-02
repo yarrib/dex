@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+dist/
+.databricks/
+mlruns/
+*.sqlite
+*.sqlite-journal
+.pytest_cache/
+.ruff_cache/

@@ -1,0 +1,34 @@
+"""The run queue. The API (or CLI) enqueues; DBOS workers dequeue within these limits."""
+
+from __future__ import annotations
+
+from dbos import DBOS
+
+from {{ project_name }}.config import Settings, get_settings
+from {{ project_name }}.workflows.agent_run import agent_run
+
+QUEUE_NAME = "agent_runs"
+
+
+def register_queues(settings: Settings | None = None) -> None:
+    """Declare the queue. Call after `DBOS.launch()` (see runtime.py).
+
+    * `global_concurrency` caps runs executing at once across all workers.
+    * `limiter` caps how many runs may *start* per minute — a coarse throttle on model
+      spend. A per-call model rate limit would live inside the model step instead.
+    """
+    s = settings or get_settings()
+    DBOS.register_queue(
+        QUEUE_NAME,
+        global_concurrency=s.max_concurrent_runs,
+        limiter={"limit": s.max_runs_per_minute, "period": 60},
+        polling_interval_sec=s.queue_polling_interval_seconds,
+    )
+
+
+def enqueue_run(task: str) -> str:
+    """Enqueue a run in this process; returns the run id (the DBOS workflow id)."""
+    queue = DBOS.retrieve_queue(QUEUE_NAME)
+    if queue is None:
+        raise RuntimeError("queue not registered; launch the runtime first")
+    return queue.enqueue(agent_run, task).get_workflow_id()

@@ -1,0 +1,43 @@
+"""Example side-effecting tool — replace with real tools.
+
+Pattern to copy: derive the write from the idempotency key, so a step that runs twice
+(crash after the write, before DBOS recorded the step) still produces ONE effect.
+
+Where an external API accepts an idempotency key (Stripe, GitHub `Idempotency-Key`,
+a PR title marker, ...) pass `idempotency_key` straight through. Where it doesn't,
+check for an existing result before writing — as done here with a unique-keyed row.
+"""
+
+from __future__ import annotations
+
+import sqlite3
+from typing import Any
+
+from {{ project_name }}.config import get_settings
+
+
+def _connect() -> sqlite3.Connection:
+    conn = sqlite3.connect(get_settings().effects_db_path)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS notes ("
+        " idempotency_key TEXT PRIMARY KEY, text TEXT NOT NULL,"
+        " created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+    )
+    return conn
+
+
+def record_note(arguments: dict[str, Any], idempotency_key: str) -> dict[str, Any]:
+    text = str(arguments.get("text", ""))
+    with _connect() as conn:  # commits on success
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO notes (idempotency_key, text) VALUES (?, ?)",
+            (idempotency_key, text),
+        )
+        created = cur.rowcount == 1
+    return {"recorded": text, "idempotency_key": idempotency_key, "duplicate": not created}
+
+
+def count_notes() -> int:
+    """Number of recorded notes (used by tests and `status`)."""
+    with _connect() as conn:
+        return conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]

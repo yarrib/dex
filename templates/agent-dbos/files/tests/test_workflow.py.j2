@@ -1,0 +1,106 @@
+"""The agent loop with a fake model: step outputs, events, limits and the queue."""
+
+from __future__ import annotations
+
+import threading
+from typing import Any
+
+import pytest
+from dbos import DBOS, SetWorkflowID
+
+from {{ project_name }}.agent.schemas import Completion
+from {{ project_name }}.agent.tools import TOOLS, Tool
+from {{ project_name }}.steps.llm import set_backend
+from {{ project_name }}.streaming import read_events
+from {{ project_name }}.workflows.agent_run import agent_run
+from {{ project_name }}.workflows.queue import enqueue_run
+
+from tests.conftest import new_run_id, wait_for
+from tests.fake_llm import FakeLLM, llm_turns, tool_call
+
+
+@pytest.fixture
+def echo_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A side-effect-free tool that needs no approval."""
+    monkeypatch.setitem(
+        TOOLS,
+        "echo",
+        Tool(
+            name="echo",
+            description="echo",
+            parameters={"type": "object", "properties": {"text": {"type": "string"}}},
+            fn=lambda args, key: {"echo": args.get("text", "")},
+        ),
+    )
+
+
+def run(task: str = "do it") -> dict[str, Any]:
+    return DBOS.start_workflow(agent_run, task).get_result()
+
+
+def step_names(run_id: str) -> list[str]:
+    return [s["function_name"] for s in DBOS.list_workflow_steps(run_id)]
+
+
+def test_run_without_tools_completes(launch_runtime, env):
+    launch_runtime()
+    set_backend(FakeLLM([Completion(text="all done")], log_path=env["LLM_LOG"]))
+
+    result = run()
+
+    assert result == {"status": "completed", "output": "all done", "turns": 1}
+    assert llm_turns(env["LLM_LOG"]) == [0]
+
+
+def test_tool_call_round_trip_is_one_llm_call_per_turn(launch_runtime, env, echo_tool):
+    launch_runtime()
+    set_backend(
+        FakeLLM(
+            [tool_call("echo", text="hi"), Completion(text="echoed hi")], log_path=env["LLM_LOG"]
+        )
+    )
+    run_id = new_run_id()
+
+    with SetWorkflowID(run_id):
+        result = DBOS.start_workflow(agent_run, "echo hi").get_result()
+
+    assert result["status"] == "completed" and result["turns"] == 2
+    assert llm_turns(env["LLM_LOG"]) == [0, 1]
+    names = step_names(run_id)
+    assert sum(n.endswith("call_model") for n in names) == 2
+    assert sum(n.endswith("run_tool") for n in names) == 1
+    kinds = [event["kind"] for _, event in read_events(run_id)]
+    assert kinds == ["started", "turn", "tool_result", "turn", "finished"]
+
+
+def test_turn_budget_is_enforced(launch_runtime, env, echo_tool):
+    launch_runtime(MAX_TURNS="2")
+    set_backend(FakeLLM([tool_call("echo", text="again")], log_path=env["LLM_LOG"]))
+
+    result = run()
+
+    assert result["status"] == "turn_budget_exceeded"
+    assert llm_turns(env["LLM_LOG"]) == [0, 1]
+
+
+def test_unknown_tool_is_reported_to_the_model_not_raised(launch_runtime, env):
+    launch_runtime()
+    set_backend(FakeLLM([tool_call("nope"), Completion(text="ok")], log_path=env["LLM_LOG"]))
+
+    assert run()["status"] == "completed"
+
+
+def test_queue_caps_concurrency(launch_runtime, env, echo_tool):
+    launch_runtime(MAX_CONCURRENT_RUNS="2")
+    gate = threading.Event()
+    set_backend(FakeLLM([Completion(text="done")], gate=gate))
+
+    run_ids = [enqueue_run(f"task {i}") for i in range(3)]
+
+    def statuses() -> list[str]:
+        return sorted(DBOS.retrieve_workflow(r).get_status().status for r in run_ids)
+
+    # Two runs execute (blocked on the gate); the third waits in the queue.
+    wait_for(lambda: statuses() == ["ENQUEUED", "PENDING", "PENDING"])
+    gate.set()
+    wait_for(lambda: statuses() == ["SUCCESS"] * 3)

@@ -1,0 +1,27 @@
+[project]
+name = "{{ project_name }}"
+template = "agent-dbos"
+
+[skills]
+packs = ["default", "agent-dev"]
+
+# Tasks: `dex run <name>`
+{%- if database == 'postgres' %}
+
+[tasks.db-up]
+command = "docker compose up -d"
+{%- endif %}
+
+[tasks.serve]
+command = "uv run {{ project_name }} serve"
+
+[tasks.test]
+command = "uv run pytest"
+
+[tasks.eval]
+command = "uv run python evals/runner.py"
+{%- if deploy_target == 'databricks_app' %}
+
+[tasks.deploy]
+command = "databricks bundle deploy && databricks bundle run {{ project_name }}_app"
+{%- endif %}

@@ -1,0 +1,39 @@
+"""A side effect happens once even when its step runs twice."""
+
+from __future__ import annotations
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.tools.example_tool import count_notes, record_note
+from {{ project_name }}.steps.llm import set_backend
+
+from tests import crashy_tools
+from tests._crash_worker import SCRIPTS
+from tests.conftest import new_run_id, run_worker
+from tests.fake_llm import FakeLLM
+
+
+def test_record_note_is_idempotent_by_key(env):
+    first = record_note({"text": "hello"}, "run-1:3:record_note")
+    again = record_note({"text": "hello"}, "run-1:3:record_note")
+    other = record_note({"text": "hello"}, "run-2:3:record_note")
+
+    assert (first["duplicate"], again["duplicate"], other["duplicate"]) == (False, True, False)
+    assert count_notes() == 2
+
+
+def test_tool_retried_after_crash_performs_its_side_effect_once(launch_runtime, env):
+    run_id = new_run_id()
+
+    # The tool writes its row, then the process dies before DBOS records the step.
+    assert run_worker("after_effect", run_id).wait(timeout=60) == 137
+    assert count_notes() == 1
+
+    # Recovery runs the step AGAIN (at-least-once) with the same idempotency key.
+    crashy_tools.register(env["CRASH_MARKER"])
+    launch_runtime()
+    set_backend(FakeLLM(SCRIPTS["after_effect"], log_path=env["LLM_LOG"]))
+    result = DBOS.retrieve_workflow(run_id).get_result()
+
+    assert result["status"] == "completed"
+    assert count_notes() == 1  # still one row: the retry was a no-op

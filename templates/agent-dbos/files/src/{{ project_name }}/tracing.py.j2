@@ -1,0 +1,63 @@
+"""MLflow tracing for model and tool steps, tagged with the DBOS workflow id.
+
+Tracing is best-effort: if mlflow is missing or `AGENT_TRACING=0`, the wrapped step runs
+untraced. A span carries `run_id` so an MLflow trace lines up with its DBOS workflow
+(`status <run_id>` shows the same id).
+"""
+
+from __future__ import annotations
+
+import functools
+import os
+from collections.abc import Callable
+from typing import Any, TypeVar
+
+from dbos import DBOS
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+_mlflow_module: Any = None
+_mlflow_checked = False
+
+
+def _mlflow() -> Any:
+    global _mlflow_module, _mlflow_checked
+    if not _mlflow_checked:
+        _mlflow_checked = True
+        if os.environ.get("AGENT_TRACING", "1") != "0":
+            try:
+                import mlflow
+
+                _mlflow_module = mlflow
+            except ImportError:
+                _mlflow_module = None
+    return _mlflow_module
+
+
+def setup_tracing() -> None:
+    """Point MLflow at the configured tracking server/experiment (no-op when disabled)."""
+    mlflow = _mlflow()
+    if mlflow is None:
+        return
+    mlflow.set_experiment(os.environ.get("MLFLOW_EXPERIMENT_NAME", "{{ project_name }}"))
+
+
+def traced(name: str, span_type: str = "TOOL") -> Callable[[F], F]:
+    """Wrap a function in an MLflow span named `name`."""
+
+    def decorator(fn: F) -> F:
+        @functools.wraps(fn)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            mlflow = _mlflow()
+            if mlflow is None:
+                return fn(*args, **kwargs)
+            with mlflow.start_span(name=name, span_type=span_type) as span:
+                span.set_attributes({"run_id": DBOS.workflow_id or ""})
+                span.set_inputs({"args": args, "kwargs": kwargs})
+                result = fn(*args, **kwargs)
+                span.set_outputs(result)
+                return result
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator

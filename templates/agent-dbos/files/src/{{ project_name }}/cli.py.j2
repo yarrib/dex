@@ -1,0 +1,137 @@
+"""Command line: serve | run | {% if include_hitl %}approve | reject | {% endif %}status | replay.
+
+`run`, `approve`, `reject`, `status` and `replay` talk to the system database through a
+DBOS *client*: they never execute workflows themselves, so a `serve` process (or several)
+does the work, and the commands work while the server is down — runs just wait.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+{%- if not include_api %}
+import threading
+{%- endif %}
+from typing import Any
+
+from {{ project_name }}.config import APP_NAME
+from {{ project_name }}.workflows.queue import QUEUE_NAME
+
+TERMINAL = {"SUCCESS", "ERROR", "CANCELLED", "MAX_RECOVERY_ATTEMPTS_EXCEEDED"}
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog=APP_NAME, description="{{ description }}")
+    sub = p.add_subparsers(dest="command", required=True)
+
+{%- if include_api %}
+    serve = sub.add_parser("serve", help="run the API and the queue worker")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+{%- else %}
+    sub.add_parser("serve", help="run the queue worker")
+{%- endif %}
+
+    run = sub.add_parser("run", help="enqueue a run and print its run id")
+    run.add_argument("task")
+    run.add_argument("--wait", action="store_true", help="block until the run finishes")
+
+    status = sub.add_parser("status", help="show a run's state and step trace")
+    status.add_argument("run_id")
+{%- if include_hitl %}
+
+    for name, helptext in (("approve", "approve the action a run is waiting on"),
+                           ("reject", "reject the action a run is waiting on")):
+        decide = sub.add_parser(name, help=helptext)
+        decide.add_argument("run_id")
+        decide.add_argument("--reason", default="")
+{%- endif %}
+
+    replay = sub.add_parser("replay", help="fork a run, re-executing from a step onwards")
+    replay.add_argument("run_id")
+    replay.add_argument("--from-step", type=int, default=0, help="first step to re-execute")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.command == "serve":
+        return _serve({%- if include_api %}args.host, args.port{% endif %})
+    return _client_command(args)
+
+
+def _serve({% if include_api %}host: str, port: int{% endif %}) -> int:
+{%- if include_api %}
+    import uvicorn
+
+    uvicorn.run("{{ project_name }}.api:app", host=host, port=port)
+    return 0
+{%- else %}
+    from {{ project_name }} import runtime
+
+    runtime.launch()
+    print(f"worker running (queue '{QUEUE_NAME}'); Ctrl+C to stop")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        runtime.shutdown()
+    return 0
+{%- endif %}
+
+
+def _client_command(args: argparse.Namespace) -> int:
+    from {{ project_name }}.runtime import make_client
+
+    client = make_client()
+    try:
+        if args.command == "run":
+            options: Any = {"queue_name": QUEUE_NAME, "workflow_name": "agent_run"}
+            handle = client.enqueue(options, args.task)
+            print(handle.get_workflow_id())
+            if args.wait:
+                print(json.dumps(handle.get_result(), indent=2))
+        elif args.command == "status":
+            return _print_status(client, args.run_id)
+{%- if include_hitl %}
+        elif args.command in ("approve", "reject"):
+            from {{ project_name }}.steps.approval import APPROVAL_TOPIC
+
+            message = {"approved": args.command == "approve", "reason": args.reason}
+            client.send(args.run_id, message, topic=APPROVAL_TOPIC)
+            print(f"{args.command}d {args.run_id}")
+{%- endif %}
+        elif args.command == "replay":
+            handle = client.fork_workflow(args.run_id, args.from_step, queue_name=QUEUE_NAME)
+            print(handle.get_workflow_id())
+    finally:
+        client.destroy()
+    return 0
+
+
+def _print_status(client: Any, run_id: str) -> int:
+    runs = client.list_workflows(workflow_ids=[run_id])
+    if not runs:
+        print(f"no such run: {run_id}", file=sys.stderr)
+        return 1
+    run = runs[0]
+    print(f"run     {run_id}")
+    print(f"status  {run.status}")
+{%- if include_hitl %}
+    pending = client.get_event(run_id, "pending_approval", timeout_seconds=0)
+    if pending:
+        print(f"waiting for approval: {json.dumps(pending['call'])}")
+{%- endif %}
+    if run.status in TERMINAL and run.output is not None:
+        print(f"output  {json.dumps(run.output)}")
+    print("steps")
+    for step in client.list_workflow_steps(run_id):
+        outcome = "error" if step["error"] else "ok"
+        print(f"  {step['function_id']:>3}  {step['function_name']}  [{outcome}]")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

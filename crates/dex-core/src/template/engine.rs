@@ -29,6 +29,16 @@ impl TemplateEngine {
         Ok(rendered)
     }
 
+    /// Evaluate a Jinja2 expression (e.g. `include_ci` or `database == 'postgres'`)
+    /// against `context` and return its truthiness.
+    ///
+    /// A bare variable name behaves as before; names missing from the context
+    /// are undefined and therefore falsy.
+    pub fn eval_condition(&self, expr: &str, context: &minijinja::Value) -> Result<bool, DexError> {
+        let compiled = self.env.compile_expression(expr)?;
+        Ok(compiled.eval(context)?.is_true())
+    }
+
     /// Render a path string (for variable interpolation in file paths).
     ///
     /// Uses the same Jinja2 syntax: `{{ project_name }}/src/main.py`
@@ -51,6 +61,31 @@ impl Default for TemplateEngine {
 mod tests {
     use super::*;
     use minijinja::context;
+
+    #[test]
+    fn eval_condition_bare_name_and_expression() {
+        let engine = TemplateEngine::new();
+        let ctx = context! { include_ci => true, database => "postgres", off => false };
+        assert!(engine.eval_condition("include_ci", &ctx).unwrap());
+        assert!(!engine.eval_condition("off", &ctx).unwrap());
+        assert!(!engine.eval_condition("missing", &ctx).unwrap());
+        assert!(
+            engine
+                .eval_condition("database == 'postgres'", &ctx)
+                .unwrap()
+        );
+        assert!(
+            !engine
+                .eval_condition("database == 'lakebase'", &ctx)
+                .unwrap()
+        );
+        assert!(
+            engine
+                .eval_condition("include_ci and database != 'lakebase'", &ctx)
+                .unwrap()
+        );
+        assert!(engine.eval_condition("1 +", &ctx).is_err());
+    }
 
     #[test]
     fn render_simple_string() {

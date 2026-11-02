@@ -1,0 +1,105 @@
+"""Eval harness: run each case through the durable workflow and check the output.
+
+By default the model is the real one configured in .env. Pass `--fake` to use a scripted
+stand-in (smoke-test the harness with no API key). A case passes when the run completes and
+its output contains every `must_contain` and none of the `must_not_contain` strings.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+CASES_DIR = Path(__file__).parent / "cases"
+
+
+def load_cases(cases_dir: Path = CASES_DIR) -> list[dict[str, Any]]:
+    return [json.loads(p.read_text()) for p in sorted(cases_dir.glob("*.json"))]
+
+
+def check_case(case: dict[str, Any], output: str) -> tuple[bool, str]:
+    for banned in case.get("must_not_contain", []):
+        if banned and banned.lower() in output.lower():
+            return False, f"output contains banned substring {banned!r}"
+    for required in case.get("must_contain", []):
+        if required and required.lower() not in output.lower():
+            return False, f"output missing required substring {required!r}"
+    return True, "ok"
+
+
+def run_evals(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    from dbos import DBOS
+
+    from {{ project_name }}.workflows.agent_run import agent_run
+
+    results: dict[str, Any] = {"total": len(cases), "passed": 0, "failed": 0, "cases": []}
+    for case in cases:
+        name = case.get("name", "unknown")
+        try:
+            result = DBOS.start_workflow(agent_run, case["input"]).get_result()
+            passed, reason = check_case(case, result["output"])
+            if result["status"] != "completed":
+                passed, reason = False, f"run ended {result['status']}"
+        except Exception as exc:
+            passed, reason = False, f"raised: {exc}"
+        results["passed" if passed else "failed"] += 1
+        results["cases"].append({"name": name, "passed": passed, "reason": reason})
+    return results
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fake", action="store_true", help="use a scripted model (no API key)")
+    args = parser.parse_args()
+
+    if args.fake or "DBOS_DATABASE_URL" not in os.environ:
+        # Evals use a throwaway system database so they never touch real runs.
+        os.environ["DBOS_DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp()}/evals.sqlite"
+    os.environ.setdefault("EFFECTS_DB_PATH", f"{tempfile.mkdtemp()}/effects.sqlite")
+    os.environ.setdefault("AGENT_TRACING", "0")
+{%- if include_hitl %}
+    # No human in an eval: actions that need approval are approved by the (journaled) timeout.
+    os.environ.setdefault("APPROVAL_TIMEOUT_SECONDS", "0.5")
+    os.environ.setdefault("APPROVAL_TIMEOUT_DEFAULT", "approve")
+{%- endif %}
+
+    from {{ project_name }} import runtime
+
+    runtime.launch()
+    try:
+        if args.fake:
+            from {{ project_name }}.steps.llm import set_backend
+
+            set_backend(_fake_backend)
+        results = run_evals(load_cases())
+    finally:
+        runtime.shutdown()
+
+    print(json.dumps(results, indent=2))
+    return 0 if results["failed"] == 0 else 1
+
+
+def _fake_backend(
+    history: list[dict[str, Any]], specs: list[dict[str, Any]], on_token: Any
+) -> Any:
+    """Scripted stand-in: call `record_note` once if asked to record, then answer."""
+    from {{ project_name }}.agent.schemas import Completion, ToolCall
+
+    task = history[1]["content"].lower()
+    already_called = any(m["role"] == "tool" for m in history)
+    if "record a note" in task and not already_called:
+        return Completion(
+            tool_calls=[ToolCall(id="c1", name="record_note", arguments={"text": "hello"})]
+        )
+    if already_called:
+        return Completion(text="I recorded the note.")
+    return Completion(text="2 + 2 = 4")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

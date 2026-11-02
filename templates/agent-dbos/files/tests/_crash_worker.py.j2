@@ -1,0 +1,48 @@
+"""Subprocess used by the crash tests: start ONE run, then die (or get killed) mid-run.
+
+    python -m tests._crash_worker <scenario> <run_id>
+
+Scenarios
+  before_effect   tool crashes the process before its side effect
+  after_effect    tool performs its side effect, then crashes the process
+{%- if include_hitl %}
+  approval        run parks on a human approval and blocks until killed
+{%- endif %}
+
+Environment (DBOS_DATABASE_URL, EFFECTS_DB_PATH, LLM_LOG, CRASH_MARKER) comes from the test.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+from dbos import DBOS, SetWorkflowID
+
+from {{ project_name }} import runtime
+from {{ project_name }}.agent.schemas import Completion
+from {{ project_name }}.steps.llm import set_backend
+from {{ project_name }}.workflows.agent_run import agent_run
+
+from tests import crashy_tools
+from tests.fake_llm import FakeLLM, tool_call
+
+SCRIPTS = {
+    "before_effect": [tool_call("crash_before_effect", text="hello"), Completion(text="done")],
+    "after_effect": [tool_call("crash_after_effect", text="hello"), Completion(text="done")],
+    "approval": [tool_call("record_note", text="hello"), Completion(text="done")],
+}
+
+
+def main() -> None:
+    scenario, run_id = sys.argv[1], sys.argv[2]
+    crashy_tools.register(os.environ["CRASH_MARKER"])
+    runtime.launch()
+    set_backend(FakeLLM(SCRIPTS[scenario], log_path=os.environ["LLM_LOG"]))
+    with SetWorkflowID(run_id):
+        handle = DBOS.start_workflow(agent_run, "do the thing")
+    handle.get_result()  # blocks until the crash (or, for `approval`, until the test kills us)
+
+
+if __name__ == "__main__":
+    main()

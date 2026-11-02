@@ -1,0 +1,87 @@
+"""Human-in-the-loop: a durable wait that survives restarts."""
+
+from __future__ import annotations
+
+from dbos import DBOS, SetWorkflowID
+
+from {{ project_name }}.agent.schemas import Completion
+from {{ project_name }}.agent.tools.example_tool import count_notes
+from {{ project_name }}.runtime import make_client
+from {{ project_name }}.steps.approval import PENDING_EVENT, pending_approval, submit_decision
+from {{ project_name }}.steps.llm import set_backend
+from {{ project_name }}.workflows.agent_run import agent_run
+
+from tests._crash_worker import SCRIPTS
+from tests.conftest import new_run_id, run_worker, wait_for
+from tests.fake_llm import FakeLLM, llm_turns, tool_call
+
+NOTE_SCRIPT = [tool_call("record_note", text="hello"), Completion(text="done")]
+
+
+def start(run_id: str) -> None:
+    with SetWorkflowID(run_id):
+        DBOS.start_workflow(agent_run, "record a note")
+
+
+def test_approve_resumes_the_run(launch_runtime, env):
+    launch_runtime()
+    set_backend(FakeLLM(NOTE_SCRIPT, log_path=env["LLM_LOG"]))
+    run_id = new_run_id()
+    start(run_id)
+
+    pending = wait_for(lambda: pending_approval(run_id))
+    assert pending["call"]["name"] == "record_note"
+    assert count_notes() == 0  # nothing happens before approval
+
+    submit_decision(run_id, True)
+    assert DBOS.retrieve_workflow(run_id).get_result()["status"] == "completed"
+    assert count_notes() == 1
+
+
+def test_reject_stops_the_run_without_the_side_effect(launch_runtime, env):
+    launch_runtime()
+    set_backend(FakeLLM(NOTE_SCRIPT, log_path=env["LLM_LOG"]))
+    run_id = new_run_id()
+    start(run_id)
+    wait_for(lambda: pending_approval(run_id))
+
+    submit_decision(run_id, False, "not today")
+    result = DBOS.retrieve_workflow(run_id).get_result()
+
+    assert result["status"] == "rejected" and "not today" in result["output"]
+    assert count_notes() == 0
+
+
+def test_timeout_takes_the_configured_default_branch(launch_runtime, env):
+    launch_runtime(APPROVAL_TIMEOUT_SECONDS="0.3", APPROVAL_TIMEOUT_DEFAULT="reject")
+    set_backend(FakeLLM(NOTE_SCRIPT, log_path=env["LLM_LOG"]))
+    run_id = new_run_id()
+    start(run_id)
+
+    result = DBOS.retrieve_workflow(run_id).get_result()
+
+    assert result["status"] == "rejected"
+    assert count_notes() == 0
+
+
+def test_waiting_run_survives_a_process_kill(launch_runtime, env):
+    run_id = new_run_id()
+    worker = run_worker("approval", run_id)
+    client = make_client()
+    try:
+        wait_for(lambda: client.get_event(run_id, PENDING_EVENT, timeout_seconds=0))
+        worker.kill()  # SIGKILL while parked on the approval
+        worker.wait(timeout=30)
+    finally:
+        client.destroy()
+    assert llm_turns(env["LLM_LOG"]) == [0]
+
+    launch_runtime()  # recovery: replays to the same wait
+    set_backend(FakeLLM(SCRIPTS["approval"], log_path=env["LLM_LOG"]))
+    wait_for(lambda: pending_approval(run_id))
+    assert count_notes() == 0
+
+    submit_decision(run_id, True)
+    assert DBOS.retrieve_workflow(run_id).get_result()["status"] == "completed"
+    assert count_notes() == 1
+    assert llm_turns(env["LLM_LOG"]) == [0, 1]  # turn 0 was not asked again

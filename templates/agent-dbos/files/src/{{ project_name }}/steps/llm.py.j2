@@ -1,0 +1,241 @@
+"""The model step. Every LLM call is a checkpointed DBOS step.
+
+On recovery a completed turn returns its recorded completion; the model is not called
+again. The step returns a plain dict (`Completion.model_dump()`) so DBOS can store it.
+
+History is provider-neutral:
+  {"role": "system" | "user", "content": str}
+  {"role": "assistant", "content": str, "tool_calls": [ToolCall dumps]}
+  {"role": "tool", "tool_call_id": str, "name": str, "content": str}
+Each backend converts it to its SDK's wire format.
+"""
+
+from __future__ import annotations
+
+{% if llm_sdk == 'openai' -%}
+import json
+{% endif -%}
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.schemas import Completion, ToolCall
+from {{ project_name }}.agent.tools import TOOLS
+from {{ project_name }}.config import get_settings
+from {{ project_name }}.streaming import tokens
+from {{ project_name }}.tracing import traced
+
+PROMPT_PATH = Path(__file__).resolve().parent.parent / "agent" / "prompts" / "system.md"
+
+# (history, tool specs, on_token) -> Completion. Tests install a fake with `set_backend`.
+Backend = Callable[[list[dict[str, Any]], list[dict[str, Any]], Callable[[str], None]], Completion]
+_backend: Backend | None = None
+
+
+def set_backend(backend: Backend | None) -> None:
+    """Override the model backend (tests, local dry runs). `None` restores the default."""
+    global _backend
+    _backend = backend
+
+
+def tool_specs() -> list[dict[str, Any]]:
+    return [
+        {"name": t.name, "description": t.description, "parameters": t.parameters}
+        for t in TOOLS.values()
+    ]
+
+
+@DBOS.step()
+def begin_run(task: str) -> dict[str, Any]:
+    """Freeze everything a run reads from the outside world (prompt file, settings).
+
+    Reading files or env inside the workflow body would make replay non-deterministic;
+    reading them here records them once.
+    """
+    s = get_settings()
+    return {
+        "history": [
+            {"role": "system", "content": PROMPT_PATH.read_text()},
+            {"role": "user", "content": task},
+        ],
+        "max_turns": s.max_turns,
+        "approval_timeout_seconds": s.approval_timeout_seconds,
+        "approval_timeout_default": s.approval_timeout_default,
+    }
+
+
+@DBOS.step()
+@traced("call_model", span_type="LLM")
+def call_model(history: list[dict[str, Any]]) -> dict[str, Any]:
+    """One model turn. Streams tokens live; only the final completion is checkpointed."""
+    run_id = DBOS.workflow_id or ""
+    backend = _backend or _default_backend()
+    completion = backend(history, tool_specs(), lambda t: tokens.publish(run_id, t))
+    for call in completion.tool_calls:
+        tool = TOOLS.get(call.name)
+        call.needs_approval = bool(tool and tool.needs_approval)
+    return completion.model_dump()
+
+
+def assistant_message(completion: Completion) -> dict[str, Any]:
+    return {
+        "role": "assistant",
+        "content": completion.text,
+        "tool_calls": [c.model_dump() for c in completion.tool_calls],
+    }
+
+
+def _default_backend() -> Backend:
+    return _{{ llm_sdk }}_backend
+
+{% if llm_sdk == 'openai' %}
+# --- OpenAI (also Databricks model serving: set OPENAI_BASE_URL + OPENAI_API_KEY) ---
+
+
+def _to_openai_messages(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for m in history:
+        if m["role"] == "assistant" and m.get("tool_calls"):
+            out.append(
+                {
+                    "role": "assistant",
+                    "content": m.get("content") or None,
+                    "tool_calls": [
+                        {
+                            "id": c["id"],
+                            "type": "function",
+                            "function": {
+                                "name": c["name"],
+                                "arguments": json.dumps(c["arguments"]),
+                            },
+                        }
+                        for c in m["tool_calls"]
+                    ],
+                }
+            )
+        elif m["role"] == "tool":
+            out.append(
+                {"role": "tool", "tool_call_id": m["tool_call_id"], "content": m["content"]}
+            )
+        else:
+            out.append({"role": m["role"], "content": m["content"]})
+    return out
+
+
+def _openai_backend(
+    history: list[dict[str, Any]],
+    specs: list[dict[str, Any]],
+    on_token: Callable[[str], None],
+) -> Completion:
+    from openai import OpenAI
+
+    kwargs: dict[str, Any] = {}
+    if specs:
+        kwargs["tools"] = [{"type": "function", "function": spec} for spec in specs]
+    stream = OpenAI().chat.completions.create(
+        model=get_settings().llm_model,
+        messages=_to_openai_messages(history),
+        stream=True,
+        **kwargs,
+    )
+    return _collect_openai_stream(stream, on_token)
+
+
+def _collect_openai_stream(stream: Any, on_token: Callable[[str], None]) -> Completion:
+    """Fold streamed chunks into one Completion, forwarding text deltas to `on_token`."""
+    text: list[str] = []
+    partial: dict[int, dict[str, str]] = {}
+    for chunk in stream:
+        if not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta
+        if delta.content:
+            text.append(delta.content)
+            on_token(delta.content)
+        for tc in delta.tool_calls or []:
+            slot = partial.setdefault(tc.index, {"id": "", "name": "", "args": ""})
+            if tc.id:
+                slot["id"] = tc.id
+            if tc.function is not None:
+                if tc.function.name:
+                    slot["name"] = tc.function.name
+                if tc.function.arguments:
+                    slot["args"] += tc.function.arguments
+    calls = [
+        ToolCall(id=s["id"], name=s["name"], arguments=json.loads(s["args"] or "{}"))
+        for _, s in sorted(partial.items())
+    ]
+    return Completion(text="".join(text), tool_calls=calls)
+{% else %}
+# --- Anthropic ---
+
+
+def _to_anthropic_messages(history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for m in history:
+        if m["role"] == "system":
+            continue
+        if m["role"] == "assistant":
+            blocks: list[dict[str, Any]] = []
+            if m.get("content"):
+                blocks.append({"type": "text", "text": m["content"]})
+            for c in m.get("tool_calls") or []:
+                blocks.append(
+                    {"type": "tool_use", "id": c["id"], "name": c["name"], "input": c["arguments"]}
+                )
+            out.append({"role": "assistant", "content": blocks})
+        elif m["role"] == "tool":
+            block = {
+                "type": "tool_result",
+                "tool_use_id": m["tool_call_id"],
+                "content": m["content"],
+            }
+            # Consecutive tool results must share one user message.
+            if out and out[-1]["role"] == "user" and _is_tool_results(out[-1]):
+                out[-1]["content"].append(block)
+            else:
+                out.append({"role": "user", "content": [block]})
+        else:
+            out.append({"role": "user", "content": m["content"]})
+    return out
+
+
+def _is_tool_results(message: dict[str, Any]) -> bool:
+    content = message["content"]
+    return isinstance(content, list) and all(b.get("type") == "tool_result" for b in content)
+
+
+def _anthropic_backend(
+    history: list[dict[str, Any]],
+    specs: list[dict[str, Any]],
+    on_token: Callable[[str], None],
+) -> Completion:
+    from anthropic import Anthropic
+
+    kwargs: dict[str, Any] = {}
+    if specs:
+        kwargs["tools"] = [
+            {"name": s["name"], "description": s["description"], "input_schema": s["parameters"]}
+            for s in specs
+        ]
+    system = "\n\n".join(m["content"] for m in history if m["role"] == "system")
+    with Anthropic().messages.stream(
+        model=get_settings().llm_model,
+        max_tokens=4096,
+        system=system,
+        messages=_to_anthropic_messages(history),
+        **kwargs,
+    ) as stream:
+        for token in stream.text_stream:
+            on_token(token)
+        final = stream.get_final_message()
+    text = "".join(b.text for b in final.content if b.type == "text")
+    calls = [
+        ToolCall(id=b.id, name=b.name, arguments=dict(b.input))
+        for b in final.content
+        if b.type == "tool_use"
+    ]
+    return Completion(text=text, tool_calls=calls)
+{% endif %}

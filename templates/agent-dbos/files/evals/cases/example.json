@@ -1,0 +1,6 @@
+{
+  "name": "records_a_note",
+  "input": "record a note saying hello",
+  "must_contain": ["recorded"],
+  "must_not_contain": ["error"]
+}

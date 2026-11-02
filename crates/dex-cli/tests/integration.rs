@@ -349,6 +349,32 @@ fn mcp_list_templates_returns_known_templates() {
         text.contains("python-package"),
         "missing 'python-package' template in list"
     );
+    assert!(
+        text.contains("agent-dbos"),
+        "missing 'agent-dbos' template in list"
+    );
+}
+
+#[test]
+fn mcp_get_template_variables_returns_agent_dbos_specs() {
+    let req = r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_template_variables","arguments":{"template":"agent-dbos"}}}"#;
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    let text = responses[0]["result"]["content"][0]["text"]
+        .as_str()
+        .expect("expected text content");
+    for var in [
+        "project_name",
+        "llm_sdk",
+        "database",
+        "include_hitl",
+        "include_api",
+        "deploy_target",
+        "max_concurrent_runs",
+    ] {
+        assert!(text.contains(var), "missing variable {var} in:\n{text}");
+    }
 }
 
 #[test]
@@ -1079,4 +1105,270 @@ fn agent_env_init_reports_updated_after_manifest_change() {
         .unwrap();
     assert!(output.status.success());
     assert!(String::from_utf8_lossy(&output.stdout).contains("0 created, 1 updated, 4 unchanged"));
+}
+
+// --- agent-dbos (durable agent template) ---
+
+/// Scaffold `agent-dbos` into `<tmp>/demo_agent` using an answers file; returns the project dir.
+fn scaffold_agent_dbos(answers: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("demo_agent");
+    std::fs::create_dir(&project_dir).unwrap();
+    let answers_file = base.path().join("answers.toml");
+    std::fs::write(&answers_file, format!("[values]\n{answers}\n")).unwrap();
+
+    dex()
+        .args([
+            "init",
+            "--template",
+            "agent-dbos",
+            "--no-prompt",
+            "--answers",
+        ])
+        .arg(&answers_file)
+        .arg("--dir")
+        .arg(&project_dir)
+        .assert()
+        .success();
+    (base, project_dir)
+}
+
+/// Every rendered text file under `dir` (skipping installed skill/tool dirs) must be free of
+/// unrendered Jinja markers.
+fn assert_no_jinja_leftovers(dir: &std::path::Path) {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for entry in std::fs::read_dir(dir).unwrap().flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            if path.is_dir() {
+                if ![".claude", ".cursor", ".github", ".ai-skills"].contains(&name.as_str()) {
+                    walk(&path, out);
+                }
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    walk(dir, &mut files);
+    for f in files {
+        if f.extension().is_some_and(|e| e == "json")
+            && f.file_name().unwrap() == ".context-map.json"
+        {
+            continue;
+        }
+        let text = std::fs::read_to_string(&f).unwrap_or_default();
+        assert!(
+            !text.contains("{{") && !text.contains("{%"),
+            "unrendered Jinja in {}",
+            f.display()
+        );
+    }
+}
+
+#[test]
+fn init_agent_dbos_renders_every_database_and_sdk_combination() {
+    for database in ["postgres", "lakebase"] {
+        for llm_sdk in ["openai", "anthropic"] {
+            let (_base, p) = scaffold_agent_dbos(&format!(
+                "database = \"{database}\"\nllm_sdk = \"{llm_sdk}\""
+            ));
+            let ctx = format!("{database}/{llm_sdk}");
+
+            for f in [
+                "pyproject.toml",
+                "dex.toml",
+                "dbos-config.yaml",
+                ".env.example",
+                "AGENTS.md",
+                "README.md",
+                "databricks.yml",
+                "app.yaml",
+                "resources/app.yml",
+                "src/demo_agent/cli.py",
+                "src/demo_agent/config.py",
+                "src/demo_agent/api.py",
+                "src/demo_agent/streaming.py",
+                "src/demo_agent/tracing.py",
+                "src/demo_agent/workflows/agent_run.py",
+                "src/demo_agent/workflows/queue.py",
+                "src/demo_agent/steps/llm.py",
+                "src/demo_agent/steps/tools.py",
+                "src/demo_agent/steps/approval.py",
+                "src/demo_agent/agent/schemas.py",
+                "src/demo_agent/agent/prompts/system.md",
+                "src/demo_agent/agent/tools/example_tool.py",
+                "tests/test_workflow.py",
+                "tests/test_resume.py",
+                "tests/test_idempotency.py",
+                "tests/test_hitl.py",
+                "tests/test_api.py",
+                "evals/runner.py",
+                "evals/cases/example.json",
+                ".claude/skills/durable-workflows/SKILL.md",
+            ] {
+                assert!(p.join(f).is_file(), "[{ctx}] missing {f}");
+            }
+
+            // `database` toggles the compose file and the config code.
+            assert_eq!(
+                p.join("docker-compose.yml").exists(),
+                database == "postgres",
+                "[{ctx}] docker-compose.yml presence"
+            );
+            let config = std::fs::read_to_string(p.join("src/demo_agent/config.py")).unwrap();
+            assert_eq!(
+                config.contains("_lakebase_engine"),
+                database == "lakebase",
+                "[{ctx}]"
+            );
+
+            // `llm_sdk` toggles the client used inside the model step, and the dependency.
+            let llm = std::fs::read_to_string(p.join("src/demo_agent/steps/llm.py")).unwrap();
+            let pyproject = std::fs::read_to_string(p.join("pyproject.toml")).unwrap();
+            assert!(llm.contains(&format!("_{llm_sdk}_backend")), "[{ctx}]");
+            assert!(pyproject.contains(&format!("\"{llm_sdk}>=")), "[{ctx}]");
+            let other = if llm_sdk == "openai" {
+                "anthropic"
+            } else {
+                "openai"
+            };
+            assert!(!pyproject.contains(&format!("\"{other}>=")), "[{ctx}]");
+
+            let app = std::fs::read_to_string(p.join("resources/app.yml")).unwrap();
+            assert_eq!(
+                app.contains("instance_name"),
+                database == "lakebase",
+                "[{ctx}]"
+            );
+
+            assert_no_jinja_leftovers(&p);
+        }
+    }
+}
+
+#[test]
+fn init_agent_dbos_optional_files_follow_their_flags() {
+    let (_b, p) = scaffold_agent_dbos("include_hitl = false");
+    assert!(!p.join("src/demo_agent/steps/approval.py").exists());
+    assert!(!p.join("tests/test_hitl.py").exists());
+    assert!(p.join("src/demo_agent/api.py").exists());
+    let api = std::fs::read_to_string(p.join("src/demo_agent/api.py")).unwrap();
+    assert!(!api.contains("/approve"), "HITL endpoints must be dropped");
+    let cli = std::fs::read_to_string(p.join("src/demo_agent/cli.py")).unwrap();
+    assert!(
+        !cli.contains("\"approve\""),
+        "approve command must be dropped"
+    );
+    assert_no_jinja_leftovers(&p);
+
+    let (_b, p) = scaffold_agent_dbos("include_api = false");
+    assert!(!p.join("src/demo_agent/api.py").exists());
+    assert!(!p.join("src/demo_agent/static").exists());
+    assert!(!p.join("tests/test_api.py").exists());
+    assert!(p.join("src/demo_agent/steps/approval.py").exists());
+    let pyproject = std::fs::read_to_string(p.join("pyproject.toml")).unwrap();
+    assert!(!pyproject.contains("fastapi"));
+    assert_no_jinja_leftovers(&p);
+
+    let (_b, p) = scaffold_agent_dbos("deploy_target = \"none\"\ninclude_mcp = false");
+    for f in [
+        "databricks.yml",
+        "app.yaml",
+        "resources/app.yml",
+        ".mcp.json",
+    ] {
+        assert!(!p.join(f).exists(), "{f} should be absent");
+    }
+    assert!(p.join("docker-compose.yml").exists());
+    assert_no_jinja_leftovers(&p);
+}
+
+#[test]
+fn agent_new_runtime_durable_resolves_to_agent_dbos_with_llm_sdk() {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("durable_agent");
+    std::fs::create_dir(&project_dir).unwrap();
+
+    dex()
+        .args([
+            "agent",
+            "new",
+            "--runtime",
+            "durable",
+            "--sdk",
+            "anthropic",
+            "--no-prompt",
+            "--dir",
+        ])
+        .arg(&project_dir)
+        .assert()
+        .success();
+
+    let pyproject = std::fs::read_to_string(project_dir.join("pyproject.toml")).unwrap();
+    assert!(
+        pyproject.contains("dbos"),
+        "expected the agent-dbos template"
+    );
+    assert!(pyproject.contains("\"anthropic>="));
+    assert!(!pyproject.contains("\"openai>="));
+    assert!(
+        project_dir
+            .join("src/durable_agent/workflows/agent_run.py")
+            .is_file()
+    );
+}
+
+#[test]
+fn agent_new_runtime_durable_rejects_baml() {
+    let base = tempfile::tempdir().unwrap();
+    dex()
+        .args([
+            "agent",
+            "new",
+            "--runtime",
+            "durable",
+            "--sdk",
+            "baml",
+            "--no-prompt",
+            "--dir",
+        ])
+        .arg(base.path())
+        .assert()
+        .failure();
+}
+
+#[test]
+fn mcp_scaffold_agent_runtime_durable_uses_agent_dbos() {
+    let base = tempfile::tempdir().unwrap();
+    let project_dir = base.path().join("mcp_durable");
+    let req = format!(
+        r#"{{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{{"name":"scaffold_agent","arguments":{{"sdk":"openai","runtime":"durable","dir":"{}","variables":{{"project_name":"mcp_durable"}}}}}}}}"#,
+        project_dir.display()
+    );
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    let is_error = responses[0]["result"]["isError"].as_bool().unwrap_or(false);
+    assert!(!is_error, "scaffold_agent returned error: {responses:?}");
+    assert!(
+        project_dir
+            .join("src/mcp_durable/workflows/agent_run.py")
+            .is_file()
+    );
+    let pyproject = std::fs::read_to_string(project_dir.join("pyproject.toml")).unwrap();
+    assert!(pyproject.contains("\"openai>="));
+}
+
+#[test]
+fn mcp_scaffold_agent_durable_baml_returns_error() {
+    let base = tempfile::tempdir().unwrap();
+    let req = format!(
+        r#"{{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{{"name":"scaffold_agent","arguments":{{"sdk":"baml","runtime":"durable","dir":"{}"}}}}}}"#,
+        base.path().display()
+    );
+    let responses = mcp_call(&format!("{req}\n"));
+
+    assert_eq!(responses.len(), 1);
+    assert!(responses[0]["result"]["isError"].as_bool().unwrap_or(false));
 }

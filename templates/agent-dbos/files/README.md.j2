@@ -1,0 +1,105 @@
+# {{ project_name }}
+
+{{ description }}
+
+A durable agent service on [DBOS](https://docs.dbos.dev/python/). Every model call and tool
+call is a checkpointed step, so a crashed or redeployed run resumes where it stopped — **one
+model call per step, one side effect per action** — instead of starting over.
+
+## Quickstart
+
+```bash
+{%- if database == 'postgres' %}
+docker compose up -d              # local Postgres for DBOS (or: dex run db-up)
+{%- else %}
+cp .env.example .env              # fill in LAKEBASE_* and Databricks auth
+{%- endif %}
+uv sync
+uv run pytest                     # fake LLM, no API keys
+uv run {{ project_name }} serve   # {% if include_api %}API + worker on :8000{% else %}queue worker{% endif %}
+```
+
+In another shell (set `{% if llm_sdk == 'openai' %}OPENAI_API_KEY{% else %}ANTHROPIC_API_KEY{% endif %}` for the server):
+
+```bash
+uv run {{ project_name }} run "record a note saying hello"   # prints a run id
+{%- if include_hitl %}
+uv run {{ project_name }} approve <run_id>                   # the example tool needs approval
+{%- endif %}
+uv run {{ project_name }} status <run_id>                    # state + step trace
+```
+
+## Crash demo
+
+1. `uv run {{ project_name }} serve`, then start a run{% if include_hitl %} and approve it{% endif %}.
+2. `kill -9` the server while the run is mid-tool-call.
+3. Start `serve` again. DBOS recovers the run from its last completed step.
+4. `status <run_id>` shows one `call_model` per turn and the ledger (`.effects.sqlite`) has one
+   row per `record_note` — not two.
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `workflows/agent_run.py` | The agent loop — deterministic glue |
+| `workflows/queue.py` | Run queue: concurrency cap, start-rate limiter |
+| `steps/llm.py` | The model step ({{ llm_sdk }}); tokens stream live, completion is checkpointed |
+| `steps/tools.py` | One step per tool call, with idempotency keys |
+{%- if include_hitl %}
+| `steps/approval.py` | Durable human-in-the-loop wait (`DBOS.recv`) |
+{%- endif %}
+| `streaming.py` | Durable progress events (resumable) + live token bus |
+{%- if include_api %}
+| `api.py` | FastAPI: runs, SSE{% if include_hitl %}, approvals{% endif %}, a minimal inbox page at `/` |
+{%- endif %}
+| `agent/tools/` | Your tools — see `AGENTS.md` for the replay-safety rules |
+
+## Following a run
+
+{% if include_api -%}
+```bash
+curl -N localhost:8000/runs/<run_id>/events                    # durable progress (SSE)
+curl -N -H 'Last-Event-ID: 3' localhost:8000/runs/<run_id>/events   # resume after event 3
+curl -N localhost:8000/runs/<run_id>/tokens                    # live model tokens (not resumable)
+```
+{%- else -%}
+This project has no API (`include_api = false`); use `status <run_id>`.
+{%- endif %}
+
+## Tests
+
+`uv run pytest` runs against a throwaway SQLite system database — no Docker needed. To run
+the same suite against Postgres{% if database == 'postgres' %} (`docker compose up -d`){% endif %}:
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:dbos@localhost:5432/postgres uv run pytest
+```
+
+`tests/test_resume.py` and `tests/test_idempotency.py` crash a real worker process with
+`os._exit`, then recover the run in a fresh one.
+{%- if database == 'lakebase' %}
+
+## Lakebase auth
+
+`config.py` builds a SQLAlchemy engine that fetches a Databricks OAuth token on every new
+connection (pool recycled every 15 min, well inside the token lifetime). If your Databricks
+App binds Lakebase as an app resource, check which `PG*` variables the platform injects and
+simplify `_lakebase_engine()` accordingly.
+{%- endif %}
+{%- if deploy_target == 'databricks_app' %}
+
+## Deploy to Databricks Apps
+
+```bash
+databricks bundle validate && dex run deploy
+```
+
+`databricks.yml` includes `resources/app.yml`; `app.yaml` holds the launch command. Set
+secrets (model keys) as app resources, not in the bundle.
+{%- endif %}
+
+## Upgrading DBOS
+
+`dbos` is pinned to a minor in `pyproject.toml`. Replay semantics must not shift under
+in-flight runs: bump deliberately, run the crash tests, and bump `APP_VERSION` if workflow
+step order changed.

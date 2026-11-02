@@ -1,0 +1,5 @@
+{
+  "name": "answers_directly",
+  "input": "what is 2 + 2? answer without using tools",
+  "must_contain": ["4"]
+}

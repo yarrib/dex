@@ -1,0 +1,47 @@
+"""Human-in-the-loop approval as a durable wait.
+
+The workflow parks on `DBOS.recv`; the wait outlives the process. After a restart the
+workflow replays to this point and waits again (the timeout deadline is journaled, so it
+does not restart). `approve` / `reject` deliver the decision with `DBOS.send`.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.schemas import Decision
+
+APPROVAL_TOPIC = "approval"
+PENDING_EVENT = "pending_approval"
+
+
+def wait_for_approval(
+    call: dict[str, Any], timeout_seconds: float, timeout_default: str
+) -> Decision:
+    """Park the run until a decision arrives, or take the configured default on timeout.
+
+    Workflow-level code (not a step): `set_event` and `recv` are themselves journaled by
+    DBOS, so a timeout takes the same branch on every replay.
+    """
+    DBOS.set_event(PENDING_EVENT, {"call": call})
+    message = DBOS.recv(topic=APPROVAL_TOPIC, timeout_seconds=timeout_seconds)
+    DBOS.set_event(PENDING_EVENT, None)
+    if message is None:
+        return Decision(
+            approved=timeout_default == "approve",
+            reason=f"no decision within {timeout_seconds:g}s; defaulted to {timeout_default}",
+            source="timeout",
+        )
+    return Decision(approved=bool(message.get("approved")), reason=str(message.get("reason", "")))
+
+
+def submit_decision(run_id: str, approved: bool, reason: str = "") -> None:
+    """Deliver a decision to a waiting run (in-process; the CLI uses DBOSClient.send)."""
+    DBOS.send(run_id, {"approved": approved, "reason": reason}, topic=APPROVAL_TOPIC)
+
+
+def pending_approval(run_id: str) -> dict[str, Any] | None:
+    """The action a run is waiting on, or None."""
+    return DBOS.get_event(run_id, PENDING_EVENT, timeout_seconds=0)

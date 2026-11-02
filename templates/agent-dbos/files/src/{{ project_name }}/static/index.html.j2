@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ project_name }}</title>
+<style>
+  body { font: 15px system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; }
+  input { width: 70%; }
+  pre { background: #f4f4f4; padding: .6rem; overflow: auto; }
+  li { margin: .4rem 0; }
+</style>
+<h1>{{ project_name }}</h1>
+<form id="f"><input id="task" placeholder="Task" required> <button>Run</button></form>
+<h2>Run</h2>
+<pre id="log">(start a run)</pre>
+{%- if include_hitl %}
+<h2>Waiting for approval</h2>
+<ul id="inbox"></ul>
+{%- endif %}
+<script>
+// Everything below renders as plain text nodes: tool arguments come from the model and
+// must be treated as untrusted text, never parsed as markup.
+const log = document.getElementById("log");
+
+document.getElementById("f").onsubmit = async (e) => {
+  e.preventDefault();
+  const res = await fetch("/runs", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({task: document.getElementById("task").value}),
+  });
+  const {run_id} = await res.json();
+  log.textContent = "run " + run_id + "\n";
+  const es = new EventSource("/runs/" + run_id + "/events"); // reconnects with Last-Event-ID
+  for (const kind of ["started", "turn", "approval", "tool_result", "finished"]) {
+    es.addEventListener(kind, (m) => {
+      log.textContent += kind + " " + m.data + "\n";
+      if (kind === "finished") es.close();
+    });
+  }
+};
+{%- if include_hitl %}
+
+async function decide(id, verb) {
+  await fetch("/runs/" + id + "/" + verb, {method: "POST"});
+  refresh();
+}
+
+function button(label, onclick) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.onclick = onclick;
+  return b;
+}
+
+async function refresh() {
+  const items = await (await fetch("/inbox")).json();
+  const list = document.getElementById("inbox");
+  list.replaceChildren(...items.map((item) => {
+    const li = document.createElement("li");
+    const text = item.run_id.slice(0, 8) + " " + item.call.name + " " +
+                 JSON.stringify(item.call.arguments) + " ";
+    li.append(text,
+              button("Approve", () => decide(item.run_id, "approve")), " ",
+              button("Reject", () => decide(item.run_id, "reject")));
+    return li;
+  }));
+}
+setInterval(refresh, 2000);
+refresh();
+{%- endif %}
+</script>
