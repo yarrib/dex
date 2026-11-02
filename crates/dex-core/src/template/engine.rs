@@ -34,11 +34,7 @@ impl TemplateEngine {
     ///
     /// A bare variable name behaves as before; names missing from the context
     /// are undefined and therefore falsy.
-    pub fn eval_condition(
-        &self,
-        expr: &str,
-        context: &minijinja::Value,
-    ) -> Result<bool, DexError> {
+    pub fn eval_condition(&self, expr: &str, context: &minijinja::Value) -> Result<bool, DexError> {
         let compiled = self.env.compile_expression(expr)?;
         Ok(compiled.eval(context)?.is_true())
     }
@@ -73,8 +69,16 @@ mod tests {
         assert!(engine.eval_condition("include_ci", &ctx).unwrap());
         assert!(!engine.eval_condition("off", &ctx).unwrap());
         assert!(!engine.eval_condition("missing", &ctx).unwrap());
-        assert!(engine.eval_condition("database == 'postgres'", &ctx).unwrap());
-        assert!(!engine.eval_condition("database == 'lakebase'", &ctx).unwrap());
+        assert!(
+            engine
+                .eval_condition("database == 'postgres'", &ctx)
+                .unwrap()
+        );
+        assert!(
+            !engine
+                .eval_condition("database == 'lakebase'", &ctx)
+                .unwrap()
+        );
         assert!(
             engine
                 .eval_condition("include_ci and database != 'lakebase'", &ctx)

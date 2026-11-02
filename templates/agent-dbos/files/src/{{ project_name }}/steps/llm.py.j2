@@ -12,7 +12,9 @@ Each backend converts it to its SDK's wire format.
 
 from __future__ import annotations
 
+{% if llm_sdk == 'openai' -%}
 import json
+{% endif -%}
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any

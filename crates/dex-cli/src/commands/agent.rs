@@ -98,11 +98,11 @@ impl Sdk {
     }
 }
 
+/// Template name plus `(variable, value)` overrides to apply when scaffolding it.
+type TemplateChoice = (&'static str, Vec<(String, String)>);
+
 /// Resolve the template name and variable overrides for an SDK + runtime pair.
-fn resolve_template(
-    sdk: Sdk,
-    runtime: Runtime,
-) -> Result<(&'static str, Vec<(String, String)>), DexError> {
+fn resolve_template(sdk: Sdk, runtime: Runtime) -> Result<TemplateChoice, DexError> {
     match (runtime, sdk) {
         (Runtime::Standard, sdk) => Ok((sdk.template_name(), Vec::new())),
         (Runtime::Durable, Sdk::Baml) => Err(DexError::Config(ConfigError::Invalid(
@@ -113,7 +113,10 @@ fn resolve_template(
                 Sdk::Anthropic => "anthropic",
                 _ => "openai",
             };
-            Ok(("agent-dbos", vec![("llm_sdk".to_string(), llm_sdk.to_string())]))
+            Ok((
+                "agent-dbos",
+                vec![("llm_sdk".to_string(), llm_sdk.to_string())],
+            ))
         }
     }
 }

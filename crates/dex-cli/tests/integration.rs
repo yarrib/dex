@@ -1118,7 +1118,13 @@ fn scaffold_agent_dbos(answers: &str) -> (tempfile::TempDir, std::path::PathBuf)
     std::fs::write(&answers_file, format!("[values]\n{answers}\n")).unwrap();
 
     dex()
-        .args(["init", "--template", "agent-dbos", "--no-prompt", "--answers"])
+        .args([
+            "init",
+            "--template",
+            "agent-dbos",
+            "--no-prompt",
+            "--answers",
+        ])
         .arg(&answers_file)
         .arg("--dir")
         .arg(&project_dir)
@@ -1146,7 +1152,8 @@ fn assert_no_jinja_leftovers(dir: &std::path::Path) {
     let mut files = Vec::new();
     walk(dir, &mut files);
     for f in files {
-        if f.extension().is_some_and(|e| e == "json") && f.file_name().unwrap() == ".context-map.json"
+        if f.extension().is_some_and(|e| e == "json")
+            && f.file_name().unwrap() == ".context-map.json"
         {
             continue;
         }
@@ -1163,8 +1170,9 @@ fn assert_no_jinja_leftovers(dir: &std::path::Path) {
 fn init_agent_dbos_renders_every_database_and_sdk_combination() {
     for database in ["postgres", "lakebase"] {
         for llm_sdk in ["openai", "anthropic"] {
-            let (_base, p) =
-                scaffold_agent_dbos(&format!("database = \"{database}\"\nllm_sdk = \"{llm_sdk}\""));
+            let (_base, p) = scaffold_agent_dbos(&format!(
+                "database = \"{database}\"\nllm_sdk = \"{llm_sdk}\""
+            ));
             let ctx = format!("{database}/{llm_sdk}");
 
             for f in [
@@ -1209,18 +1217,30 @@ fn init_agent_dbos_renders_every_database_and_sdk_combination() {
                 "[{ctx}] docker-compose.yml presence"
             );
             let config = std::fs::read_to_string(p.join("src/demo_agent/config.py")).unwrap();
-            assert_eq!(config.contains("_lakebase_engine"), database == "lakebase", "[{ctx}]");
+            assert_eq!(
+                config.contains("_lakebase_engine"),
+                database == "lakebase",
+                "[{ctx}]"
+            );
 
             // `llm_sdk` toggles the client used inside the model step, and the dependency.
             let llm = std::fs::read_to_string(p.join("src/demo_agent/steps/llm.py")).unwrap();
             let pyproject = std::fs::read_to_string(p.join("pyproject.toml")).unwrap();
             assert!(llm.contains(&format!("_{llm_sdk}_backend")), "[{ctx}]");
             assert!(pyproject.contains(&format!("\"{llm_sdk}>=")), "[{ctx}]");
-            let other = if llm_sdk == "openai" { "anthropic" } else { "openai" };
+            let other = if llm_sdk == "openai" {
+                "anthropic"
+            } else {
+                "openai"
+            };
             assert!(!pyproject.contains(&format!("\"{other}>=")), "[{ctx}]");
 
             let app = std::fs::read_to_string(p.join("resources/app.yml")).unwrap();
-            assert_eq!(app.contains("instance_name"), database == "lakebase", "[{ctx}]");
+            assert_eq!(
+                app.contains("instance_name"),
+                database == "lakebase",
+                "[{ctx}]"
+            );
 
             assert_no_jinja_leftovers(&p);
         }
@@ -1236,7 +1256,10 @@ fn init_agent_dbos_optional_files_follow_their_flags() {
     let api = std::fs::read_to_string(p.join("src/demo_agent/api.py")).unwrap();
     assert!(!api.contains("/approve"), "HITL endpoints must be dropped");
     let cli = std::fs::read_to_string(p.join("src/demo_agent/cli.py")).unwrap();
-    assert!(!cli.contains("\"approve\""), "approve command must be dropped");
+    assert!(
+        !cli.contains("\"approve\""),
+        "approve command must be dropped"
+    );
     assert_no_jinja_leftovers(&p);
 
     let (_b, p) = scaffold_agent_dbos("include_api = false");
@@ -1249,7 +1272,12 @@ fn init_agent_dbos_optional_files_follow_their_flags() {
     assert_no_jinja_leftovers(&p);
 
     let (_b, p) = scaffold_agent_dbos("deploy_target = \"none\"\ninclude_mcp = false");
-    for f in ["databricks.yml", "app.yaml", "resources/app.yml", ".mcp.json"] {
+    for f in [
+        "databricks.yml",
+        "app.yaml",
+        "resources/app.yml",
+        ".mcp.json",
+    ] {
         assert!(!p.join(f).exists(), "{f} should be absent");
     }
     assert!(p.join("docker-compose.yml").exists());
@@ -1278,17 +1306,33 @@ fn agent_new_runtime_durable_resolves_to_agent_dbos_with_llm_sdk() {
         .success();
 
     let pyproject = std::fs::read_to_string(project_dir.join("pyproject.toml")).unwrap();
-    assert!(pyproject.contains("dbos"), "expected the agent-dbos template");
+    assert!(
+        pyproject.contains("dbos"),
+        "expected the agent-dbos template"
+    );
     assert!(pyproject.contains("\"anthropic>="));
     assert!(!pyproject.contains("\"openai>="));
-    assert!(project_dir.join("src/durable_agent/workflows/agent_run.py").is_file());
+    assert!(
+        project_dir
+            .join("src/durable_agent/workflows/agent_run.py")
+            .is_file()
+    );
 }
 
 #[test]
 fn agent_new_runtime_durable_rejects_baml() {
     let base = tempfile::tempdir().unwrap();
     dex()
-        .args(["agent", "new", "--runtime", "durable", "--sdk", "baml", "--no-prompt", "--dir"])
+        .args([
+            "agent",
+            "new",
+            "--runtime",
+            "durable",
+            "--sdk",
+            "baml",
+            "--no-prompt",
+            "--dir",
+        ])
         .arg(base.path())
         .assert()
         .failure();
