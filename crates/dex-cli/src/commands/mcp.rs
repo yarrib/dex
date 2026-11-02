@@ -329,6 +329,11 @@ fn handle_tools_list(id: &Value) -> Value {
                                 "enum": ["anthropic", "openai", "baml"],
                                 "description": "SDK / framework for the agent. anthropic = Anthropic SDK (claude-*), openai = OpenAI SDK (gpt-*), baml = BAML typed functions (provider-agnostic)."
                             },
+                            "runtime": {
+                                "type": "string",
+                                "enum": ["standard", "durable"],
+                                "description": "Optional. 'durable' scaffolds agent-dbos (DBOS checkpointed model/tool steps, human-in-the-loop approval); requires sdk anthropic or openai. Default 'standard'."
+                            },
                             "dir": {
                                 "type": "string",
                                 "description": "Target directory path. Created if it does not exist."
@@ -510,13 +515,29 @@ fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
         ))
     })?;
 
-    let template_name = match sdk {
-        "anthropic" => "agent-anthropic",
-        "openai" => "agent-openai",
-        "baml" => "agent-baml",
-        other => {
+    let runtime = args
+        .get("runtime")
+        .and_then(|v| v.as_str())
+        .unwrap_or("standard");
+
+    let template_name = match (runtime, sdk) {
+        ("standard", "anthropic") => "agent-anthropic",
+        ("standard", "openai") => "agent-openai",
+        ("standard", "baml") => "agent-baml",
+        ("durable", "anthropic" | "openai") => "agent-dbos",
+        ("durable", "baml") => {
+            return Err(DexError::Config(ConfigError::Invalid(
+                "runtime 'durable' supports sdk anthropic or openai, not baml".into(),
+            )));
+        }
+        ("standard" | "durable", other) => {
             return Err(DexError::Config(ConfigError::Invalid(format!(
                 "invalid sdk '{other}': expected one of anthropic, openai, baml"
+            ))));
+        }
+        (other, _) => {
+            return Err(DexError::Config(ConfigError::Invalid(format!(
+                "invalid runtime '{other}': expected 'standard' or 'durable'"
             ))));
         }
     };
@@ -527,6 +548,15 @@ fn tool_scaffold_agent(args: &Value) -> Result<String, DexError> {
             "template".to_string(),
             Value::String(template_name.to_string()),
         );
+        // The durable template picks its model client via `llm_sdk`.
+        if template_name == "agent-dbos" {
+            let vars = obj
+                .entry("variables")
+                .or_insert_with(|| Value::Object(Default::default()));
+            if let Some(vars) = vars.as_object_mut() {
+                vars.insert("llm_sdk".to_string(), Value::String(sdk.to_string()));
+            }
+        }
     }
 
     let body = tool_scaffold_project(&forwarded)?;

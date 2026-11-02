@@ -1,0 +1,177 @@
+[template]
+name = "agent-dbos"
+description = "Durable AI agent — DBOS checkpointed LLM/tool steps, human-in-the-loop approval, SSE progress, optional Databricks Apps + Lakebase"
+version = "0.1.0"
+min_dex_version = "0.1.0"
+
+[[variables]]
+name = "project_name"
+prompt = "Project name"
+type = "string"
+required = true
+validate = "^[a-z][a-z0-9_]*$"
+
+[[variables]]
+name = "description"
+prompt = "What does this agent do? (one sentence)"
+type = "string"
+required = true
+
+[[variables]]
+name = "llm_sdk"
+prompt = "Model client used inside the LLM step"
+type = "choice"
+choices = ["openai", "anthropic"]
+default = "openai"
+required = false
+
+[[variables]]
+name = "database"
+prompt = "DBOS system database"
+type = "choice"
+choices = ["postgres", "lakebase"]
+default = "postgres"
+required = false
+
+[[variables]]
+name = "include_hitl"
+prompt = "Include human-in-the-loop approval (durable wait, inbox endpoints, approve/reject commands)?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "include_api"
+prompt = "Include a FastAPI service with SSE progress (otherwise a CLI-only queue worker)?"
+type = "bool"
+default = true
+required = false
+
+[[variables]]
+name = "deploy_target"
+prompt = "Deployment target"
+type = "choice"
+choices = ["databricks_app", "none"]
+default = "databricks_app"
+required = false
+
+[[variables]]
+name = "max_concurrent_runs"
+prompt = "Maximum concurrent runs (queue concurrency)"
+type = "string"
+default = "4"
+required = false
+validate = "^[1-9][0-9]*$"
+
+[[variables]]
+name = "python_version"
+prompt = "Python version"
+type = "choice"
+choices = ["3.12", "3.11"]
+default = "3.12"
+required = false
+
+[[variables]]
+name = "ai_tools"
+prompt = "Which AI coding assistants should this project support?"
+type = "multi"
+choices = ["claude", "cursor", "copilot", "generic"]
+default = "claude,cursor,copilot,generic"
+required = false
+
+[[variables]]
+name = "include_mcp"
+prompt = "Include a .mcp.json for MCP-capable tools (Claude Code, Claude Desktop, Cursor)?"
+type = "bool"
+default = true
+required = false
+
+[skills]
+packs = ["default", "agent-dev"]
+
+[[files]]
+src = ".mcp.json.j2"
+condition = "include_mcp"
+context_role = "ai_config"
+context_description = "MCP server config for AI coding assistants"
+
+[[files]]
+src = "AGENTS.md.j2"
+context_role = "ai_doc"
+context_description = "Canonical agent-orientation doc, including replay-safety rules"
+
+[[files]]
+src = ".claude/skills/durable-workflows/SKILL.md"
+condition = "'claude' in ai_tools"
+context_role = "ai_config"
+context_description = "Skill teaching coding assistants the DBOS replay rules"
+
+[[files]]
+src = "docker-compose.yml"
+condition = "database == 'postgres'"
+context_role = "config"
+context_description = "Local Postgres 16 for the DBOS system database"
+
+[[files]]
+src = "src/{{ project_name }}/steps/approval.py.j2"
+condition = "include_hitl"
+context_role = "entry_point"
+context_description = "Durable human-in-the-loop wait (DBOS.recv)"
+
+[[files]]
+src = "src/{{ project_name }}/api.py.j2"
+condition = "include_api"
+context_role = "entry_point"
+context_description = "FastAPI service: runs, SSE progress, approvals"
+
+[[files]]
+src = "src/{{ project_name }}/static/index.html.j2"
+condition = "include_api"
+
+[[files]]
+src = "tests/test_hitl.py.j2"
+condition = "include_hitl"
+
+[[files]]
+src = "tests/test_api.py.j2"
+condition = "include_api"
+
+[[files]]
+src = "databricks.yml.j2"
+condition = "deploy_target == 'databricks_app'"
+context_role = "config"
+context_description = "Databricks Asset Bundle root"
+
+[[files]]
+src = "app.yaml.j2"
+condition = "deploy_target == 'databricks_app'"
+context_role = "config"
+context_description = "Databricks Apps launch command"
+
+[[files]]
+src = "resources/app.yml.j2"
+condition = "deploy_target == 'databricks_app'"
+context_role = "config"
+context_description = "Databricks App resource definition"
+
+[on_success]
+message = """
+Next steps:
+  cd {{ project_name }}
+{%- if database == 'postgres' %}
+  docker compose up -d        # local Postgres for DBOS
+{%- endif %}
+  uv sync
+  uv run pytest               # fake LLM, no API keys needed
+  uv run {{ project_name }} serve      # {% if include_api %}API + worker{% else %}queue worker{% endif %}
+  uv run {{ project_name }} run "fix the failing test in tests/test_math.py"
+{%- if include_hitl %}
+  uv run {{ project_name }} approve <run_id>
+{%- endif %}
+
+Crash demo: `kill -9` the server mid-run, restart `serve`, and the run resumes
+from its last completed step (one model call per step, one side effect per action).
+
+Open the project in your AI coding assistant and read AGENTS.md — it states the
+replay-safety rules every edit to the workflow must follow.
+"""

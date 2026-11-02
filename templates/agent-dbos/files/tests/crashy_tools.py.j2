@@ -1,0 +1,39 @@
+"""Tools that hard-crash the process once, to simulate `kill -9` mid-step.
+
+`os._exit` skips every handler, exactly like a SIGKILL: the DBOS step is never recorded and
+the workflow stays PENDING for the next process to recover.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Any
+
+from {{ project_name }}.agent.tools import TOOLS, Tool
+from {{ project_name }}.agent.tools.example_tool import record_note
+
+_PARAMS = {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}
+
+
+def _crash_once(marker: Path) -> None:
+    if not marker.exists():
+        marker.touch()
+        os._exit(137)
+
+
+def register(marker: str | Path) -> None:
+    """Add `crash_before_effect` and `crash_after_effect` to the tool registry."""
+    marker_path = Path(marker)
+
+    def before(arguments: dict[str, Any], key: str) -> dict[str, Any]:
+        _crash_once(marker_path)  # dies before doing anything
+        return record_note(arguments, key)
+
+    def after(arguments: dict[str, Any], key: str) -> dict[str, Any]:
+        result = record_note(arguments, key)  # side effect is done...
+        _crash_once(marker_path)  # ...then the process dies before DBOS records the step
+        return result
+
+    for name, fn in (("crash_before_effect", before), ("crash_after_effect", after)):
+        TOOLS[name] = Tool(name=name, description=name, parameters=_PARAMS, fn=fn)

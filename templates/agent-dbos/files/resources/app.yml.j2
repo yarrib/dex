@@ -1,0 +1,15 @@
+resources:
+  apps:
+    {{ project_name }}_app:
+      name: "${bundle.target}-{{ project_name | replace('_', '-') }}"
+      description: "{{ description }}"
+      source_code_path: ..
+{%- if database == 'lakebase' %}
+      resources:
+        - name: dbos-system-db
+          description: Lakebase instance holding DBOS checkpoints
+          database:
+            instance_name: ${var.lakebase_instance}
+            database_name: databricks_postgres
+            permission: CAN_CONNECT_AND_CREATE
+{%- endif %}

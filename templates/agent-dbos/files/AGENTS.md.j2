@@ -1,0 +1,77 @@
+# AGENTS.md — {{ project_name }}
+
+> Canonical orientation doc for any AI coding assistant working on this project (Claude Code,
+> Cursor, Copilot, or any MCP client). Read it first — especially **Replay-safety rules**.
+
+## Purpose
+
+{{ description }}
+
+This is a *durable* agent: runs survive crashes, redeploys{% if include_hitl %} and long human waits{% endif %}. Every model call and tool call is a checkpointed DBOS step; on restart DBOS re-runs the workflow function and completed steps return their recorded output instead of executing.
+
+## Architecture
+
+```
+{{ project_name }}/
+├── AGENTS.md / CLAUDE.md
+├── dex.toml                      # tasks: {% if database == 'postgres' %}db-up, {% endif %}serve, test, eval{% if deploy_target == 'databricks_app' %}, deploy{% endif %}
+
+├── dbos-config.yaml              # for the `dbos` CLI; the app builds its config in config.py
+{%- if database == 'postgres' %}
+├── docker-compose.yml            # local Postgres 16 = the DBOS system database
+{%- endif %}
+├── src/{{ project_name }}/
+│   ├── cli.py                    # serve | run | {% if include_hitl %}approve | reject | {% endif %}status | replay
+│   ├── config.py                 # settings from env; DBOS config
+│   ├── runtime.py                # launch/shutdown DBOS, register the queue, client factory
+│   ├── workflows/
+│   │   ├── agent_run.py          # @DBOS.workflow — the agent loop (deterministic glue)
+│   │   └── queue.py              # "agent_runs" queue: concurrency + start-rate limit
+│   ├── steps/
+│   │   ├── llm.py                # @DBOS.step — model call ({{ llm_sdk }}); begin_run freezes prompt/settings
+│   │   ├── tools.py              # @DBOS.step — one per tool call, idempotency keys
+{%- if include_hitl %}
+│   │   └── approval.py           # durable human-in-the-loop wait (DBOS.recv)
+{%- endif %}
+│   ├── agent/{prompts/system.md, schemas.py, tools/}
+│   ├── streaming.py              # durable progress events + in-memory token bus
+{%- if include_api %}
+│   ├── api.py                    # FastAPI: runs, SSE{% if include_hitl %}, approvals, inbox{% endif %}
+
+{%- endif %}
+│   └── tracing.py                # MLflow spans tagged with the run id
+├── tests/                        # fake LLM; crash tests use real subprocesses
+└── evals/                        # runner.py + cases/*.json
+```
+
+## Replay-safety rules (non-negotiable)
+
+1. **Workflow code is deterministic between steps.** No clock, random, network, env or file I/O in `@DBOS.workflow` bodies. Do it in a step — `begin_run` reads the prompt file and settings once and records them.
+2. **Every non-deterministic call is a step**, including `datetime.now()` and `uuid4()` when they affect control flow.
+3. **Steps return JSON-serializable values** (`pydantic .model_dump()`, dicts, lists, scalars) so DBOS can checkpoint them.
+4. **Steps are at-least-once.** Make side effects idempotent with `steps/tools.py:idempotency_key` (workflow id + step id + tool name): pass it to APIs that accept a key, otherwise check for an existing result before writing.
+5. **Changing a workflow's step order is a breaking change.** Bump `APP_VERSION` (DBOS only recovers runs of the same application version).
+{%- if include_hitl %}
+6. **Human waits use `DBOS.recv`**, never sleeping or polling; the timeout branch is journaled too.
+{%- endif %}
+
+The `durable-workflows` skill repeats these for assistants that load skills.
+
+## Common tasks
+
+| Task | How |
+| --- | --- |
+| Add a tool | `agent/tools/<name>.py` (idempotent by key) → register in `agent/tools/__init__.py`; add a test that runs it twice with one key |
+| Change the prompt | `agent/prompts/system.md` (read once per run in `begin_run`; in-flight runs keep their old prompt) |
+| Add a model parameter | `steps/llm.py` backend; keep the step's signature and dict return |
+| Run tests | `uv run pytest` (SQLite, fake LLM) — or `TEST_DATABASE_URL=postgresql://… uv run pytest` |
+| Run evals | `uv run python evals/runner.py` |
+| Rerun from a step | `{{ project_name }} replay <run_id> --from-step N` |
+
+## Queue
+
+`MAX_CONCURRENT_RUNS` ({{ max_concurrent_runs }} by default) caps runs executing at once; `MAX_RUNS_PER_MINUTE` throttles run starts. Surplus runs wait in `ENQUEUED`.
+
+## Skills installed in this project
+
+This project uses the `default` and `agent-dev` skill packs, installed per the `ai_tools` variable ({{ ai_tools }}). Re-run `dex skills install` to refresh.

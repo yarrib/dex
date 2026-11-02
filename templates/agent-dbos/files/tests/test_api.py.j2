@@ -1,0 +1,157 @@
+"""HTTP API: enqueue, status, and resumable SSE progress."""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+from {{ project_name }}.agent.schemas import Completion
+from {{ project_name }}.agent.tools import TOOLS, Tool
+from {{ project_name }}.steps.llm import set_backend
+
+from tests.conftest import wait_for
+from tests.fake_llm import FakeLLM, tool_call
+
+
+@pytest.fixture
+def client(env) -> Iterator[TestClient]:
+    from sse_starlette.sse import AppStatus
+
+    from {{ project_name }}.api import app
+
+    AppStatus.should_exit_event = None  # sse-starlette keeps a loop-bound event between tests
+    with TestClient(app) as c:  # lifespan launches DBOS
+        yield c
+    set_backend(None)
+
+
+@pytest.fixture(autouse=True)
+def echo_tool(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(
+        TOOLS,
+        "echo",
+        Tool(
+            name="echo",
+            description="echo",
+            parameters={"type": "object", "properties": {"text": {"type": "string"}}},
+            fn=lambda args, key: {"echo": args.get("text", "")},
+        ),
+    )
+
+
+def parse_sse(lines: Iterator[str]) -> list[dict[str, Any]]:
+    events, current = [], {}
+    for line in lines:
+        if line.strip() == "":
+            if current:
+                events.append(current)
+                current = {}
+        elif ":" in line and not line.startswith(":"):
+            key, _, value = line.partition(":")
+            current[key] = value.strip()
+    if current:
+        events.append(current)
+    return events
+
+
+def stream_events(
+    client: TestClient,
+    run_id: str,
+    last_event_id: str | None = None,
+    stop_after: int | None = None,
+) -> list[dict[str, Any]]:
+    headers = {"Last-Event-ID": last_event_id} if last_event_id is not None else {}
+    events: list[dict[str, Any]] = []
+    with client.stream("GET", f"/runs/{run_id}/events", headers=headers) as response:
+        assert response.status_code == 200
+        for event in parse_sse(response.iter_lines()):
+            events.append(event)
+            if stop_after is not None and len(events) >= stop_after:
+                break  # simulate the client dropping mid-stream
+    return events
+
+
+def start_run(client: TestClient, task: str = "echo hi") -> str:
+    response = client.post("/runs", json={"task": task})
+    assert response.status_code == 202
+    return response.json()["run_id"]
+
+
+def wait_success(client: TestClient, run_id: str) -> dict[str, Any]:
+    def done() -> dict[str, Any] | None:
+        body = client.get(f"/runs/{run_id}").json()
+        return body if body["status"] == "SUCCESS" else None
+
+    return wait_for(done)
+{%- if include_hitl %}
+
+
+def inbox_item(client: TestClient, run_id: str) -> dict[str, Any] | None:
+    items = client.get("/inbox").json()
+    return next((i for i in items if i["run_id"] == run_id), None)
+{%- endif %}
+
+
+def test_run_completes_and_status_reports_result(client):
+    set_backend(FakeLLM([tool_call("echo", text="hi"), Completion(text="echoed")]))
+    run_id = start_run(client)
+
+    body = wait_success(client, run_id)
+
+    assert body["result"]["output"] == "echoed"
+
+
+def test_index_page_is_served_and_renders_untrusted_text_safely(client):
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "<title>{{ project_name }}</title>" in response.text
+    # Tool arguments come from the model: the page must never feed them to innerHTML.
+    assert "innerHTML" not in response.text
+
+
+def test_unknown_run_is_404(client):
+    assert client.get("/runs/does-not-exist").status_code == 404
+
+
+def test_sse_reconnect_with_last_event_id_replays_nothing_twice(client):
+    set_backend(FakeLLM([tool_call("echo", text="hi"), Completion(text="echoed")]))
+    run_id = start_run(client)
+    wait_for(lambda: client.get(f"/runs/{run_id}").json()["status"] == "SUCCESS")
+
+    full = stream_events(client, run_id)
+    assert [e["event"] for e in full] == ["started", "turn", "tool_result", "turn", "finished"]
+    assert [int(e["id"]) for e in full] == [0, 1, 2, 3, 4]
+
+    # Drop after two events, reconnect from the last id we saw: the rest arrive once, in order.
+    first = stream_events(client, run_id, stop_after=2)
+    rest = stream_events(client, run_id, last_event_id=first[-1]["id"])
+    assert [e["id"] for e in first + rest] == [e["id"] for e in full]
+    assert first + rest == full
+{%- if include_hitl %}
+
+
+def test_inbox_approve_over_http(client):
+    set_backend(FakeLLM([tool_call("record_note", text="hello"), Completion(text="done")]))
+    run_id = start_run(client, "record a note")
+
+    item = wait_for(lambda: inbox_item(client, run_id))
+    assert item["call"]["name"] == "record_note"
+
+    assert client.post(f"/runs/{run_id}/approve", json={"reason": "ok"}).status_code == 200
+    body = wait_success(client, run_id)
+    assert body["result"]["status"] == "completed"
+
+
+def test_reject_over_http(client):
+    set_backend(FakeLLM([tool_call("record_note", text="hello"), Completion(text="done")]))
+    run_id = start_run(client, "record a note")
+    wait_for(lambda: inbox_item(client, run_id))
+
+    client.post(f"/runs/{run_id}/reject", json={"reason": "no"})
+    body = wait_success(client, run_id)
+    assert body["result"]["status"] == "rejected"
+{%- endif %}

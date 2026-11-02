@@ -7,7 +7,7 @@ Desktop, or any MCP client out of the box.
 ## Synopsis
 
 ```
-dex agent new [--sdk <anthropic|openai|baml>]
+dex agent new [--sdk <anthropic|openai|baml>] [--runtime <standard|durable>]
               [--dir <path>] [--no-prompt]
               [--preset <profile>] [--standards <path>]
 ```
@@ -24,6 +24,19 @@ dex agent new --sdk baml        # BAML typed functions (any provider)
 ```
 
 Omit `--sdk` to be prompted.
+
+## Runtime choice
+
+```bash
+dex agent new --sdk openai                       # default: plain agent loop
+dex agent new --sdk anthropic --runtime durable  # durable runs on DBOS (agent-dbos)
+```
+
+`--runtime durable` scaffolds the `agent-dbos` template: every model and tool call is a
+checkpointed step, so a crashed or redeployed run resumes instead of restarting, and a run can
+wait days for a human approval. `--sdk` picks the model client (`llm_sdk`); `baml` is not
+available with the durable runtime. The durable template asks its own questions (database,
+HITL, API, deploy target) — see [built-in templates](../templates/built-in.md#agent-dbos).
 
 ## Variables
 

@@ -102,6 +102,21 @@ src = "resources/"
 condition = "include_job"
 ```
 
+`condition` is a Jinja2 expression evaluated over the template variables, so it can be a bare
+variable name or a comparison — useful for `choice` variables, which are always truthy:
+
+```toml
+[[files]]
+src = "docker-compose.yml"
+condition = "database == 'postgres'"
+
+[[files]]
+src = ".claude/"
+condition = "'claude' in ai_tools"
+```
+
+An undefined variable is falsy; an invalid expression fails the scaffold with an error.
+
 If no `[[files]]` entry exists for a path, it is always included.
 
 ## Writing template files

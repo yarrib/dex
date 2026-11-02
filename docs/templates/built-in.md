@@ -12,6 +12,7 @@ dex ships a family of built-in templates, embedded in the binary at compile time
 | `dabs-etl` | *(Deprecated — use `dabs-platform` with `--preset data_eng`)* DLT pipeline |
 | `dabs-ml` | *(Deprecated — use `dabs-platform` with `--preset mlops`)* MLflow training + serving |
 | `dabs-aiagent` | *(Deprecated — use `dabs-platform` with `--preset agents`)* AI agent serving |
+| **`agent-dbos`** | An agent whose runs must survive crashes, redeploys, or a wait for human approval (durable execution on DBOS) |
 
 The four focused `dabs-*` templates below are **superseded by `dabs-platform`**, which
 consolidates their baseline into a single template to avoid drift. They remain available
@@ -54,6 +55,80 @@ component adds its own gated directory (`pipeline/`, `ml/`, `serving_rt/`, `serv
 > **Distribution:** point an org registry at this template with `[[templates.remotes]]`
 > in `~/.config/dex/config.toml`, and ship org constants via `standards.toml`. See the
 > template's own README (`templates/dabs-platform/README.md`).
+
+---
+
+## agent-dbos
+
+A Python agent service whose runs are **durable**: every LLM call and tool call is a
+checkpointed [DBOS](https://docs.dbos.dev/python/) step and the agent loop is a DBOS workflow.
+`kill -9` mid-run, restart, and the run finishes with exactly one model call per step and one
+side effect per action. It sits beside `agent-openai` / `agent-anthropic` / `agent-baml`, which
+scaffold the agent logic but not its orchestration.
+
+```bash
+dex init --template agent-dbos --dir my_agent
+dex agent new --runtime durable --sdk anthropic      # same template, llm_sdk preset
+dex init -t agent-dbos --no-prompt --answers answers.toml
+```
+
+**When to use:** runs longer than one request — multi-step tool use, background jobs, anything
+that waits on a human. For a single-shot agent, use `agent-openai` / `agent-anthropic`.
+
+**Variables:**
+
+| Name | Type | Default | Description |
+|---|---|---|---|
+| `project_name` | string | *(dir name)* | Package and app name (`^[a-z][a-z0-9_]*$`) |
+| `description` | string | — | One-line purpose (README, AGENTS.md, system prompt) |
+| `llm_sdk` | choice | `openai` | Client used inside the model step (`openai`, `anthropic`) |
+| `database` | choice | `postgres` | DBOS system database (`postgres` → compose file; `lakebase` → OAuth-token engine) |
+| `include_hitl` | bool | `true` | Approval step (`DBOS.recv`), inbox endpoints, `approve`/`reject` commands |
+| `include_api` | bool | `true` | FastAPI service with SSE; `false` gives a CLI-only queue worker |
+| `deploy_target` | choice | `databricks_app` | `databricks_app` adds `databricks.yml`, `resources/app.yml`, `app.yaml`; `none` omits them |
+| `max_concurrent_runs` | string (int) | `4` | Queue concurrency |
+| `python_version` | choice | `3.12` | Python version (`3.12`, `3.11`) |
+| `ai_tools`, `include_mcp` | multi / bool | as `agent-openai` | AI assistant configuration |
+
+Only `database`, `llm_sdk` and `deploy_target` change generated code; the other options toggle
+whole files.
+
+**Generated files (default options):**
+
+```
+src/<project_name>/
+├── cli.py                  # serve | run | approve | reject | status | replay
+├── config.py               # settings from env; DBOS config
+├── runtime.py              # launch/shutdown, queue registration, client factory
+├── workflows/agent_run.py  # @DBOS.workflow — the agent loop
+├── workflows/queue.py      # "agent_runs": concurrency cap + start-rate limiter
+├── steps/llm.py            # @DBOS.step model call; tokens stream live, completion checkpointed
+├── steps/tools.py          # @DBOS.step per tool call, idempotency keys
+├── steps/approval.py       # durable human-in-the-loop wait   (include_hitl)
+├── agent/{prompts/system.md, schemas.py, tools/}
+├── streaming.py            # resumable progress events (DBOS streams) + in-memory token bus
+├── api.py, static/         # FastAPI: runs, SSE, approvals, inbox page   (include_api)
+└── tracing.py              # MLflow spans tagged with the run id
+tests/                      # fake LLM; crash tests kill a real worker process
+evals/                      # runner.py + cases/*.json
+docker-compose.yml          # local Postgres 16                    (database = postgres)
+databricks.yml, app.yaml, resources/app.yml                        (deploy_target = databricks_app)
+dbos-config.yaml, dex.toml, AGENTS.md, CLAUDE.md, README.md, .env.example
+.claude/skills/durable-workflows/SKILL.md   # replay rules for coding assistants (when `claude` in ai_tools)
+```
+
+**Replay-safety rules** (stated in the generated `AGENTS.md` and skill): workflow code is
+deterministic between steps; every non-deterministic call is a step; steps return
+JSON-serializable values; steps are at-least-once so side effects are idempotent by key;
+changing step order is a breaking change (bump `APP_VERSION`).
+
+**Generated-project tests** run on a throwaway SQLite system database with a fake model — no
+Docker, no API keys. Set `TEST_DATABASE_URL` to run the same suite on Postgres. The resume and
+idempotency tests crash a real worker process with `os._exit` and recover the run in a fresh
+one.
+
+> **Pinning:** `pyproject.toml` pins `dbos~=3.4`. The queue API (`DBOS.register_queue`, called
+> after launch) and workflow streams (`write_stream`/`read_stream`) are 3.x APIs.
 
 ---
 

@@ -1,0 +1,101 @@
+"""Wire-format conversion for the {{ llm_sdk }} backend (no network, no API key)."""
+
+from __future__ import annotations
+
+from types import SimpleNamespace as NS
+
+from {{ project_name }}.steps import llm
+
+HISTORY = [
+    {"role": "system", "content": "be brief"},
+    {"role": "user", "content": "record two notes"},
+    {
+        "role": "assistant",
+        "content": "on it",
+        "tool_calls": [
+            {"id": "a", "name": "record_note", "arguments": {"text": "one"}},
+            {"id": "b", "name": "record_note", "arguments": {"text": "two"}},
+        ],
+    },
+    {"role": "tool", "tool_call_id": "a", "name": "record_note", "content": "{}"},
+    {"role": "tool", "tool_call_id": "b", "name": "record_note", "content": "{}"},
+]
+{%- if llm_sdk == 'openai' %}
+
+
+def test_openai_messages_keep_tool_call_ids_and_json_arguments():
+    messages = llm._to_openai_messages(HISTORY)
+
+    assert [m["role"] for m in messages] == ["system", "user", "assistant", "tool", "tool"]
+    calls = messages[2]["tool_calls"]
+    assert [c["id"] for c in calls] == ["a", "b"]
+    assert calls[0]["function"]["arguments"] == '{"text": "one"}'
+    assert [m["tool_call_id"] for m in messages[3:]] == ["a", "b"]
+
+
+def _chunk(content=None, tool_calls=None):
+    delta = NS(content=content, tool_calls=tool_calls)
+    return NS(choices=[NS(delta=delta)])
+
+
+def _tc(index, id=None, name=None, arguments=None):
+    return NS(index=index, id=id, function=NS(name=name, arguments=arguments))
+
+
+def test_stream_folds_text_and_fragmented_tool_calls():
+    tokens: list[str] = []
+    stream = [
+        NS(choices=[]),  # usage-only chunk
+        _chunk(content="Re"),
+        _chunk(content="cording"),
+        _chunk(tool_calls=[_tc(0, id="a", name="record_note", arguments='{"te')]),
+        _chunk(tool_calls=[_tc(0, arguments='xt": "one"}')]),
+        _chunk(tool_calls=[_tc(1, id="b", name="record_note", arguments='{"text": "two"}')]),
+    ]
+
+    completion = llm._collect_openai_stream(stream, tokens.append)
+
+    assert completion.text == "Recording" and tokens == ["Re", "cording"]
+    assert [(c.id, c.arguments) for c in completion.tool_calls] == [
+        ("a", {"text": "one"}),
+        ("b", {"text": "two"}),
+    ]
+
+
+def test_stream_with_no_tool_calls_is_done():
+    completion = llm._collect_openai_stream([_chunk(content="hi")], lambda _: None)
+
+    assert completion.done and completion.text == "hi"
+{%- else %}
+
+
+def test_anthropic_messages_group_consecutive_tool_results_in_one_user_turn():
+    messages = llm._to_anthropic_messages(HISTORY)
+
+    assert [m["role"] for m in messages] == ["user", "assistant", "user"]  # system is separate
+    assistant = messages[1]["content"]
+    assert [b["type"] for b in assistant] == ["text", "tool_use", "tool_use"]
+    assert assistant[1]["input"] == {"text": "one"}
+    results = messages[2]["content"]
+    assert [(b["type"], b["tool_use_id"]) for b in results] == [
+        ("tool_result", "a"),
+        ("tool_result", "b"),
+    ]
+{%- endif %}
+
+
+def test_call_model_marks_tools_that_need_approval(env):
+    from {{ project_name }}.agent.schemas import Completion, ToolCall
+
+    llm.set_backend(
+        lambda history, specs, on_token: Completion(
+            tool_calls=[ToolCall(id="a", name="record_note", arguments={"text": "x"})]
+        )
+    )
+    try:
+        # A step called outside a workflow just runs the function: no DBOS launch needed.
+        result = llm.call_model([{"role": "user", "content": "x"}])
+    finally:
+        llm.set_backend(None)
+
+    assert result["tool_calls"][0]["needs_approval"] is True

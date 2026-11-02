@@ -1,0 +1,29 @@
+# Databricks Apps launch command. The app process is both the API and the DBOS worker:
+# DBOS launches in the FastAPI lifespan (see src/{{ project_name }}/api.py).
+command:
+  - uv
+  - run
+{%- if include_api %}
+  - uvicorn
+  - {{ project_name }}.api:app
+  - --host
+  - 0.0.0.0
+  - --port
+  - "8000"
+{%- else %}
+  - {{ project_name }}
+  - serve
+{%- endif %}
+env:
+  - name: APP_VERSION
+    value: "1"
+  - name: MAX_CONCURRENT_RUNS
+    value: "{{ max_concurrent_runs }}"
+{%- if database == 'lakebase' %}
+  # Set LAKEBASE_HOST / LAKEBASE_USER from the bound database resource or your workspace;
+  # see README "Lakebase auth".
+  - name: LAKEBASE_HOST
+    value: ""
+  - name: LAKEBASE_USER
+    value: ""
+{%- endif %}

@@ -1,0 +1,47 @@
+"""DBOS lifecycle: build the app, launch it, register the queue, and make clients."""
+
+from __future__ import annotations
+
+import threading
+
+from dbos import DBOS, DBOSClient
+
+from {{ project_name }}.config import dbos_config, get_settings
+
+_lock = threading.Lock()
+_launched = False
+
+
+def launch() -> bool:
+    """Idempotently start DBOS (recovering interrupted runs). True if this call launched it."""
+    global _launched
+    with _lock:
+        if _launched:
+            return False
+        # Importing the workflow module registers `agent_run` with DBOS.
+        from {{ project_name }}.tracing import setup_tracing
+        from {{ project_name }}.workflows.queue import register_queues
+
+        DBOS(config=dbos_config())
+        DBOS.launch()
+        register_queues()
+        setup_tracing()
+        _launched = True
+        return True
+
+
+def shutdown() -> None:
+    global _launched
+    with _lock:
+        if _launched:
+            DBOS.destroy()
+            _launched = False
+
+
+def make_client() -> DBOSClient:
+    """A client for enqueuing and controlling runs from a process that is NOT a worker."""
+    s = get_settings()
+    config = dbos_config(s)
+    if "system_database_engine" in config:
+        return DBOSClient(system_database_engine=config["system_database_engine"])
+    return DBOSClient(system_database_url=config["system_database_url"])

@@ -1,0 +1,45 @@
+"""Tool execution. One DBOS step per tool call, with an idempotency key.
+
+A step is at-least-once: if the process dies after the side effect but before DBOS records
+the step, recovery runs it again. The key — workflow id + step id + tool name — is the same
+on the retry, so an idempotent tool (see agent/tools/example_tool.py) does the work once.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.tools import TOOLS
+from {{ project_name }}.tracing import traced
+
+
+def idempotency_key(tool_name: str) -> str:
+    """Stable across retries and replays of the same step in the same run."""
+    return f"{DBOS.workflow_id}:{DBOS.step_id}:{tool_name}"
+
+
+@DBOS.step(retries_allowed=True, max_attempts=3, interval_seconds=1.0, backoff_rate=2.0)
+@traced("run_tool", span_type="TOOL")
+def run_tool(call: dict[str, Any]) -> dict[str, Any]:
+    """Run one tool call; returns `{"ok": bool, "content": str}` for the model to read.
+
+    Unexpected exceptions are retried (transient failures), then fail the run, which you can
+    `replay` after fixing. Expected failures should be returned as `ok: False` by the tool.
+    """
+    tool = TOOLS.get(call["name"])
+    if tool is None:
+        return {"ok": False, "content": f"unknown tool {call['name']!r}"}
+    result = tool.fn(call.get("arguments") or {}, idempotency_key(tool.name))
+    return {"ok": True, "content": json.dumps(result, sort_keys=True)}
+
+
+def tool_message(call: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "role": "tool",
+        "tool_call_id": call["id"],
+        "name": call["name"],
+        "content": result["content"],
+    }

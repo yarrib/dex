@@ -54,6 +54,11 @@ pub struct InitArgs {
     /// Omit the path to use the default: ~/.config/dex/answers/<template>.toml
     #[arg(long, short = 's', num_args = 0..=1, default_missing_value = "")]
     pub save_answers: Option<String>,
+
+    /// Programmatic variable values set by wrapper commands (e.g. `dex agent new`).
+    /// Highest priority: they win over answers, standards, presets and prompts.
+    #[arg(skip)]
+    pub overrides: Vec<(String, String)>,
 }
 
 pub fn run(args: InitArgs) -> Result<(), DexError> {
@@ -143,7 +148,13 @@ pub fn run(args: InitArgs) -> Result<(), DexError> {
             continue;
         }
 
-        // Answers file (highest priority): overrides standards, preset, and defaults.
+        // Wrapper-command overrides (e.g. `dex agent new --sdk anthropic`).
+        if let Some((_, raw)) = args.overrides.iter().find(|(k, _)| k == &spec.name) {
+            variables.insert(spec.name.clone(), prefill_to_value(&spec.var_type, raw));
+            continue;
+        }
+
+        // Answers file: overrides standards, preset, and defaults.
         if let Some(toml_val) = answers_prefills.get(&spec.name) {
             let mj_val = toml_val_to_minijinja(toml_val);
             variables.insert(spec.name.clone(), mj_val);

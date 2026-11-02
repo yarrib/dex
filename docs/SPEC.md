@@ -52,17 +52,22 @@ dex init [--template <name>] [--dir <path>] [--no-prompt]
     unless --no-prompt is set (uses defaults). --preset loads a named profile
     from the presets file; --standards loads flat key-value pre-fills.
 
-dex agent new [--sdk <anthropic|openai|baml>] [--dir <path>] [--no-prompt]
+dex agent new [--sdk <anthropic|openai|baml>] [--runtime <standard|durable>]
+              [--dir <path>] [--no-prompt]
               [--preset <profile>] [--standards <path>]
     Scaffold a batteries-included AI agent project. Thin wrapper over
     `dex init` that restricts the template to the `agent-*` family. The
     generated project is coding-assistant agnostic: it includes AGENTS.md,
     .mcp.json, planner/reviewer stubs, and — via an on_success hook — skills
     installed into .claude/, .cursor/, .github/, and .ai-skills/.
+    --runtime durable scaffolds `agent-dbos` (DBOS checkpointed model/tool
+    steps) with `llm_sdk` set from --sdk; it supports anthropic and openai
+    only (baml is rejected). Default runtime is `standard`.
 
 dex init --template agent-anthropic
 dex init --template agent-openai
 dex init --template agent-baml
+dex init --template agent-dbos
     Alternative entry point to the same agent templates. `dex agent new` is
     the recommended UX; `dex init --template agent-*` is the equivalent
     low-level form.
@@ -444,6 +449,19 @@ differs in how the primary model is called:
 | Prompt location | `prompts/system.md` | `prompts/system.md` | `baml_src/*.baml` (plus `prompts/` for planner/reviewer) |
 | Output schema | untyped string | untyped string | typed via BAML class |
 | Planner/Reviewer | direct SDK calls | direct SDK calls | typed BAML functions (`b.Plan`, `b.Review`) |
+
+### 8.4.1. Durable Agent Template (`agent-dbos`)
+
+Not part of the plan → act → review family above: `agent-dbos` scaffolds the *orchestration*
+of an agent whose runs must survive crashes, redeploys and long human waits. Every LLM call
+and tool call is a checkpointed DBOS step; the agent loop is a DBOS workflow; a DBOS queue
+bounds concurrency; human approval is a durable `DBOS.recv`; progress streams over SSE with
+resumable offsets. See `docs/templates/built-in.md#agent-dbos` for variables and layout.
+
+Template-engine note: a `[[files]]` entry's `condition` is a Jinja2 expression over the
+template variables — a bare name (`include_api`) or a comparison
+(`database == 'postgres'`, `'claude' in ai_tools`). `agent-dbos` uses this to gate files on
+choice variables.
 
 ### 8.5. Terraform Agent Template (`dabs-tf-agent`)
 

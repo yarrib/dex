@@ -1,0 +1,55 @@
+"""Crash a real worker process mid-run, recover in a fresh one: no model call is repeated."""
+
+from __future__ import annotations
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.schemas import Completion
+from {{ project_name }}.steps.llm import set_backend
+
+from tests import crashy_tools
+from tests._crash_worker import SCRIPTS
+from tests.conftest import new_run_id, run_worker, wait_for
+from tests.fake_llm import FakeLLM, llm_turns
+
+
+def test_run_resumes_after_crash_without_repeating_the_model_call(launch_runtime, env):
+    run_id = new_run_id()
+
+    # 1. A worker starts the run: turn 0 asks for a tool, the tool kills the process.
+    worker = run_worker("before_effect", run_id)
+    assert worker.wait(timeout=60) == 137
+    assert llm_turns(env["LLM_LOG"]) == [0]
+
+    # 2. A fresh process launches DBOS; recovery re-runs the workflow from its checkpoints.
+    crashy_tools.register(env["CRASH_MARKER"])  # marker exists now: the tool succeeds
+    launch_runtime()
+    set_backend(FakeLLM(SCRIPTS["before_effect"], log_path=env["LLM_LOG"]))
+    result = DBOS.retrieve_workflow(run_id).get_result()
+
+    # 3. Turn 0 was NOT asked again; only the missing turn 1 hit the model.
+    assert result == {"status": "completed", "output": "done", "turns": 2}
+    assert llm_turns(env["LLM_LOG"]) == [0, 1]
+    names = [s["function_name"] for s in DBOS.list_workflow_steps(run_id)]
+    assert sum(n.endswith("call_model") for n in names) == 2
+
+
+def test_completed_steps_survive_even_if_the_script_would_answer_differently(
+    launch_runtime, env
+):
+    """Recorded completions are replayed, not regenerated: a different model gets no say."""
+    run_id = new_run_id()
+    assert run_worker("before_effect", run_id).wait(timeout=60) == 137
+
+    crashy_tools.register(env["CRASH_MARKER"])
+    launch_runtime()
+    # After recovery turn 0 comes from the checkpoint; this script only matters for turn 1.
+    set_backend(
+        FakeLLM(
+            [Completion(text="WRONG"), Completion(text="turn-1 answer")], log_path=env["LLM_LOG"]
+        )
+    )
+    result = DBOS.retrieve_workflow(run_id).get_result()
+
+    assert result["output"] == "turn-1 answer"
+    assert wait_for(lambda: llm_turns(env["LLM_LOG"]) == [0, 1])

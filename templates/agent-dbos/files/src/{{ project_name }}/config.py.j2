@@ -1,0 +1,121 @@
+"""Settings, read from the environment. Nothing here touches the network at import time."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from dbos import DBOSConfig
+
+APP_NAME = "{{ project_name }}"
+DEFAULT_MODEL = "{% if llm_sdk == 'openai' %}gpt-4o-mini{% else %}claude-sonnet-4-5{% endif %}"
+{%- if database == 'postgres' %}
+DEFAULT_DATABASE_URL = "postgresql://postgres:dbos@localhost:5432/{{ project_name }}"
+{%- endif %}
+
+
+@dataclass(frozen=True)
+class Settings:
+    app_name: str
+    database_url: str
+    llm_model: str
+    max_turns: int
+    max_concurrent_runs: int
+    max_runs_per_minute: int
+    approval_timeout_seconds: float
+    approval_timeout_default: str  # "approve" | "reject" — the journaled timeout branch
+    application_version: str
+    queue_polling_interval_seconds: float
+    effects_db_path: Path
+
+
+def get_settings() -> Settings:
+    """Build settings from the environment (read fresh on every call; cheap)."""
+    return Settings(
+        app_name=APP_NAME,
+        database_url=_database_url(),
+        llm_model=os.environ.get("LLM_MODEL", DEFAULT_MODEL),
+        max_turns=int(os.environ.get("MAX_TURNS", "10")),
+        max_concurrent_runs=int(os.environ.get("MAX_CONCURRENT_RUNS", "{{ max_concurrent_runs }}")),
+        max_runs_per_minute=int(os.environ.get("MAX_RUNS_PER_MINUTE", "60")),
+        approval_timeout_seconds=float(os.environ.get("APPROVAL_TIMEOUT_SECONDS", "86400")),
+        approval_timeout_default=os.environ.get("APPROVAL_TIMEOUT_DEFAULT", "reject"),
+        # Bump when you change a workflow's step order: DBOS only recovers workflows
+        # that were started by the same application version.
+        application_version=os.environ.get("APP_VERSION", "1"),
+        queue_polling_interval_seconds=float(os.environ.get("QUEUE_POLL_SECONDS", "1.0")),
+        effects_db_path=Path(os.environ.get("EFFECTS_DB_PATH", ".effects.sqlite")),
+    )
+
+
+def dbos_config(settings: Settings | None = None) -> DBOSConfig:
+    """The DBOS runtime config for this app."""
+    s = settings or get_settings()
+    config: DBOSConfig = {
+        "name": s.app_name,
+        "application_version": s.application_version,
+        "run_admin_server": False,
+    }
+{%- if database == 'lakebase' %}
+    if s.database_url:
+        config["system_database_url"] = s.database_url
+    else:
+        config["system_database_engine"] = _lakebase_engine()
+{%- else %}
+    config["system_database_url"] = s.database_url
+{%- endif %}
+    return config
+
+
+{%- if database == 'postgres' %}
+
+
+def _database_url() -> str:
+    return os.environ.get("DBOS_DATABASE_URL", DEFAULT_DATABASE_URL)
+{%- else %}
+
+
+def _database_url() -> str:
+    """An explicit DBOS_DATABASE_URL wins (tests use a local SQLite file).
+
+    Otherwise the Lakebase engine is built lazily by `_lakebase_engine()`.
+    """
+    return os.environ.get("DBOS_DATABASE_URL", "")
+
+
+def _lakebase_engine():
+    """SQLAlchemy engine for Lakebase with an OAuth token injected on every new connection.
+
+    Lakebase takes a short-lived Databricks OAuth token as the Postgres password, so the
+    token is fetched in a `do_connect` hook instead of being baked into the URL: pooled
+    connections that get recycled pick up a fresh token automatically.
+
+    NOTE: if your Databricks App binds Lakebase as a resource, the platform injects
+    PGHOST/PGUSER/PGDATABASE and you can drop LAKEBASE_* — verify what your app
+    environment provides (see README "Lakebase auth").
+    """
+    import sqlalchemy as sa
+    from databricks.sdk import WorkspaceClient
+
+    host = os.environ["LAKEBASE_HOST"]
+    database = os.environ.get("LAKEBASE_DATABASE", "databricks_postgres")
+    user = os.environ["LAKEBASE_USER"]
+    client = WorkspaceClient()
+
+    def _token() -> str:
+        header = client.config.authenticate().get("Authorization", "")
+        return header.removeprefix("Bearer ").strip()
+
+    engine = sa.create_engine(
+        f"postgresql+psycopg://{user}@{host}:5432/{database}?sslmode=require",
+        pool_pre_ping=True,
+        pool_recycle=900,  # recycle well before the ~1h token expiry
+    )
+
+    @sa.event.listens_for(engine, "do_connect")
+    def _inject_token(dialect, conn_rec, cargs, cparams):  # noqa: ANN001
+        cparams["password"] = _token()
+
+    return engine
+{%- endif %}

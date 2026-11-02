@@ -1,0 +1,52 @@
+"""A scripted model for tests: no API keys, no network.
+
+The script is indexed by *turn* (the number of assistant messages already in the history),
+not by call count — so it behaves identically in a process that is recovering a run.
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+from pathlib import Path
+from typing import Any
+
+from {{ project_name }}.agent.schemas import Completion, ToolCall
+
+
+def tool_call(name: str, call_id: str = "c1", **arguments: Any) -> Completion:
+    return Completion(tool_calls=[ToolCall(id=call_id, name=name, arguments=arguments)])
+
+
+class FakeLLM:
+    def __init__(
+        self,
+        script: list[Completion],
+        log_path: str | Path | None = None,
+        gate: threading.Event | None = None,
+    ) -> None:
+        self.script = script
+        self.log_path = Path(log_path) if log_path else None
+        self.gate = gate  # when set, each call blocks until the test opens the gate
+        self.calls = 0
+
+    def __call__(self, history: list[dict[str, Any]], specs: list[dict[str, Any]], on_token: Any):
+        turn = sum(1 for m in history if m["role"] == "assistant")
+        self.calls += 1
+        if self.log_path:  # shared across processes, so crash tests can count real calls
+            with self.log_path.open("a") as f:
+                f.write(json.dumps({"turn": turn}) + "\n")
+        if self.gate is not None:
+            self.gate.wait(timeout=30)
+        completion = self.script[min(turn, len(self.script) - 1)]
+        for ch in completion.text:
+            on_token(ch)
+        return completion.model_copy(deep=True)
+
+
+def llm_turns(log_path: str | Path) -> list[int]:
+    """Turn numbers of every model call recorded in `log_path`, in order."""
+    path = Path(log_path)
+    if not path.exists():
+        return []
+    return [json.loads(line)["turn"] for line in path.read_text().splitlines() if line]

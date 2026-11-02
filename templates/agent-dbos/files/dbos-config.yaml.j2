@@ -1,0 +1,8 @@
+# Used by the `dbos` CLI (e.g. `dbos workflow list`). The application itself builds
+# its config in src/{{ project_name }}/config.py so the system database URL always
+# comes from the environment.
+name: {{ project_name }}
+language: python
+{%- if database == 'postgres' %}
+system_database_url: ${DBOS_DATABASE_URL}
+{%- endif %}

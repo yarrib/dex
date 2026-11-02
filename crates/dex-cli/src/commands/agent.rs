@@ -31,6 +31,11 @@ pub struct NewArgs {
     #[arg(long, value_enum)]
     sdk: Option<Sdk>,
 
+    /// Runtime for the agent. `durable` scaffolds `agent-dbos`: every model and
+    /// tool call is a checkpointed DBOS step (requires `--sdk anthropic|openai`).
+    #[arg(long, value_enum, default_value_t = Runtime::Standard)]
+    runtime: Runtime,
+
     /// Target directory.
     #[arg(short, long, default_value = ".")]
     dir: String,
@@ -60,7 +65,15 @@ pub struct NewArgs {
     save_answers: Option<String>,
 }
 
-#[derive(Copy, Clone, Debug, ValueEnum)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
+pub enum Runtime {
+    /// Plain agent loop (agent-anthropic / agent-openai / agent-baml).
+    Standard,
+    /// Durable agent runs on DBOS (agent-dbos).
+    Durable,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, ValueEnum)]
 pub enum Sdk {
     Anthropic,
     Openai,
@@ -85,6 +98,26 @@ impl Sdk {
     }
 }
 
+/// Resolve the template name and variable overrides for an SDK + runtime pair.
+fn resolve_template(
+    sdk: Sdk,
+    runtime: Runtime,
+) -> Result<(&'static str, Vec<(String, String)>), DexError> {
+    match (runtime, sdk) {
+        (Runtime::Standard, sdk) => Ok((sdk.template_name(), Vec::new())),
+        (Runtime::Durable, Sdk::Baml) => Err(DexError::Config(ConfigError::Invalid(
+            "--runtime durable supports --sdk anthropic or openai (baml is not available)".into(),
+        ))),
+        (Runtime::Durable, sdk) => {
+            let llm_sdk = match sdk {
+                Sdk::Anthropic => "anthropic",
+                _ => "openai",
+            };
+            Ok(("agent-dbos", vec![("llm_sdk".to_string(), llm_sdk.to_string())]))
+        }
+    }
+}
+
 pub fn run(args: AgentArgs) -> Result<(), DexError> {
     match args.command {
         AgentCommand::New(a) => run_new(a),
@@ -95,11 +128,12 @@ fn run_new(args: NewArgs) -> Result<(), DexError> {
     let sdk = match args.sdk {
         Some(s) => s,
         None if args.no_prompt => Sdk::Anthropic,
-        None => prompt_sdk()?,
+        None => prompt_sdk(args.runtime)?,
     };
+    let (template, overrides) = resolve_template(sdk, args.runtime)?;
 
     let init_args = InitArgs {
-        template: sdk.template_name().to_string(),
+        template: template.to_string(),
         dir: args.dir,
         no_prompt: args.no_prompt,
         standards: args.standards,
@@ -107,13 +141,17 @@ fn run_new(args: NewArgs) -> Result<(), DexError> {
         presets_file: args.presets_file,
         answers: args.answers,
         save_answers: args.save_answers,
+        overrides,
     };
 
     init::run(init_args)
 }
 
-fn prompt_sdk() -> Result<Sdk, DexError> {
-    let options = [Sdk::Anthropic, Sdk::Openai, Sdk::Baml];
+fn prompt_sdk(runtime: Runtime) -> Result<Sdk, DexError> {
+    let options: Vec<Sdk> = match runtime {
+        Runtime::Standard => vec![Sdk::Anthropic, Sdk::Openai, Sdk::Baml],
+        Runtime::Durable => vec![Sdk::Anthropic, Sdk::Openai],
+    };
     let labels: Vec<&str> = options.iter().map(|s| s.label()).collect();
 
     let selection = Select::new()
@@ -124,4 +162,30 @@ fn prompt_sdk() -> Result<Sdk, DexError> {
         .map_err(|e| DexError::Config(ConfigError::Invalid(e.to_string())))?;
 
     Ok(options[selection])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standard_runtime_maps_sdk_to_template() {
+        let (t, o) = resolve_template(Sdk::Openai, Runtime::Standard).unwrap();
+        assert_eq!(t, "agent-openai");
+        assert!(o.is_empty());
+    }
+
+    #[test]
+    fn durable_runtime_resolves_to_agent_dbos_with_llm_sdk() {
+        let (t, o) = resolve_template(Sdk::Anthropic, Runtime::Durable).unwrap();
+        assert_eq!(t, "agent-dbos");
+        assert_eq!(o, vec![("llm_sdk".to_string(), "anthropic".to_string())]);
+        let (_, o) = resolve_template(Sdk::Openai, Runtime::Durable).unwrap();
+        assert_eq!(o[0].1, "openai");
+    }
+
+    #[test]
+    fn durable_runtime_rejects_baml() {
+        assert!(resolve_template(Sdk::Baml, Runtime::Durable).is_err());
+    }
 }

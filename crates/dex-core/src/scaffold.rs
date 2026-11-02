@@ -43,7 +43,7 @@ pub fn scaffold(
 
     for (rel_path, content) in &template.files {
         // Check file rules for conditional inclusion.
-        if !should_include_file(rel_path, &template.file_rules, variables) {
+        if !should_include_file(&engine, &context, rel_path, &template.file_rules)? {
             continue;
         }
 
@@ -114,30 +114,29 @@ fn get_overwrite_flag(rel_path: &Path, file_rules: &[crate::template::FileRule])
 }
 
 /// Check whether a file should be included based on file rules and variable values.
+///
+/// A rule's `condition` is a Jinja2 expression evaluated against the template
+/// variables: a bare variable name (`include_ci`) or a comparison
+/// (`database == 'postgres'`).
 fn should_include_file(
+    engine: &TemplateEngine,
+    context: &minijinja::Value,
     rel_path: &Path,
     file_rules: &[crate::template::FileRule],
-    variables: &HashMap<String, minijinja::Value>,
-) -> bool {
+) -> Result<bool, DexError> {
     for rule in file_rules {
         let rule_src = Path::new(&rule.src);
 
         // Check if this rule applies to the file.
         if rel_path.starts_with(rule_src)
             && let Some(condition) = &rule.condition
+            && !engine.eval_condition(condition, context)?
         {
-            let is_truthy = variables
-                .get(condition)
-                .map(|v| v.is_true())
-                .unwrap_or(false);
-
-            if !is_truthy {
-                return false;
-            }
+            return Ok(false);
         }
     }
 
-    true
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -240,5 +239,51 @@ mod tests {
         let result = scaffold(&template, dir.path(), &vars).unwrap();
         assert_eq!(result.files_created.len(), 1);
         assert!(!dir.path().join(".github/ci.yml").exists());
+    }
+
+    #[test]
+    fn scaffold_condition_supports_comparison_expressions() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut files = HashMap::new();
+        files.insert(PathBuf::from("pg.yml"), "pg".to_string());
+        files.insert(PathBuf::from("lake.yml"), "lake".to_string());
+
+        let rule = |src: &str, cond: &str| FileRule {
+            src: src.to_string(),
+            dest: None,
+            condition: Some(cond.to_string()),
+            overwrite: false,
+            context_role: None,
+            context_description: None,
+        };
+        let rules = vec![
+            rule("pg.yml", "database == 'postgres'"),
+            rule("lake.yml", "database == 'lakebase'"),
+        ];
+
+        let template = make_template(files, rules);
+        let mut vars = HashMap::new();
+        vars.insert("database".to_string(), minijinja::Value::from("postgres"));
+
+        scaffold(&template, dir.path(), &vars).unwrap();
+        assert!(dir.path().join("pg.yml").exists());
+        assert!(!dir.path().join("lake.yml").exists());
+    }
+
+    #[test]
+    fn scaffold_invalid_condition_is_an_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut files = HashMap::new();
+        files.insert(PathBuf::from("a.txt"), "a".to_string());
+        let rules = vec![FileRule {
+            src: "a.txt".to_string(),
+            dest: None,
+            condition: Some("1 +".to_string()),
+            overwrite: false,
+            context_role: None,
+            context_description: None,
+        }];
+        let template = make_template(files, rules);
+        assert!(scaffold(&template, dir.path(), &HashMap::new()).is_err());
     }
 }

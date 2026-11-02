@@ -1,0 +1,74 @@
+"""The agent loop as a DBOS workflow.
+
+The workflow body is deterministic glue. Everything non-deterministic — model calls, tool
+calls, reading files or env — happens inside steps whose outputs DBOS records before the
+workflow moves on. On restart DBOS re-runs this function; completed steps return their
+recorded output instead of executing, so the model is not called again.
+
+Rules for editing this file are in AGENTS.md. In short: no clock, random, network or file
+I/O here; steps return JSON-serializable values; reordering steps is a breaking change
+(bump APP_VERSION).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from dbos import DBOS
+
+from {{ project_name }}.agent.schemas import Completion, RunResult, ToolCall
+{%- if include_hitl %}
+from {{ project_name }}.steps.approval import wait_for_approval
+{%- endif %}
+from {{ project_name }}.steps.llm import assistant_message, begin_run, call_model
+from {{ project_name }}.steps.tools import run_tool, tool_message
+from {{ project_name }}.streaming import close_events, emit
+
+
+@DBOS.workflow()
+def agent_run(task: str) -> dict[str, Any]:
+    """Run the agent on `task`. Returns `RunResult.model_dump()`."""
+    start = begin_run(task)  # step: freezes prompt + limits for this run
+    history: list[dict[str, Any]] = start["history"]
+    try:
+        emit("started", {"task": task})
+        for turn in range(start["max_turns"]):
+            reply = Completion.model_validate(call_model(history))  # step: checkpointed
+            history.append(assistant_message(reply))
+            emit("turn", {"turn": turn, "summary": reply.summary})
+            if reply.done:
+                return _finish(RunResult(status="completed", output=reply.text, turns=turn + 1))
+            for call in reply.tool_calls:
+{%- if include_hitl %}
+                if call.needs_approval:
+                    decision = wait_for_approval(  # durable DBOS.recv
+                        call.model_dump(),
+                        start["approval_timeout_seconds"],
+                        start["approval_timeout_default"],
+                    )
+                    emit("approval", {"tool": call.name, **decision.model_dump()})
+                    if not decision.approved:
+                        return _finish(
+                            RunResult(
+                                status="rejected",
+                                output=f"{call.name} was not approved. {decision.reason}".strip(),
+                                turns=turn + 1,
+                            )
+                        )
+{%- endif %}
+                history.append(_run(call))
+        return _finish(RunResult(status="turn_budget_exceeded", turns=start["max_turns"]))
+    finally:
+        close_events()
+
+
+def _run(call: ToolCall) -> dict[str, Any]:
+    payload = call.model_dump()
+    result = run_tool(payload)  # step: idempotent
+    emit("tool_result", {"tool": call.name, "ok": result["ok"]})
+    return tool_message(payload, result)
+
+
+def _finish(result: RunResult) -> dict[str, Any]:
+    emit("finished", {"status": result.status})
+    return result.model_dump()
