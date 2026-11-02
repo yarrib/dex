@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-e67c5ce9.js";
+            window.path_to_searchindex_js = "../searchindex-3d5d0dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a40167fc.js"></script>
+        <script src="../toc-7751e53d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -185,7 +185,7 @@
 coding-assistant agnostic: it works with Claude Code, Cursor, Copilot, Claude
 Desktop, or any MCP client out of the box.</p>
 <h2 id="synopsis"><a class="header" href="#synopsis">Synopsis</a></h2>
-<pre><code>dex agent new [--sdk &lt;anthropic|openai|baml&gt;]
+<pre><code>dex agent new [--sdk &lt;anthropic|openai|baml&gt;] [--runtime &lt;standard|durable&gt;]
               [--dir &lt;path&gt;] [--no-prompt]
               [--preset &lt;profile&gt;] [--standards &lt;path&gt;]
 </code></pre>
@@ -197,6 +197,15 @@ dex agent new --sdk openai      # OpenAI SDK (gpt-* models)
 dex agent new --sdk baml        # BAML typed functions (any provider)
 </code></pre>
 <p>Omit <code>--sdk</code> to be prompted.</p>
+<h2 id="runtime-choice"><a class="header" href="#runtime-choice">Runtime choice</a></h2>
+<pre><code class="language-bash">dex agent new --sdk openai                       # default: plain agent loop
+dex agent new --sdk anthropic --runtime durable  # durable runs on DBOS (agent-dbos)
+</code></pre>
+<p><code>--runtime durable</code> scaffolds the <code>agent-dbos</code> template: every model and tool call is a
+checkpointed step, so a crashed or redeployed run resumes instead of restarting, and a run can
+wait days for a human approval. <code>--sdk</code> picks the model client (<code>llm_sdk</code>); <code>baml</code> is not
+available with the durable runtime. The durable template asks its own questions (database,
+HITL, API, deploy target) — see <a href="../templates/built-in.html#agent-dbos">built-in templates</a>.</p>
 <h2 id="variables"><a class="header" href="#variables">Variables</a></h2>
 <p>Prompts asked (defaults from <code>template.toml</code>):</p>
 <div class="table-wrapper">

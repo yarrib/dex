@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-e67c5ce9.js";
+            window.path_to_searchindex_js = "../searchindex-3d5d0dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a40167fc.js"></script>
+        <script src="../toc-7751e53d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -262,6 +262,17 @@ condition = "include_notebook"   # include only if this bool variable is true
 src = "resources/"
 condition = "include_job"
 </code></pre>
+<p><code>condition</code> is a Jinja2 expression evaluated over the template variables, so it can be a bare
+variable name or a comparison — useful for <code>choice</code> variables, which are always truthy:</p>
+<pre><code class="language-toml">[[files]]
+src = "docker-compose.yml"
+condition = "database == 'postgres'"
+
+[[files]]
+src = ".claude/"
+condition = "'claude' in ai_tools"
+</code></pre>
+<p>An undefined variable is falsy; an invalid expression fails the scaffold with an error.</p>
 <p>If no <code>[[files]]</code> entry exists for a path, it is always included.</p>
 <h2 id="writing-template-files"><a class="header" href="#writing-template-files">Writing template files</a></h2>
 <p>Template files use <a href="https://jinja.palletsprojects.com/">Jinja2</a> syntax, rendered by <a href="https://github.com/mitsuhiko/minijinja">minijinja</a> in Rust. Use the <code>.j2</code> extension for any file that needs rendering.</p>

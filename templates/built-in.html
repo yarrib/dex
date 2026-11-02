@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-e67c5ce9.js";
+            window.path_to_searchindex_js = "../searchindex-3d5d0dcc.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-a40167fc.js"></script>
+        <script src="../toc-7751e53d.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -195,6 +195,7 @@
 <tr><td><code>dabs-etl</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset data_eng</code>)</em> DLT pipeline</td></tr>
 <tr><td><code>dabs-ml</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset mlops</code>)</em> MLflow training + serving</td></tr>
 <tr><td><code>dabs-aiagent</code></td><td><em>(Deprecated — use <code>dabs-platform</code> with <code>--preset agents</code>)</em> AI agent serving</td></tr>
+<tr><td><strong><code>agent-dbos</code></strong></td><td>An agent whose runs must survive crashes, redeploys, or a wait for human approval (durable execution on DBOS)</td></tr>
 </tbody>
 </table>
 </div>
@@ -237,6 +238,74 @@ component adds its own gated directory (<code>pipeline/</code>, <code>ml/</code>
 <p><strong>Distribution:</strong> point an org registry at this template with <code>[[templates.remotes]]</code>
 in <code>~/.config/dex/config.toml</code>, and ship org constants via <code>standards.toml</code>. See the
 template’s own README (<code>templates/dabs-platform/README.md</code>).</p>
+</blockquote>
+<hr>
+<h2 id="agent-dbos"><a class="header" href="#agent-dbos">agent-dbos</a></h2>
+<p>A Python agent service whose runs are <strong>durable</strong>: every LLM call and tool call is a
+checkpointed <a href="https://docs.dbos.dev/python/">DBOS</a> step and the agent loop is a DBOS workflow.
+<code>kill -9</code> mid-run, restart, and the run finishes with exactly one model call per step and one
+side effect per action. It sits beside <code>agent-openai</code> / <code>agent-anthropic</code> / <code>agent-baml</code>, which
+scaffold the agent logic but not its orchestration.</p>
+<pre><code class="language-bash">dex init --template agent-dbos --dir my_agent
+dex agent new --runtime durable --sdk anthropic      # same template, llm_sdk preset
+dex init -t agent-dbos --no-prompt --answers answers.toml
+</code></pre>
+<p><strong>When to use:</strong> runs longer than one request — multi-step tool use, background jobs, anything
+that waits on a human. For a single-shot agent, use <code>agent-openai</code> / <code>agent-anthropic</code>.</p>
+<p><strong>Variables:</strong></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Name</th><th>Type</th><th>Default</th><th>Description</th></tr>
+</thead>
+<tbody>
+<tr><td><code>project_name</code></td><td>string</td><td><em>(dir name)</em></td><td>Package and app name (<code>^[a-z][a-z0-9_]*$</code>)</td></tr>
+<tr><td><code>description</code></td><td>string</td><td>—</td><td>One-line purpose (README, AGENTS.md, system prompt)</td></tr>
+<tr><td><code>llm_sdk</code></td><td>choice</td><td><code>openai</code></td><td>Client used inside the model step (<code>openai</code>, <code>anthropic</code>)</td></tr>
+<tr><td><code>database</code></td><td>choice</td><td><code>postgres</code></td><td>DBOS system database (<code>postgres</code> → compose file; <code>lakebase</code> → OAuth-token engine)</td></tr>
+<tr><td><code>include_hitl</code></td><td>bool</td><td><code>true</code></td><td>Approval step (<code>DBOS.recv</code>), inbox endpoints, <code>approve</code>/<code>reject</code> commands</td></tr>
+<tr><td><code>include_api</code></td><td>bool</td><td><code>true</code></td><td>FastAPI service with SSE; <code>false</code> gives a CLI-only queue worker</td></tr>
+<tr><td><code>deploy_target</code></td><td>choice</td><td><code>databricks_app</code></td><td><code>databricks_app</code> adds <code>databricks.yml</code>, <code>resources/app.yml</code>, <code>app.yaml</code>; <code>none</code> omits them</td></tr>
+<tr><td><code>max_concurrent_runs</code></td><td>string (int)</td><td><code>4</code></td><td>Queue concurrency</td></tr>
+<tr><td><code>python_version</code></td><td>choice</td><td><code>3.12</code></td><td>Python version (<code>3.12</code>, <code>3.11</code>)</td></tr>
+<tr><td><code>ai_tools</code>, <code>include_mcp</code></td><td>multi / bool</td><td>as <code>agent-openai</code></td><td>AI assistant configuration</td></tr>
+</tbody>
+</table>
+</div>
+<p>Only <code>database</code>, <code>llm_sdk</code> and <code>deploy_target</code> change generated code; the other options toggle
+whole files.</p>
+<p><strong>Generated files (default options):</strong></p>
+<pre><code>src/&lt;project_name&gt;/
+├── cli.py                  # serve | run | approve | reject | status | replay
+├── config.py               # settings from env; DBOS config
+├── runtime.py              # launch/shutdown, queue registration, client factory
+├── workflows/agent_run.py  # @DBOS.workflow — the agent loop
+├── workflows/queue.py      # "agent_runs": concurrency cap + start-rate limiter
+├── steps/llm.py            # @DBOS.step model call; tokens stream live, completion checkpointed
+├── steps/tools.py          # @DBOS.step per tool call, idempotency keys
+├── steps/approval.py       # durable human-in-the-loop wait   (include_hitl)
+├── agent/{prompts/system.md, schemas.py, tools/}
+├── streaming.py            # resumable progress events (DBOS streams) + in-memory token bus
+├── api.py, static/         # FastAPI: runs, SSE, approvals, inbox page   (include_api)
+└── tracing.py              # MLflow spans tagged with the run id
+tests/                      # fake LLM; crash tests kill a real worker process
+evals/                      # runner.py + cases/*.json
+docker-compose.yml          # local Postgres 16                    (database = postgres)
+databricks.yml, app.yaml, resources/app.yml                        (deploy_target = databricks_app)
+dbos-config.yaml, dex.toml, AGENTS.md, CLAUDE.md, README.md, .env.example
+.claude/skills/durable-workflows/SKILL.md   # replay rules for coding assistants (when `claude` in ai_tools)
+</code></pre>
+<p><strong>Replay-safety rules</strong> (stated in the generated <code>AGENTS.md</code> and skill): workflow code is
+deterministic between steps; every non-deterministic call is a step; steps return
+JSON-serializable values; steps are at-least-once so side effects are idempotent by key;
+changing step order is a breaking change (bump <code>APP_VERSION</code>).</p>
+<p><strong>Generated-project tests</strong> run on a throwaway SQLite system database with a fake model — no
+Docker, no API keys. Set <code>TEST_DATABASE_URL</code> to run the same suite on Postgres. The resume and
+idempotency tests crash a real worker process with <code>os._exit</code> and recover the run in a fresh
+one.</p>
+<blockquote>
+<p><strong>Pinning:</strong> <code>pyproject.toml</code> pins <code>dbos~=3.4</code>. The queue API (<code>DBOS.register_queue</code>, called
+after launch) and workflow streams (<code>write_stream</code>/<code>read_stream</code>) are 3.x APIs.</p>
 </blockquote>
 <hr>
 <h2 id="default"><a class="header" href="#default">default</a></h2>
